@@ -128,7 +128,6 @@ enum EventType {
 
 model User {
   id                BigInt    @id @default(autoincrement())
-  username          String    @unique @db.VarChar(100)
   email             String    @unique @db.VarChar(255)
   phoneNumber       String?   @map("phone_number") @db.VarChar(30)
   firstName         String?   @map("first_name") @db.VarChar(100)

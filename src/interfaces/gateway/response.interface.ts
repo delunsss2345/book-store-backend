@@ -1,8 +1,14 @@
 import { HttpStatus } from '@nestjs/common';
+import { Status } from 'src/constants/enum.constant';
+import { HttpMessage } from 'src/constants/http-message.constant';
 
-class ResponseDto<T> {
-    success: string;
+export class ResponseDto<T> {
+    success: Status.OK;
     statusCode: HttpStatus.OK;
-    message: string;
+    message: HttpMessage.OK;
     data?: T;
+
+    constructor(payload: Partial<ResponseDto<T>>) {
+        Object.assign(this, payload)
+    }
 }

@@ -6,7 +6,7 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ResponseDto } from 'src/interfaces/gateway/response.interface';
+import { ResponseDto } from '@common/dto';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {

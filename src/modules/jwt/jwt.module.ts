@@ -1,9 +1,9 @@
+import { JwtProvider } from '@/config/jwt.config';
 import { Module } from '@nestjs/common';
-import { JwtAuthController } from './jwt.controller';
 import { JwtAuthService } from './jwt.service';
 
 @Module({
-  controllers: [JwtAuthController],
+  imports: [JwtProvider],
   providers: [JwtAuthService],
 })
 export class JwtAuthModule { }

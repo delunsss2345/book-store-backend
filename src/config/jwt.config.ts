@@ -7,10 +7,6 @@ export class JwtConfiguration {
     @IsNotEmpty()
     ACCESS_TOKEN_SECRET: string;
 
-    @IsString()
-    @IsNotEmpty()
-    REFRESH_TOKEN_SECRET: string;
-
     @IsNumber()
     ACCESS_TOKEN_TIME: number;
 
@@ -19,8 +15,6 @@ export class JwtConfiguration {
 
     constructor(data: Partial<JwtConfiguration> = {}) {
         this.ACCESS_TOKEN_SECRET = data.ACCESS_TOKEN_SECRET ?? process.env['ACCESS_TOKEN_SECRET'] ?? '';
-        this.REFRESH_TOKEN_SECRET = data.REFRESH_TOKEN_SECRET ?? process.env['REFRESH_TOKEN_SECRET'] ?? '';
-
         this.ACCESS_TOKEN_TIME = data?.ACCESS_TOKEN_TIME ?? Number(process.env['ACCESS_TOKEN_TIME']);
         this.REFRESH_TOKEN_TIME = data?.REFRESH_TOKEN_TIME ?? Number(process.env['REFRESH_TOKEN_TIME']);
 

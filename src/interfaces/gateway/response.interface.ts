@@ -7,23 +7,35 @@ export class ResponseDto<T> {
     statusCode: HttpStatus = HttpStatus.OK;
     message: string = HttpMessage.OK;
     data?: T;
-    path?: string
+    path?: string;
     constructor(payload: Partial<ResponseDto<T>>) {
-        Object.assign(this, payload)
+        Object.assign(this, payload);
     }
-    public static error({ statusCode, path, message }: { message: string, statusCode: HttpStatus, path: string }) {
+    public static error({
+        statusCode,
+        path,
+        message,
+    }: {
+        message: string;
+        statusCode: HttpStatus;
+        path: string;
+    }) {
         return new ResponseDto({
             success: Status.NO,
             statusCode,
             path,
-            message
-        })
+            message,
+        });
     }
-    public static success<T>({ statusCode, data, message }: { message: string, statusCode: HttpStatus, data: T }) {
-        return new ResponseDto<T>({
-            statusCode,
-            data,
-            message
-        })
+    public static success<T>({
+        statusCode = HttpStatus.OK,
+        data,
+        message = HttpMessage.OK,
+    }: {
+        message?: string;
+        statusCode?: HttpStatus;
+        data: T;
+    }) {
+        return new ResponseDto<T>({ statusCode, data, message });
     }
 }

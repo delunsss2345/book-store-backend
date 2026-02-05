@@ -1,3 +1,4 @@
+import { ResponseDto } from '@common/dto';
 import {
     ArgumentsHost,
     Catch,
@@ -6,9 +7,8 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ResponseDto } from '@common/dto';
 
-@Catch()
+@Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();

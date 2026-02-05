@@ -7,8 +7,8 @@ import { Prisma, User } from '@prisma/client';
 export class AuthRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    createUser(data: Prisma.UserCreateInput): Promise<User> {
-        return this.prisma.user.create({ data });
+    createUser(data: Prisma.UserCreateInput): Promise<AuthMe> {
+        return this.prisma.user.create({ select: authUserSelect, data });
     }
 
     findUserByEmail(email: string): Promise<AuthMe | null> {

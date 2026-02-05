@@ -1,5 +1,5 @@
 import { PrismaService } from '@/database';
-import { AuthMe, authUserSelect } from '@/database/selects/auth.select';
+import { AuthMe, AuthMeWithPassword, authUserSelect, authUserSelectPassword } from '@/database/selects/auth.select';
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 
@@ -14,6 +14,12 @@ export class AuthRepository {
     findUserByEmail(email: string): Promise<AuthMe | null> {
         return this.prisma.user.findUnique({
             select: authUserSelect,
+            where: { email }
+        });
+    }
+    findAuthByEmailPassword(email: string): Promise<AuthMeWithPassword | null> {
+        return this.prisma.user.findUnique({
+            select: authUserSelectPassword,
             where: { email }
         });
     }

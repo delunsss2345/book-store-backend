@@ -22,21 +22,11 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@common/*": [
-        "src/common/*"
-      ],
-      "@modules/*": [
-        "src/modules/*"
-      ],
-      "@database/*": [
-        "src/database/*"
-      ],
-      "@config/*": [
-        "src/config/*"
-      ]
+      "@/*": ["src/*"],
+      "@common/*": ["src/common/*"],
+      "@modules/*": ["src/modules/*"],
+      "@database/*": ["src/database/*"],
+      "@config/*": ["src/config/*"]
     }
   }
 }

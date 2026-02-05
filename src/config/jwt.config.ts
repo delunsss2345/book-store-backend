@@ -29,8 +29,8 @@ export const JwtProvider = JwtModule.registerAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: (config: ConfigService) => {
-        const accessSecret = config.get<string>('JWT_CONFIG.ACCESS_TOKEN_SECRET');
-        const accessTime = Number(config.get('JWT_CONFIG.ACCESS_TOKEN_TIME'));
+        const accessSecret = config.get<string>('ACCESS_TOKEN_SECRET');
+        const accessTime = Number(config.get('ACCESS_TOKEN_TIME'));
 
         if (!accessSecret || !Number.isFinite(accessTime)) {
             throw new Error('Invalid JWT config (ACCESS_TOKEN_SECRET/ACCESS_TOKEN_TIME)');

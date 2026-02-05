@@ -1,5 +1,4 @@
 import { CONFIGURATION, TConfiguration } from '@/config';
-import { JwtAuthModule } from '@/modules/jwt/jwt.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -12,8 +11,6 @@ import { AuthModule } from './modules/auth';
     ConfigModule.forRoot({
       isGlobal: true, load: [() => CONFIGURATION]
     }),
-    JwtAuthModule
-
   ],
   controllers: [AppController],
   providers: [AppService],

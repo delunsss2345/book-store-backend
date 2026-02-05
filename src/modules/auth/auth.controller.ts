@@ -1,8 +1,10 @@
+import { UserAgent } from '@/common/decorators/userAgent.decorator';
 import { AuthService } from '@/modules/auth/auth.service';
 import {
+    LoginBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto';
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Ip, Post } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
@@ -12,10 +14,11 @@ export class AuthController {
     register(@Body() body: RegisterBodyDTO) {
         return this.authService.register(body);
     }
-
-    // @Post('login')
-    // login(@Body() body: LoginBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {
-    // }
+    @HttpCode(HttpStatus.OK)
+    @Post('login')
+    login(@Body() body: LoginBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {
+        return this.authService.login(body, userAgent, ip)
+    }
 
     // @Post('refresh-token')
     // refreshToken(@Body() body: RefreshTokenBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {

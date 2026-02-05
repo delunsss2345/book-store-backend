@@ -1,9 +1,13 @@
+import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
+    LoginBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto';
+import { randomKey } from '@/utils/randomKey.utils';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { RoleCode } from '@prisma/client';
 import bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
@@ -20,15 +24,45 @@ export class AuthService {
             firstName: body.firstName,
             lastName: body.lastName
         });
-        return { user }
+
+        const signature = this.signTokenPair({
+            sub: user.id.toString(),
+            isEmailVerified: user.isEmailVerified,
+            roles: [RoleCode.GUEST]
+        });
+        return { user, ...signature }
     }
 
-    // login(body: LoginBodyDTO, userAgent: string, ip: string) {
-    //     // TODO: verify credentials
-    //     // TODO: issue access/refresh tokens
-    //     // TODO: persist session/device with userAgent + ip
-    //     return { success: true };
-    // }
+    signTokenPair(payload: JwtPayload) {
+        const accessToken = this.jwtService.sign(payload);
+        const refreshToken = randomKey();
+        return {
+            accessToken,
+            refreshToken
+        }
+    }
+
+    async login(body: LoginBodyDTO, userAgent: string, ip: string) {
+        console.log(userAgent);
+        console.log(ip);
+        const user = await this.authRepository.findAuthByEmailPassword(body.email);
+        if (!user) {
+            return ['Sai tài khoản hoặc mật khẩu', null];
+        }
+        const isPassword = await bcrypt.compare(body.password, user.password)
+        if (!isPassword) {
+            return ['Sai tài khoản hoặc mật khẩu', null];
+        }
+        // TODO: verify credentials
+        // TODO: issue access/refresh tokens
+        // TODO: persist session/device with userAgent + ip
+        const signature = this.signTokenPair({
+            sub: user.id.toString(),
+            isEmailVerified: user.isEmailVerified,
+            roles: [RoleCode.GUEST]
+        });
+        return { user, ...signature }
+    }
 
     // refreshToken(body: RefreshTokenBodyDTO, userAgent: string, ip: string) {
     //     // TODO: validate refresh token

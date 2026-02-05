@@ -16,3 +16,4 @@ class Configuration extends BaseConfiguration {
     JWT_CONFIG = new JwtConfiguration();
 }
 export const CONFIGURATION = new Configuration();
+export type TConfiguration = typeof CONFIGURATION;

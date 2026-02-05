@@ -134,7 +134,7 @@ model User {
   lastName          String?   @map("last_name") @db.VarChar(100)
   gender            String?   @db.VarChar(20)
   avatarUrl         String?   @map("avatar_url") @db.VarChar(255)
-  passwordHash      String    @map("password_hash") @db.VarChar(255)
+  password          String    @map("password") @db.VarChar(255)
   passwordChangedAt DateTime? @map("password_changed_at")
   isEmailVerified   Boolean   @default(false) @map("is_email_verified")
   totpSecret        String?   @map("totp_secret") @db.VarChar(255)

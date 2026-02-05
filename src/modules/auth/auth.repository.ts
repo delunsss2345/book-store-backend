@@ -1,0 +1,63 @@
+import { PrismaService } from '@/database';
+import { AuthMe, authUserSelect } from '@/database/selects/auth.select';
+import { Injectable } from '@nestjs/common';
+import { Prisma, User } from '@prisma/client';
+
+@Injectable()
+export class AuthRepository {
+    constructor(private readonly prisma: PrismaService) { }
+
+    createUser(data: Prisma.UserCreateInput): Promise<User> {
+        return this.prisma.user.create({ data });
+    }
+
+    findUserByEmail(email: string): Promise<AuthMe | null> {
+        return this.prisma.user.findUnique({
+            select: authUserSelect,
+            where: { email }
+        });
+    }
+
+    existsEmail(email: string): Promise<boolean> {
+        return this.prisma.user
+            .findUnique({ where: { email }, select: { id: true } })
+            .then(Boolean);
+    }
+
+    updateLastLogin(userId: bigint): Promise<User> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { lastLoginAt: new Date() },
+        });
+    }
+
+    markEmailVerified(userId: bigint): Promise<User> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                isEmailVerified: true,
+                verifyEmailAt: new Date(),
+            },
+        });
+    }
+
+    updatePassword(userId: bigint, password: string): Promise<User> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                password,
+                passwordChangedAt: new Date(),
+            },
+        });
+    }
+
+    updateProfile(
+        userId: bigint,
+        data: Pick<Prisma.UserUpdateInput, 'firstName' | 'lastName' | 'gender' | 'avatarUrl' | 'phoneNumber'>,
+    ): Promise<User> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data,
+        });
+    }
+}

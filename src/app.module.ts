@@ -5,12 +5,14 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
+import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
 
 @Module({
   imports: [DatabaseModule, AuthModule,
     ConfigModule.forRoot({
       isGlobal: true, load: [() => CONFIGURATION]
     }),
+    VerificationCodeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

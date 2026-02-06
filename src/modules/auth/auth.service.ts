@@ -12,17 +12,18 @@ import bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
     constructor(private readonly authRepository: AuthRepository,
-        private readonly jwtService: JwtService
-    ) {
+        private readonly jwtService: JwtService) {
     }
     async register(body: RegisterBodyDTO) {
         if (body.password !== body.confirm_password) {
             throw new BadRequestException('Mật khẩu xác nhận không khớp');
         }
+
         const existsEmail = await this.authRepository.existsEmail(body.email);
         if (existsEmail) {
             throw new ConflictException('Email đã tồn tại');
         }
+
         const passwordHash = await bcrypt.hash(body.password, 10);
 
         const user = await this.authRepository.createUser({
@@ -37,6 +38,8 @@ export class AuthService {
             isEmailVerified: user.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
+
+
         return { user, ...signature }
     }
 
@@ -63,7 +66,8 @@ export class AuthService {
         // TODO: verify credentials
         // TODO: issue access/refresh tokens
         // TODO: persist session/device with userAgent + ip
-        const { password , ...safeUser } = user;
+
+        const { password, ...safeUser } = user;
         const signature = this.signTokenPair({
             sub: safeUser.id.toString(),
             isEmailVerified: safeUser.isEmailVerified,

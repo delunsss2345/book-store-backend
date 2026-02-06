@@ -4,6 +4,9 @@ import {
     LoginBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto/request';
+import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
+import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
+import { generateLink } from '@/utils/generateLink.utils';
 import { randomKey } from '@/utils/randomKey.utils';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -12,7 +15,9 @@ import bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
     constructor(private readonly authRepository: AuthRepository,
-        private readonly jwtService: JwtService) {
+        private readonly jwtService: JwtService,
+        private readonly verificationCodeService: VerificationCodeService
+    ) {
     }
     async register(body: RegisterBodyDTO) {
         if (body.password !== body.confirm_password) {
@@ -38,7 +43,17 @@ export class AuthService {
             isEmailVerified: user.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
-
+        const token = randomKey();
+        const codeHash = await bcrypt.hash(token, 10);
+        const expiresAt = new Date(Date.now() + OTP_TIME_SECONDS * 1000);
+        const verifyUrl = generateLink(token);
+        await this.verificationCodeService.createRegisterVerification({
+            email: user.email,
+            verifyUrl,
+            fullName: user.lastName!.concat(" ", user.firstName!),
+            userId: user.id, codeHash,
+            token, expiresAt
+        })
 
         return { user, ...signature }
     }

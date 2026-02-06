@@ -6,5 +6,6 @@ import { VerificationCodeService } from './verification-code.service';
 @Module({
   imports: [EmailOutboxModule],
   providers: [VerificationCodeService, VerificationRepository],
+  exports: [VerificationCodeService, VerificationRepository]
 })
 export class VerificationCodeModule { }

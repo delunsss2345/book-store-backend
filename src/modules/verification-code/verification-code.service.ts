@@ -3,7 +3,6 @@ import { RegisterVerificationDto } from '@/modules/verification-code/dto/registe
 import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
 import { Injectable } from '@nestjs/common';
 import { VerificationRepository } from './verification-code.repository';
-
 @Injectable()
 export class VerificationCodeService {
     constructor(
@@ -12,10 +11,12 @@ export class VerificationCodeService {
     ) { }
 
     async createRegisterVerification(params: RegisterVerificationDto) {
-        const { email, fullName, verifyUrl, userId } = params;
-        const { token, record } = await this.verificationRepository.createVerifyCationCode({
+        const { email, fullName, verifyUrl, userId, expiresAt, codeHash, token } = params;
+        const { record } = await this.verificationRepository.createVerifyCationCode({
             userId,
             email,
+            expiresAt,
+            codeHash
         });
 
         const resolvedUrl = this.resolveVerifyUrl(verifyUrl, token);

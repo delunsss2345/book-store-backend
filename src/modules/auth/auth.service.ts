@@ -3,9 +3,9 @@ import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
     LoginBodyDTO,
     RegisterBodyDTO
-} from '@/modules/auth/dto';
+} from '@/modules/auth/dto/request';
 import { randomKey } from '@/utils/randomKey.utils';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RoleCode } from '@prisma/client';
 import bcrypt from 'bcrypt';
@@ -16,6 +16,13 @@ export class AuthService {
     ) {
     }
     async register(body: RegisterBodyDTO) {
+        if (body.password !== body.confirm_password) {
+            throw new BadRequestException('Mật khẩu xác nhận không khớp');
+        }
+        const existsEmail = await this.authRepository.existsEmail(body.email);
+        if (existsEmail) {
+            throw new ConflictException('Email đã tồn tại');
+        }
         const passwordHash = await bcrypt.hash(body.password, 10);
 
         const user = await this.authRepository.createUser({
@@ -47,21 +54,22 @@ export class AuthService {
         console.log(ip);
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
-            return ['Sai tài khoản hoặc mật khẩu', null];
+            throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
         }
         const isPassword = await bcrypt.compare(body.password, user.password)
         if (!isPassword) {
-            return ['Sai tài khoản hoặc mật khẩu', null];
+            throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
         }
         // TODO: verify credentials
         // TODO: issue access/refresh tokens
         // TODO: persist session/device with userAgent + ip
+        const { password , ...safeUser } = user;
         const signature = this.signTokenPair({
-            sub: user.id.toString(),
-            isEmailVerified: user.isEmailVerified,
+            sub: safeUser.id.toString(),
+            isEmailVerified: safeUser.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
-        return { user, ...signature }
+        return { user: safeUser, ...signature }
     }
 
     // refreshToken(body: RefreshTokenBodyDTO, userAgent: string, ip: string) {

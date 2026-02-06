@@ -1,11 +1,10 @@
-import { HttpStatus } from '@nestjs/common';
 import { Status } from '@common/constants/enum.constant';
-import { HttpMessage } from '@common/constants/http-message.constant';
+import { HttpStatus } from '@nestjs/common';
 
 export class ResponseDto<T> {
     success: Status = Status.OK;
-    statusCode: HttpStatus = HttpStatus.OK;
-    message: string = HttpMessage.OK;
+    statusCode: number = HttpStatus.OK;
+    message?: string;
     data?: T;
     path?: string;
 
@@ -15,30 +14,35 @@ export class ResponseDto<T> {
 
     public static error({
         statusCode,
-        path,
         message,
+        path,
     }: {
+        statusCode: number;
         message: string;
-        statusCode: HttpStatus;
         path: string;
     }) {
         return new ResponseDto({
             success: Status.NO,
             statusCode,
-            path,
             message,
+            path,
         });
     }
 
     public static success<T>({
-        statusCode = HttpStatus.OK,
         data,
-        message = HttpMessage.OK,
+        statusCode = HttpStatus.OK,
+        message,
     }: {
-        message?: string;
-        statusCode?: HttpStatus;
         data: T;
+        statusCode?: number;
+        message?: string;
     }) {
-        return new ResponseDto<T>({ statusCode, data, message });
+        return new ResponseDto<T>({
+            success: Status.OK,
+            statusCode,
+            message,
+            data,
+        });
     }
 }

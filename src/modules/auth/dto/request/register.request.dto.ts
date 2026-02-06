@@ -21,4 +21,10 @@ export class RegisterBodyDTO {
     @MinLength(8)
     @MaxLength(72)
     password: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(8)
+    @MaxLength(72)
+    confirm_password: string
 }

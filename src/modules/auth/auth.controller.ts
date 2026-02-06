@@ -3,7 +3,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 import {
     LoginBodyDTO,
     RegisterBodyDTO
-} from '@/modules/auth/dto';
+} from '@/modules/auth/dto/request';
 import { Body, Controller, HttpCode, HttpStatus, Ip, Post } from '@nestjs/common';
 
 @Controller('auth')

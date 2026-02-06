@@ -20,6 +20,7 @@ export class VerificationCodeService {
         });
 
         const resolvedUrl = this.resolveVerifyUrl(verifyUrl, token);
+
         const payload = {
             full_name: fullName ?? '',
             verify_url: resolvedUrl,
@@ -34,6 +35,7 @@ export class VerificationCodeService {
         return { token, verification: record };
     }
 
+    // Có vấn đề chưa nghĩa ra
     private resolveVerifyUrl(verifyUrl: string, token: string) {
         const placeholders = ['***', '{token}', '{{token}}', ':token'];
         for (const placeholder of placeholders) {

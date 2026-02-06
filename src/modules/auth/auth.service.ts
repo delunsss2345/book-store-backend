@@ -1,3 +1,4 @@
+import { VerifyCodePath } from '@/common';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
@@ -6,7 +7,7 @@ import {
 } from '@/modules/auth/dto/request';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
-import { generateLink } from '@/utils/generateLink.utils';
+import { generateLinkWithType } from '@/utils/generateLink.utils';
 import { randomKey } from '@/utils/randomKey.utils';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -43,16 +44,18 @@ export class AuthService {
             isEmailVerified: user.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
-        const token = randomKey();
-        const codeHash = await bcrypt.hash(token, 10);
-        const expiresAt = new Date(Date.now() + OTP_TIME_SECONDS * 1000);
-        const verifyUrl = generateLink(token);
+
+        // Có thể không cần phải truyền cái này xem lại
+        const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
+        const { codeHash, expiresAt } = await this.signVerifyCode(token)
+
         await this.verificationCodeService.createRegisterVerification({
             email: user.email,
-            verifyUrl,
+            verifyUrl: link,
             fullName: user.lastName!.concat(" ", user.firstName!),
             userId: user.id, codeHash,
-            token, expiresAt
+            token,
+            expiresAt
         })
 
         return { user, ...signature }
@@ -65,6 +68,12 @@ export class AuthService {
             accessToken,
             refreshToken
         }
+    }
+
+    async signVerifyCode(token: string) {
+        const codeHash = await bcrypt.hash(token, 10);
+        const expiresAt = new Date(Date.now() + OTP_TIME_SECONDS * 1000);
+        return { codeHash, expiresAt };
     }
 
     async login(body: LoginBodyDTO, userAgent: string, ip: string) {

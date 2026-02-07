@@ -1,4 +1,5 @@
 import { GetUser } from '@/common/decorators/getUser.decorator';
+import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Controller, Get } from '@nestjs/common';
 import { UserDeviceService } from './user-device.service';
 
@@ -6,8 +7,8 @@ import { UserDeviceService } from './user-device.service';
 export class UserDeviceController {
     constructor(private readonly userDeviceService: UserDeviceService) { }
 
-    @Get()
-    getDevices(@GetUser() user: { sub: string }) {
+    @Get("/")
+    getDevices(@GetUser() user: JwtPayload) {
         const userId = BigInt(user.sub);
         return this.userDeviceService.listDevices(userId);
     }

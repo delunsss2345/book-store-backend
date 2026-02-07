@@ -44,7 +44,7 @@ export class AuthGuard implements CanActivate {
 
             // check xem accessToken đã bị revoked ch
             const isRevoked = await this.revokedTokenService.isRevoked(hashedToken);
-            if (isRevoked) throw new UnauthorizedException();
+            if (isRevoked) throw new UnauthorizedException('Phiên đăng nhập bị cấm');
 
             request['user'] = payload;
         } catch {

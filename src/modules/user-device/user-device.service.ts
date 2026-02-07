@@ -1,6 +1,6 @@
+import { parseUserAgent } from '@/utils/parseUserAgent.utils';
 import { Injectable } from '@nestjs/common';
 import { UserDevice } from '@prisma/client';
-import { parseUserAgent } from '@/utils/parseUserAgent.utils';
 import { UserDeviceRepository } from './user-device.repository';
 
 const MAX_DEVICES = 4;
@@ -63,6 +63,7 @@ export class UserDeviceService {
     }
 
     listDevices(userId: bigint) {
+        console.log(userId);
         return this.userDeviceRepository.findManyByUserId(userId);
     }
 }

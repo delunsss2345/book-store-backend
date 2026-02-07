@@ -19,6 +19,7 @@ import { BadRequestException, ConflictException, Injectable, UnauthorizedExcepti
 import { JwtService } from '@nestjs/jwt';
 import { RoleCode, UserSession } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { v4 } from 'uuid';
 @Injectable()
 export class AuthService {
     constructor(private readonly authRepository: AuthRepository,
@@ -106,9 +107,6 @@ export class AuthService {
     }
 
     async login(body: LoginBodyDTO, userAgent: string, ip: string) {
-        if (!body.deviceFingerprint) {
-            throw new BadRequestException();
-        }
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
             await this.loginAttemptService.createLoginAttempt({
@@ -140,7 +138,7 @@ export class AuthService {
 
         const device = await this.userDeviceService.upsertDeviceOnLogin({
             userId: safeUser.id,
-            deviceFingerprint: body.deviceFingerprint,
+            deviceFingerprint: body?.deviceFingerprint ?? v4(),
             userAgent,
         });
 

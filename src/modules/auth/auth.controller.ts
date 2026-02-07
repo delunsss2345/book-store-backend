@@ -11,8 +11,8 @@ export class AuthController {
     constructor(private readonly authService: AuthService) {
     }
     @Post('register')
-    register(@Body() body: RegisterBodyDTO) {
-        return this.authService.register(body);
+    register(@Body() body: RegisterBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {
+        return this.authService.register(body, userAgent, ip);
     }
     @HttpCode(HttpStatus.OK)
     @Post('login')

@@ -1,5 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { LoginAttemptService } from '../login-attempt/login-attempt.service';
+import { VerificationCodeService } from '../verification-code/verification-code.service';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 
@@ -18,6 +20,12 @@ describe('AuthService', () => {
     const jwtServiceMock = {
         sign: jest.fn(),
     };
+    const verificationCodeServiceMock = {
+        createRegisterVerification: jest.fn(),
+    };
+    const loginAttemptServiceMock = {
+        createLoginAttempt: jest.fn(),
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -25,6 +33,8 @@ describe('AuthService', () => {
                 AuthService,
                 { provide: AuthRepository, useValue: authRepositoryMock },
                 { provide: JwtService, useValue: jwtServiceMock },
+                { provide: VerificationCodeService, useValue: verificationCodeServiceMock },
+                { provide: LoginAttemptService, useValue: loginAttemptServiceMock },
             ],
         }).compile();
 

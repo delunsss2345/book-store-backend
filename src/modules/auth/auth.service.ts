@@ -5,6 +5,7 @@ import {
     LoginBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto/request';
+import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
 import { generateLinkWithType } from '@/utils/generateLink.utils';
@@ -17,10 +18,11 @@ import bcrypt from 'bcrypt';
 export class AuthService {
     constructor(private readonly authRepository: AuthRepository,
         private readonly jwtService: JwtService,
-        private readonly verificationCodeService: VerificationCodeService
+        private readonly verificationCodeService: VerificationCodeService,
+        private readonly loginAttemptService: LoginAttemptService
     ) {
     }
-    async register(body: RegisterBodyDTO) {
+    async register(body: RegisterBodyDTO, userAgent: string, ip: string) {
         if (body.password !== body.confirm_password) {
             throw new BadRequestException('Mật khẩu xác nhận không khớp');
         }
@@ -39,13 +41,19 @@ export class AuthService {
             lastName: body.lastName
         });
 
+        await this.loginAttemptService.createLoginAttempt({
+            userId: user.id,
+            ip,
+            userAgent,
+            success: true,
+        });
+
         const signature = this.signTokenPair({
             sub: user.id.toString(),
             isEmailVerified: user.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
 
-        // Có thể không cần phải truyền cái này xem lại
         const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
         const { codeHash, expiresAt } = await this.signVerifyCode(token)
 
@@ -53,7 +61,8 @@ export class AuthService {
             email: user.email,
             verifyUrl: link,
             fullName: user.lastName!.concat(" ", user.firstName!),
-            userId: user.id, codeHash,
+            userId: user.id,
+            codeHash,
             token,
             expiresAt
         })
@@ -77,19 +86,37 @@ export class AuthService {
     }
 
     async login(body: LoginBodyDTO, userAgent: string, ip: string) {
-        console.log(userAgent);
-        console.log(ip);
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
+            await this.loginAttemptService.createLoginAttempt({
+                ip,
+                userAgent,
+                success: false,
+                failureReason: 'Đăng nhập vào tài khoản không tồn tại',
+            });
             throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
         }
         const isPassword = await bcrypt.compare(body.password, user.password)
         if (!isPassword) {
+            await this.loginAttemptService.createLoginAttempt({
+                userId: user.id,
+                ip,
+                userAgent,
+                success: false,
+                failureReason: 'Đăng nhập sai tài khoản hoặc mật khẩu',
+            });
             throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
         }
         // TODO: verify credentials
         // TODO: issue access/refresh tokens
         // TODO: persist session/device with userAgent + ip
+
+        await this.loginAttemptService.createLoginAttempt({
+            userId: user.id,
+            ip,
+            userAgent,
+            success: true,
+        });
 
         const { password, ...safeUser } = user;
         const signature = this.signTokenPair({

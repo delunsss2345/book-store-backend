@@ -288,7 +288,6 @@ model EmailOutbox {
 model LoginAttempt {
   id              BigInt   @id @default(autoincrement())
   userId          BigInt?  @map("user_id")
-  usernameOrEmail String?  @map("username_or_email") @db.VarChar(320)
   ip              String?  @db.VarChar(64)
   userAgent       String?  @map("user_agent") @db.VarChar(1000)
   success         Boolean?

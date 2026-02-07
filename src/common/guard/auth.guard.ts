@@ -1,5 +1,7 @@
 import { IS_PUBLIC_KEY } from '@/common/decorators/public.decorator';
 import { IS_REFRESH_KEY } from '@/common/decorators/refresh.decorator';
+import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
+import { tokenHash } from '@/utils/hashToken.utils';
 import {
     CanActivate,
     ExecutionContext,
@@ -15,7 +17,9 @@ export class AuthGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly reflector: Reflector,
+        private readonly revokedTokenService: RevokedTokenService,
     ) { }
+
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -36,6 +40,12 @@ export class AuthGuard implements CanActivate {
         if (!token) throw new UnauthorizedException();
         try {
             const payload = await this.jwtService.verifyAsync(token);
+            const hashedToken = await tokenHash(token);
+
+            // check xem accessToken đã bị revoked ch
+            const isRevoked = await this.revokedTokenService.isRevoked(hashedToken);
+            if (isRevoked) throw new UnauthorizedException();
+
             request['user'] = payload;
         } catch {
             throw new UnauthorizedException();

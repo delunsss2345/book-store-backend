@@ -11,4 +11,9 @@ export class LoginBodyDTO {
     @IsString()
     @IsNotEmpty()
     password: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    deviceFingerprint: string;
 }

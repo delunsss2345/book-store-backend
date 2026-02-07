@@ -56,6 +56,16 @@ export class UserSessionService {
         });
     }
 
+    async revokeSessionByRefreshToken(refreshToken: string) {
+        const refreshTokenHash = await hashToken(refreshToken);
+        const session = await this.userSessionRepository.findByRefreshTokenHash(refreshTokenHash);
+        if (!session) return null;
+        return this.userSessionRepository.updateUserSession(session.id, {
+            status: SessionStatus.REVOKED,
+            revokedAt: new Date(),
+        });
+    }
+
     private getRefreshTokenExpiresAt() {
         const refreshTokenSeconds = Number(this.configService.get('REFRESH_TOKEN_TIME'));
         if (!Number.isFinite(refreshTokenSeconds)) {

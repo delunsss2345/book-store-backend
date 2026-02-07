@@ -3,14 +3,17 @@ import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
     LoginBodyDTO,
-    RefreshTokenBodyDTO,
+    LogoutBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto/request';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
+import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
+import { UserDeviceService } from '@/modules/user-device/user-device.service';
 import { UserSessionService } from '@/modules/user-session/user-session.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
 import { generateLinkWithType } from '@/utils/generateLink.utils';
+import { tokenHash } from '@/utils/hashToken.utils';
 import { randomKey } from '@/utils/randomKey.utils';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -22,9 +25,12 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly verificationCodeService: VerificationCodeService,
         private readonly loginAttemptService: LoginAttemptService,
-        private readonly userSessionService: UserSessionService
+        private readonly userSessionService: UserSessionService,
+        private readonly revokedTokenService: RevokedTokenService,
+        private readonly userDeviceService: UserDeviceService
     ) {
     }
+
     getMe(id: bigint) {
         return this.authRepository.findUserById(id);
     }
@@ -100,6 +106,9 @@ export class AuthService {
     }
 
     async login(body: LoginBodyDTO, userAgent: string, ip: string) {
+        if (!body.deviceFingerprint) {
+            throw new BadRequestException();
+        }
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
             await this.loginAttemptService.createLoginAttempt({
@@ -121,14 +130,18 @@ export class AuthService {
             });
             throw new UnauthorizedException(LoginMessage.LOGIN_FAILED);
         }
-        // TODO: issue access/refresh tokens
-        // TODO: persist session/device with userAgent + ip
 
         const { password, ...safeUser } = user;
         const signature = this.signTokenPair({
             sub: safeUser.id.toString(),
             isEmailVerified: safeUser.isEmailVerified,
             roles: [RoleCode.GUEST]
+        });
+
+        const device = await this.userDeviceService.upsertDeviceOnLogin({
+            userId: safeUser.id,
+            deviceFingerprint: body.deviceFingerprint,
+            userAgent,
         });
 
         await Promise.all([
@@ -142,19 +155,15 @@ export class AuthService {
                 userId: safeUser.id,
                 refreshToken: signature.refreshToken,
                 userAgent,
+                deviceId: device.id,
             })
         ])
+
 
         return { user: safeUser, ...signature }
     }
 
-    // refreshToken(body: RefreshTokenBodyDTO, userAgent: string, ip: string) {
-    //     // TODO: validate refresh token
-    //     // TODO: rotate refresh token
-    //     // TODO: check session/device by userAgent + ip if you need
-    //     return { success: true };
-    // }
-    async refreshToken(body: RefreshTokenBodyDTO, userAgent: string, session: UserSession) {
+    async refreshToken(userAgent: string, session: UserSession) {
         if (!session) throw new UnauthorizedException();
 
         const user = await this.authRepository.findUserById(session.userId);
@@ -175,10 +184,28 @@ export class AuthService {
         return { user, ...signature };
     }
 
-    // logout(body: LogoutBodyDTO) {
-    //     // TODO: revoke refresh token / session
-    //     return { success: true };
-    // }
+    async logout(body: LogoutBodyDTO) {
+        const { accessToken, refreshToken } = body;
+        let payload: { exp?: number } | null = null;
+        try {
+            payload = await this.jwtService.verifyAsync(accessToken, { ignoreExpiration: true });
+        } catch {
+            throw new UnauthorizedException();
+        }
+
+        if (!payload?.exp || typeof payload.exp !== 'number') {
+            throw new UnauthorizedException();
+        }
+
+        const expiresAt = new Date(payload.exp * 1000);
+        const accessTokenHash = await tokenHash(accessToken);
+        await Promise.all([
+            this.revokedTokenService.revokeToken(accessTokenHash, expiresAt),
+            this.userSessionService.revokeSessionByRefreshToken(refreshToken)
+        ])
+
+        return { success: true };
+    }
 
     // forgotPassword(body: ForgotPasswordBodyDTO) {
     //     // TODO: create reset token + send email

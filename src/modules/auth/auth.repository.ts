@@ -17,6 +17,13 @@ export class AuthRepository {
             where: { email }
         });
     }
+    findUserById(id: bigint): Promise<AuthMe | null> {
+        return this.prisma.user.findFirst({
+            select: authUserSelect,
+            where: { id }
+        });
+    }
+
     findAuthByEmailPassword(email: string): Promise<AuthMeWithPassword | null> {
         return this.prisma.user.findUnique({
             select: authUserSelectPassword,

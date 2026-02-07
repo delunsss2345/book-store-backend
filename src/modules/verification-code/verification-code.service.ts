@@ -37,11 +37,9 @@ export class VerificationCodeService {
 
     // Có vấn đề chưa nghĩa ra
     private resolveVerifyUrl(verifyUrl: string, token: string) {
-        console.log(verifyUrl);
         const placeholders = ['***', '{{token}}', ':token'];
         for (const placeholder of placeholders) {
             if (verifyUrl.includes(placeholder)) {
-                console.log(placeholder);
                 return verifyUrl.replace(placeholder, encodeURIComponent(token));
             }
         }

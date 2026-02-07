@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 
-export const hashToken = (token: string) => {
-    return bcrypt.hash(token, 10);
+export const hashToken = async (token: string) => {
+    return createHash('sha256').update(token).digest('hex');
 };

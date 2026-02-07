@@ -1,6 +1,7 @@
+import { hashToken } from '@/utils/hashToken.utils';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { hashToken } from '@/utils/hashToken.utils';
+import { SessionStatus } from '@prisma/client';
 import { UserSessionRepository } from './user-session.repository';
 
 @Injectable()
@@ -25,6 +26,33 @@ export class UserSessionService {
             refreshTokenHash,
             userAgent: params.userAgent,
             expiresAt,
+        });
+    }
+
+    findByRefreshTokenHash(refreshTokenHash: string) {
+        return this.userSessionRepository.findByRefreshTokenHash(refreshTokenHash);
+    }
+
+    async rotateSession(params: {
+        sessionId: string;
+        refreshToken: string;
+        userAgent?: string | null;
+    }) {
+        const refreshTokenHash = await hashToken(params.refreshToken);
+        const expiresAt = this.getRefreshTokenExpiresAt();
+        return this.userSessionRepository.updateUserSession(params.sessionId, {
+            refreshTokenHash,
+            expiresAt,
+            status: SessionStatus.ACTIVE,
+            revokedAt: null,
+            userAgent: params.userAgent ?? undefined,
+        });
+    }
+
+    markSessionExpired(sessionId: string) {
+        return this.userSessionRepository.updateUserSession(sessionId, {
+            status: SessionStatus.EXPIRED,
+            revokedAt: new Date(),
         });
     }
 

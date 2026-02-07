@@ -9,4 +9,12 @@ export class UserSessionRepository {
     createUserSession(data: Prisma.UserSessionUncheckedCreateInput): Promise<UserSession> {
         return this.prisma.userSession.create({ data });
     }
+
+    findByRefreshTokenHash(refreshTokenHash: string): Promise<UserSession | null> {
+        return this.prisma.userSession.findUnique({ where: { refreshTokenHash } });
+    }
+
+    updateUserSession(id: string, data: Prisma.UserSessionUpdateInput): Promise<UserSession> {
+        return this.prisma.userSession.update({ where: { id }, data });
+    }
 }

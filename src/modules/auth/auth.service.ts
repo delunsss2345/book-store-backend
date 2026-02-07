@@ -3,6 +3,7 @@ import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
     LoginBodyDTO,
+    RefreshTokenBodyDTO,
     RegisterBodyDTO
 } from '@/modules/auth/dto/request';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
@@ -13,7 +14,7 @@ import { generateLinkWithType } from '@/utils/generateLink.utils';
 import { randomKey } from '@/utils/randomKey.utils';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { RoleCode } from '@prisma/client';
+import { RoleCode, UserSession } from '@prisma/client';
 import bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
@@ -24,6 +25,10 @@ export class AuthService {
         private readonly userSessionService: UserSessionService
     ) {
     }
+    getMe(id: bigint) {
+        return this.authRepository.findUserById(id);
+    }
+
     async register(body: RegisterBodyDTO, userAgent: string, ip: string) {
         if (body.password !== body.confirm_password) {
             throw new BadRequestException(RegisterMessage.PASSWORD_CONFIRM_MISMATCH);
@@ -149,6 +154,26 @@ export class AuthService {
     //     // TODO: check session/device by userAgent + ip if you need
     //     return { success: true };
     // }
+    async refreshToken(body: RefreshTokenBodyDTO, userAgent: string, session: UserSession) {
+        if (!session) throw new UnauthorizedException();
+
+        const user = await this.authRepository.findUserById(session.userId);
+        if (!user) throw new UnauthorizedException();
+
+        const signature = this.signTokenPair({
+            sub: user.id.toString(),
+            isEmailVerified: user.isEmailVerified,
+            roles: [RoleCode.GUEST]
+        });
+
+        await this.userSessionService.rotateSession({
+            sessionId: session.id,
+            refreshToken: signature.refreshToken,
+            userAgent,
+        });
+
+        return { user, ...signature };
+    }
 
     // logout(body: LogoutBodyDTO) {
     //     // TODO: revoke refresh token / session

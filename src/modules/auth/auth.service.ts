@@ -1,4 +1,4 @@
-import { VerifyCodePath } from '@/common';
+import { LoginMessage, RegisterMessage, VerifyCodePath } from '@/common/';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
@@ -6,6 +6,7 @@ import {
     RegisterBodyDTO
 } from '@/modules/auth/dto/request';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
+import { UserSessionService } from '@/modules/user-session/user-session.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
 import { generateLinkWithType } from '@/utils/generateLink.utils';
@@ -19,17 +20,18 @@ export class AuthService {
     constructor(private readonly authRepository: AuthRepository,
         private readonly jwtService: JwtService,
         private readonly verificationCodeService: VerificationCodeService,
-        private readonly loginAttemptService: LoginAttemptService
+        private readonly loginAttemptService: LoginAttemptService,
+        private readonly userSessionService: UserSessionService
     ) {
     }
     async register(body: RegisterBodyDTO, userAgent: string, ip: string) {
         if (body.password !== body.confirm_password) {
-            throw new BadRequestException('Mật khẩu xác nhận không khớp');
+            throw new BadRequestException(RegisterMessage.PASSWORD_CONFIRM_MISMATCH);
         }
 
         const existsEmail = await this.authRepository.existsEmail(body.email);
         if (existsEmail) {
-            throw new ConflictException('Email đã tồn tại');
+            throw new ConflictException(RegisterMessage.EMAIL_EXISTS);
         }
 
         const passwordHash = await bcrypt.hash(body.password, 10);
@@ -41,18 +43,25 @@ export class AuthService {
             lastName: body.lastName
         });
 
-        await this.loginAttemptService.createLoginAttempt({
-            userId: user.id,
-            ip,
-            userAgent,
-            success: true,
-        });
-
         const signature = this.signTokenPair({
             sub: user.id.toString(),
             isEmailVerified: user.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
+
+        await Promise.all([
+            this.loginAttemptService.createLoginAttempt({
+                userId: user.id,
+                ip,
+                userAgent,
+                success: true,
+            }),
+            this.userSessionService.createSession({
+                userId: user.id,
+                refreshToken: signature.refreshToken,
+                userAgent,
+            })
+        ])
 
         const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
         const { codeHash, expiresAt } = await this.signVerifyCode(token)
@@ -92,9 +101,9 @@ export class AuthService {
                 ip,
                 userAgent,
                 success: false,
-                failureReason: 'Đăng nhập vào tài khoản không tồn tại',
+                failureReason: LoginMessage.LOGIN_FAILED,
             });
-            throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
+            throw new UnauthorizedException(LoginMessage.LOGIN_FAILED);
         }
         const isPassword = await bcrypt.compare(body.password, user.password)
         if (!isPassword) {
@@ -103,20 +112,12 @@ export class AuthService {
                 ip,
                 userAgent,
                 success: false,
-                failureReason: 'Đăng nhập sai tài khoản hoặc mật khẩu',
+                failureReason: LoginMessage.LOGIN_FAILED,
             });
-            throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
+            throw new UnauthorizedException(LoginMessage.LOGIN_FAILED);
         }
-        // TODO: verify credentials
         // TODO: issue access/refresh tokens
         // TODO: persist session/device with userAgent + ip
-
-        await this.loginAttemptService.createLoginAttempt({
-            userId: user.id,
-            ip,
-            userAgent,
-            success: true,
-        });
 
         const { password, ...safeUser } = user;
         const signature = this.signTokenPair({
@@ -124,6 +125,21 @@ export class AuthService {
             isEmailVerified: safeUser.isEmailVerified,
             roles: [RoleCode.GUEST]
         });
+
+        await Promise.all([
+            this.loginAttemptService.createLoginAttempt({
+                userId: user.id,
+                ip,
+                userAgent,
+                success: true,
+            }),
+            this.userSessionService.createSession({
+                userId: safeUser.id,
+                refreshToken: signature.refreshToken,
+                userAgent,
+            })
+        ])
+
         return { user: safeUser, ...signature }
     }
 

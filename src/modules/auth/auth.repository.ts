@@ -1,7 +1,7 @@
 import { PrismaService } from '@/database';
 import { AuthMe, AuthMeWithPassword, authUserSelect, authUserSelectPassword } from '@/database/selects/auth.select';
 import { Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { Prisma, User, UserSession } from '@prisma/client';
 
 @Injectable()
 export class AuthRepository {
@@ -65,5 +65,9 @@ export class AuthRepository {
             where: { id: userId },
             data,
         });
+    }
+
+    createUserSession(data: Prisma.UserSessionUncheckedCreateInput): Promise<UserSession> {
+        return this.prisma.userSession.create({ data });
     }
 }

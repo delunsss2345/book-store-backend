@@ -1,2 +1,2 @@
-export class VerifyEmailBodyDTO {
+export class VerifyEmailRequestDto {
 }

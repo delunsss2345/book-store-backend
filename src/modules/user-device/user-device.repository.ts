@@ -69,7 +69,7 @@ export class UserDeviceRepository {
                 revokedAt: true,
                 sessions: {
                     orderBy: { createdAt: 'desc' },
-                    take: 1,
+                    take: 3,
                     select: {
                         id: true,
                         createdAt: true,

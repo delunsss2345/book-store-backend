@@ -4,6 +4,7 @@ import { HttpExceptionFilter } from '@common/filters';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import 'dotenv/config';
 import "../polyfill";
 import { AppModule } from './app.module';
@@ -19,6 +20,7 @@ async function bootstrap() {
     whitelist: true,
     transform: true,
   }));
+  app.use(cookieParser());
   const config = new DocumentBuilder()
     .setTitle('Book Store Api')
     .setVersion('1.0')

@@ -1,5 +1,5 @@
 import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
-import { RegisterVerificationDto } from '@/modules/verification-code/dto/register-verification.dto';
+import { RegisterVerificationRequestDto } from '@/modules/verification-code/dto/request/register-verification.request.dto';
 import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
 import { Injectable } from '@nestjs/common';
 import { VerificationRepository } from './verification-code.repository';
@@ -10,7 +10,7 @@ export class VerificationCodeService {
         private readonly emailOutboxService: EmailOutboxService,
     ) { }
 
-    async createRegisterVerification(params: RegisterVerificationDto) {
+    async createRegisterVerification(params: RegisterVerificationRequestDto) {
         const { email, fullName, verifyUrl, userId, expiresAt, codeHash, token } = params;
         const { record } = await this.verificationRepository.createVerifyCationCode({
             userId,

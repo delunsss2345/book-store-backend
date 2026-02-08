@@ -1,17 +1,27 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsDate, IsEmail, IsNotEmpty, IsNumber, IsString } from "class-validator";
 
-export class VerificationCodeDto {
+export class RegisterVerificationRequestDto {
     @ApiProperty()
-    @IsNotEmpty()
     @IsNumber()
+    @IsNotEmpty()
     userId: bigint;
 
     @ApiProperty()
-    @IsNotEmpty()
     @IsEmail()
     @IsString()
+    @IsNotEmpty()
     email: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    fullName: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    verifyUrl: string
 
     @ApiProperty()
     @IsNotEmpty()
@@ -23,4 +33,8 @@ export class VerificationCodeDto {
     @IsDate()
     expiresAt: Date;
 
+    @ApiProperty()
+    @IsNotEmpty()
+    @IsString()
+    token: string
 }

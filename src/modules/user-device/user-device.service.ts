@@ -1,3 +1,4 @@
+import { CreateUserDeviceRequestDto } from '@/modules/user-device/dto/request/create-user-device.request.dto';
 import { parseUserAgent } from '@/utils/parseUserAgent.utils';
 import { Injectable } from '@nestjs/common';
 import { UserDevice } from '@prisma/client';
@@ -9,11 +10,7 @@ const MAX_DEVICES = 4;
 export class UserDeviceService {
     constructor(private readonly userDeviceRepository: UserDeviceRepository) { }
 
-    async upsertDeviceOnLogin(params: {
-        userId: bigint;
-        deviceFingerprint: string;
-        userAgent?: string | null;
-    }): Promise<UserDevice> {
+    async upsertDeviceOnLogin(params: CreateUserDeviceRequestDto): Promise<UserDevice> {
         const now = new Date();
         const { deviceName, osVersion, appVersion, platform } = parseUserAgent(params.userAgent);
 
@@ -63,7 +60,6 @@ export class UserDeviceService {
     }
 
     listDevices(userId: bigint) {
-        console.log(userId);
         return this.userDeviceRepository.findManyByUserId(userId);
     }
 }

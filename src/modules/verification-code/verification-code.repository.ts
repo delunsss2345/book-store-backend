@@ -1,5 +1,5 @@
 import { PrismaService } from "@/database";
-import { VerificationCodeDto } from "@/modules/verification-code/dto/create-verify-code.dto";
+import { CreateVerifyCodeRequestDto } from "@/modules/verification-code/dto/request/create-verify-code.request.dto";
 import { Injectable } from "@nestjs/common";
 import { VerificationType } from "@prisma/client";
 
@@ -7,7 +7,7 @@ import { VerificationType } from "@prisma/client";
 export class VerificationRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async createVerifyCationCode(params: VerificationCodeDto) {
+    async createVerifyCationCode(params: CreateVerifyCodeRequestDto) {
         const { userId, email, codeHash, expiresAt } = params;
         const record = await this.prisma.verificationCode.create({
             data: {

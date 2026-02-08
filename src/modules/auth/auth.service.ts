@@ -2,9 +2,8 @@ import { LoginMessage, RegisterMessage, VerifyCodePath } from '@/common/';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
-    LoginBodyDTO,
-    LogoutBodyDTO,
-    RegisterBodyDTO
+    LoginRequestDto,
+    RegisterRequestDto
 } from '@/modules/auth/dto/request';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
 import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
@@ -36,8 +35,8 @@ export class AuthService {
         return this.authRepository.findUserById(id);
     }
 
-    async register(body: RegisterBodyDTO, userAgent: string, ip: string) {
-        if (body.password !== body.confirm_password) {
+    async register(body: RegisterRequestDto, userAgent: string, ip: string) {
+        if (body.password !== body.confirmPassword) {
             throw new BadRequestException(RegisterMessage.PASSWORD_CONFIRM_MISMATCH);
         }
 
@@ -106,7 +105,7 @@ export class AuthService {
         return { codeHash, expiresAt };
     }
 
-    async login(body: LoginBodyDTO, userAgent: string, ip: string) {
+    async login(body: LoginRequestDto, userAgent: string, ip: string) {
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
             await this.loginAttemptService.createLoginAttempt({
@@ -182,40 +181,43 @@ export class AuthService {
         return { user, ...signature };
     }
 
-    async logout(body: LogoutBodyDTO) {
-        const { accessToken, refreshToken } = body;
-        let payload: { exp?: number } | null = null;
+    async logout(body: { refreshToken: string; accessToken: string }) {
+        const { refreshToken, accessToken } = body
+
+        let payload: { exp?: number } | null = null
         try {
-            payload = await this.jwtService.verifyAsync(accessToken, { ignoreExpiration: true });
+            payload = await this.jwtService.verifyAsync(accessToken, { ignoreExpiration: true })
         } catch {
-            throw new UnauthorizedException();
+            throw new UnauthorizedException()
         }
 
         if (!payload?.exp || typeof payload.exp !== 'number') {
-            throw new UnauthorizedException();
+            throw new UnauthorizedException()
         }
 
-        const expiresAt = new Date(payload.exp * 1000);
-        const accessTokenHash = await tokenHash(accessToken);
+        const expiresAt = new Date(payload.exp * 1000)
+        const accessTokenHash = await tokenHash(accessToken)
+
         await Promise.all([
             this.revokedTokenService.revokeToken(accessTokenHash, expiresAt),
-            this.userSessionService.revokeSessionByRefreshToken(refreshToken)
+            this.userSessionService.revokeSessionByRefreshToken(refreshToken),
         ])
 
-        return { success: true };
+        return { success: true }
     }
 
-    // forgotPassword(body: ForgotPasswordBodyDTO) {
+
+    // forgotPassword(body: ForgotPasswordRequestDto) {
     //     // TODO: create reset token + send email
     //     return { success: true };
     // }
 
-    // verifyEmail(body: VerifyEmailBodyDTO) {
+    // verifyEmail(body: VerifyEmailRequestDto) {
     //     // TODO: verify token/code + mark email verified
     //     return { success: true };
     // }
 
-    // resendVerifyEmail(body: ResendVerifyEmailBodyDTO) {
+    // resendVerifyEmail(body: ResendVerifyEmailRequestDto) {
     //     // TODO: resend verify email
     //     return { success: true };
     // }

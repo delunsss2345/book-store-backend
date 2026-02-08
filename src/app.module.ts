@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
+import { MailModule } from './modules/mail/mail.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 
 @Module({
   imports: [DatabaseModule, AuthModule,
@@ -13,6 +15,8 @@ import { VerificationCodeModule } from './modules/verification-code/verification
       isGlobal: true, load: [() => CONFIGURATION]
     }),
     VerificationCodeModule,
+    MailModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

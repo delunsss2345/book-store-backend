@@ -5,6 +5,7 @@ import {
     LoginRequestDto,
     RegisterRequestDto
 } from '@/modules/auth/dto/request';
+import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
 import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
 import { UserDeviceService } from '@/modules/user-device/user-device.service';
@@ -27,7 +28,8 @@ export class AuthService {
         private readonly loginAttemptService: LoginAttemptService,
         private readonly userSessionService: UserSessionService,
         private readonly revokedTokenService: RevokedTokenService,
-        private readonly userDeviceService: UserDeviceService
+        private readonly userDeviceService: UserDeviceService,
+        private readonly emailProducer: EmailProducer
     ) {
     }
 
@@ -77,7 +79,7 @@ export class AuthService {
         const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
         const { codeHash, expiresAt } = await this.signVerifyCode(token)
 
-        await this.verificationCodeService.createRegisterVerification({
+        const outBox = await this.verificationCodeService.createRegisterVerification({
             email: user.email,
             verifyUrl: link,
             fullName: user.lastName!.concat(" ", user.firstName!),
@@ -86,7 +88,7 @@ export class AuthService {
             token,
             expiresAt
         })
-
+        await this.emailProducer.enqueueOutboxEmail(outBox.verification.id)
         return { user, ...signature }
     }
 

@@ -1,13 +1,11 @@
 import { CONFIGURATION, TConfiguration } from '@/config';
 import { Module } from '@nestjs/common';
 import { ConfigModule, } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
-import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-import { MailModule } from './modules/mail/mail.module';
 import { JobsModule } from './modules/jobs/jobs.module';
+import { MailModule } from './modules/mail/mail.module';
+import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
 
 @Module({
   imports: [DatabaseModule, AuthModule,
@@ -18,8 +16,6 @@ import { JobsModule } from './modules/jobs/jobs.module';
     MailModule,
     JobsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {
   static CONFIGURATION: TConfiguration = CONFIGURATION;

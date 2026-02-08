@@ -13,9 +13,21 @@ export class EmailOutboxRepository {
             data: {
                 toEmail,
                 templateKey: 'OTP_REGISTER',
-                payload : payload!,
+                payload: payload!,
                 status: EmailStatus.PENDING,
             },
         });
     }
+
+    findByIdEmailPending(id: bigint) {
+        return this.prisma.emailOutbox.findFirst({ where: { id, status: EmailStatus.PENDING } });
+    }
+
+    updateByIdEmailStatus(id: bigint, status: EmailStatus) {
+        return this.prisma.emailOutbox.update({
+            where: { id },
+            data: { status },
+        });
+    }
+
 }

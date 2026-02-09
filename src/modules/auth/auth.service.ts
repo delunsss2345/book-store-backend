@@ -1,7 +1,8 @@
-import { LoginMessage, RegisterMessage } from '@/common/';
+import { ChangePasswordMessage, LoginMessage, RegisterMessage } from '@/common/';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
+    ChangePasswordRequestDto,
     LoginRequestDto,
     RegisterRequestDto,
     ResendVerifyEmailRequestDto,
@@ -11,7 +12,9 @@ import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service'
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
 import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
+import { RoleService } from '@/modules/role/role.service';
 import { UserDeviceService } from '@/modules/user-device/user-device.service';
+import { UserRoleService } from '@/modules/user-role/user-role.service';
 import { UserSessionService } from '@/modules/user-session/user-session.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
@@ -37,7 +40,9 @@ export class AuthService {
         private readonly userSessionService: UserSessionService,
         private readonly revokedTokenService: RevokedTokenService,
         private readonly userDeviceService: UserDeviceService,
-        private readonly emailProducer: EmailProducer
+        private readonly emailProducer: EmailProducer,
+        private readonly userRoleService: UserRoleService,
+        private readonly roleService: RoleService
     ) {
     }
 
@@ -67,10 +72,20 @@ export class AuthService {
         const signature = this.signTokenPair({
             sub: user.id.toString(),
             isEmailVerified: user.isEmailVerified,
-            roles: [RoleCode.GUEST]
+            roles: [RoleCode.CUSTOMER]
         });
 
+
+
+        const role = await this.roleService.findRoleByName('customer');
+
+        if (!role) throw new BadRequestException('Không tạo được tài khoản')
         await Promise.all([
+            this.userRoleService.createUserRole({
+                userId: user.id,
+                roleId: role?.id
+            })
+            ,
             this.loginAttemptService.createLoginAttempt({
                 userId: user.id,
                 ip,
@@ -205,10 +220,13 @@ export class AuthService {
         }
 
         const { password, ...safeUser } = user;
+
+        const roles = await this.userRoleService.getRolesByUserId(user.id);
+
         const signature = this.signTokenPair({
             sub: safeUser.id.toString(),
             isEmailVerified: safeUser.isEmailVerified,
-            roles: [RoleCode.GUEST]
+            roles
         });
 
         const device = await this.userDeviceService.upsertDeviceOnLogin({
@@ -241,12 +259,11 @@ export class AuthService {
 
         const user = await this.authRepository.findUserById(session.userId);
         if (!user) throw new UnauthorizedException();
-
-        // TODO : Dùng GUEST là sai 
+        const roles = await this.userRoleService.getRolesByUserId(user.id);
         const signature = this.signTokenPair({
             sub: user.id.toString(),
             isEmailVerified: user.isEmailVerified,
-            roles: [RoleCode.GUEST]
+            roles
         });
 
         await this.userSessionService.rotateSession({
@@ -281,6 +298,24 @@ export class AuthService {
         ])
 
         return { success: true }
+    }
+
+    async changePassword(userId: bigint, body: ChangePasswordRequestDto) {
+        if (body.newPassword !== body.confirmNewPassword) {
+            throw new BadRequestException(ChangePasswordMessage.NEW_PASSWORD_CONFIRM_MISMATCH);
+        }
+
+        const user = await this.authRepository.findUserPasswordById(userId);
+        if (!user) throw new UnauthorizedException();
+
+        const isPassword = await bcrypt.compare(body.oldPassword, user.password);
+        if (!isPassword) {
+            throw new BadRequestException(ChangePasswordMessage.OLD_PASSWORD_INCORRECT);
+        }
+
+        const passwordHash = await bcrypt.hash(body.newPassword, 10);
+        await this.authRepository.updatePassword(userId, passwordHash);
+        return { success: true };
     }
 
 

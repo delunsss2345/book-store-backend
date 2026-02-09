@@ -1,3 +1,4 @@
+export * from './changePassword.request.dto'
 export * from './forgotPassword.request.dto'
 export * from './login.request.dto'
 export * from './logout.request.dto'

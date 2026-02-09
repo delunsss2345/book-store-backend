@@ -130,6 +130,8 @@ enum RoleCode {
   GUEST 
   ADMIN
   STAFF 
+  CUSTOMER 
+  WAREHOUSE
 }
 
 model User {
@@ -170,7 +172,7 @@ model User {
 model Role {
   id          BigInt  @id @default(autoincrement())
   code        RoleCode  @map("code") @unique
-  name        String  @map("name") @db.VarChar(255)
+  name        String  @map("name") @db.VarChar(255) @unique
   description String?  @db.VarChar(255)
   isActive    Boolean @map("is_active")
 
@@ -347,4 +349,5 @@ model RevokedToken {
 
   createdAt DateTime @default(now()) @map("created_at")
   @@index([expiresAt])
+  @@map("revoked_tokens")
 }

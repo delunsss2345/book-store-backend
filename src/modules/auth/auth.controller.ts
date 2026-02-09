@@ -9,15 +9,17 @@ import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { RefreshGuard } from '@/common/guard/refresh.guard';
 import { AuthService } from '@/modules/auth/auth.service';
 import {
+    ChangePasswordRequestDto,
     LoginRequestDto,
     LogoutRequestDto,
     RegisterRequestDto,
     ResendVerifyEmailRequestDto,
     VerifyEmailRequestDto
 } from '@/modules/auth/dto/request';
+import { ChangePasswordResponseDto } from '@/modules/auth/dto/response/changePassword.response.dto';
 import { LoginResponseDto } from '@/modules/auth/dto/response/login.response.dto';
-import { ResendEmailResponseDto } from '@/modules/auth/dto/response/resendEmail.response.dto';
 import { RegisterResponseDto } from '@/modules/auth/dto/response/register.response.dto';
+import { ResendEmailResponseDto } from '@/modules/auth/dto/response/resendEmail.response.dto';
 import { VerifyEmailResponseDto } from '@/modules/auth/dto/response/verifyEmail.response.dto';
 import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -98,6 +100,13 @@ export class AuthController {
     @ApiOkResponse({ type: ResponseDto<ResendEmailResponseDto> })
     resendEmail(@Body() body: ResendVerifyEmailRequestDto) {
         return this.authService.resendEmail(body);
+    }
+
+    @HttpCode(HttpStatus.OK)
+    @Post('change-password')
+    @ApiOkResponse({ type: ResponseDto<ChangePasswordResponseDto> })
+    changePassword(@GetUser() user: JwtPayload, @Body() body: ChangePasswordRequestDto) {
+        return this.authService.changePassword(BigInt(user.sub), body);
     }
 
     private getDeviceFingerprintCookieOptions(): CookieOptions {

@@ -11,7 +11,13 @@ export enum RegisterMessage {
     RESEND_VERIFY_EMAIL_QUOTA_EXCEEDED = 'Bạn đã gửi lại quá nhiều lần, vui lòng thử lại sau',
 }
 
+export enum ChangePasswordMessage {
+    OLD_PASSWORD_INCORRECT = 'Mật khẩu cũ không đúng',
+    NEW_PASSWORD_CONFIRM_MISMATCH = 'Mật khẩu mới xác nhận không khớp',
+}
+
 export const StatusMessage = {
     LoginMessage,
     RegisterMessage,
+    ChangePasswordMessage,
 } as const;

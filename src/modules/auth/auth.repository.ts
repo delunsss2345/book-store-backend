@@ -20,7 +20,23 @@ export class AuthRepository {
     findUserById(id: bigint): Promise<AuthMe | null> {
         return this.prisma.user.findFirst({
             select: authUserSelect,
-            where: { id }
+            where: { id },
+        });
+    }
+
+    findUserPasswordById(id: bigint): Promise<{ id: bigint; password: string } | null> {
+        return this.prisma.user.findUnique({
+            where: { id },
+            select: { id: true, password: true },
+        });
+    }
+
+    findUserRoleById(id: bigint) {
+        return this.prisma.userRole.findMany({
+            where: { userId: id },
+            select: {
+                role: true
+            }
         });
     }
 

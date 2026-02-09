@@ -31,7 +31,7 @@ export class RefreshGuard implements CanActivate {
         const refreshToken = this.extractRefreshTokenFromBody(request);
         if (!refreshToken) throw new UnauthorizedException();
 
-        const refreshTokenHash = await hashToken(refreshToken);
+        const refreshTokenHash = hashToken(refreshToken);
         const session = await this.userSessionService.findByRefreshTokenHash(refreshTokenHash);
         if (!session) throw new UnauthorizedException();
         if (session.status !== SessionStatus.ACTIVE || session.revokedAt) {

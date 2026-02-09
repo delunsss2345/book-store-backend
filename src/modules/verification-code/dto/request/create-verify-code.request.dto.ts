@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsDate, IsEmail, IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { VerificationType } from "@prisma/client";
+import { IsDate, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 export class CreateVerifyCodeRequestDto {
     @ApiProperty()
@@ -17,5 +18,10 @@ export class CreateVerifyCodeRequestDto {
     @IsNotEmpty()
     @IsDate()
     expiresAt: Date;
+
+    @ApiProperty({ enum: VerificationType })
+    @IsEnum(VerificationType)
+    @IsNotEmpty()
+    type: VerificationType;
 
 }

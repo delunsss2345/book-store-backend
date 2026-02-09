@@ -1,11 +1,14 @@
-import { ChangePasswordMessage, LoginMessage, RegisterMessage } from '@/common/';
+import { ChangePasswordMessage, ForgotPasswordMessage, LoginMessage, RegisterMessage } from '@/common/';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
     ChangePasswordRequestDto,
+    ForgotPasswordRequestDto,
     LoginRequestDto,
     RegisterRequestDto,
     ResendVerifyEmailRequestDto,
+    ResetPasswordRequestDto,
+    ResetPasswordValidateRequestDto,
     VerifyEmailRequestDto
 } from '@/modules/auth/dto/request';
 import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
@@ -290,7 +293,7 @@ export class AuthService {
         }
 
         const expiresAt = new Date(payload.exp * 1000)
-        const accessTokenHash = await tokenHash(accessToken)
+        const accessTokenHash = tokenHash(accessToken)
 
         await Promise.all([
             this.revokedTokenService.revokeToken(accessTokenHash, expiresAt),
@@ -318,10 +321,71 @@ export class AuthService {
         return { success: true };
     }
 
+    async forgotPassword(body: ForgotPasswordRequestDto) {
+        const user = await this.authRepository.findUserByEmail(body.email);
+        if (!user) {
+            return { success: true };
+        }
 
-    // forgotPassword(body: ForgotPasswordRequestDto) {
-    //     // TODO: create reset token + send email
-    //     return { success: true };
-    // }
+        const verificationBundle = await this.verificationCodeService.createForgotPasswordVerification({
+            email: user.email,
+            userId: user.id,
+            expiresAt: this.signVerifyCode(),
+        });
+
+        await this.emailProducer.enqueueOutboxEmail(
+            verificationBundle.outbox.id,
+            verificationBundle.verification.id,
+        );
+
+        return { success: true };
+    }
+
+    async validateResetPasswordToken(body: ResetPasswordValidateRequestDto) {
+        const codeHash = await hashToken(body.token);
+        const verification = await this.verificationCodeService.findActiveForgotByCodeHash(codeHash);
+
+        if (!verification) {
+            return { valid: false };
+        }
+
+        const now = new Date();
+        if (verification.expiresAt.getTime() < now.getTime()) {
+            await this.verificationCodeService.markUsedById(verification.id, now);
+            return { valid: false };
+        }
+
+        return { valid: true };
+    }
+
+    async resetPassword(body: ResetPasswordRequestDto) {
+        if (body.password !== body.password_confirmation) {
+            throw new BadRequestException(ForgotPasswordMessage.RESET_PASSWORD_CONFIRM_MISMATCH);
+        }
+
+        const codeHash = await hashToken(body.token);
+        const verification = await this.verificationCodeService.findActiveForgotByCodeHash(codeHash, body.email);
+
+        if (!verification) {
+            throw new BadRequestException(ForgotPasswordMessage.INVALID_OR_EXPIRED_RESET_TOKEN);
+        }
+
+        const now = new Date();
+        if (verification.expiresAt.getTime() < now.getTime()) {
+            await this.verificationCodeService.markUsedById(verification.id, now);
+            throw new BadRequestException(ForgotPasswordMessage.INVALID_OR_EXPIRED_RESET_TOKEN);
+        }
+
+        const user = await this.authRepository.findUserPasswordByEmail(body.email);
+        if (!user) {
+            throw new BadRequestException(ForgotPasswordMessage.INVALID_OR_EXPIRED_RESET_TOKEN);
+        }
+
+        const passwordHash = await bcrypt.hash(body.password, 10);
+        await this.authRepository.updatePassword(user.id, passwordHash);
+        await this.verificationCodeService.markUsedById(verification.id, now);
+
+        return { success: true };
+    }
 
 }

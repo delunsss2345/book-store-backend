@@ -5,5 +5,7 @@ export * from './logout.request.dto'
 export * from './refreshToken.request.dto'
 export * from './register.request.dto'
 export * from './resendVerifyEmail.request.dto'
+export * from './resetPassword.request.dto'
+export * from './resetPasswordValidate.request.dto'
 export * from './verifyEmail.request.dto'
 

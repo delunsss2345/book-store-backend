@@ -10,16 +10,22 @@ import { RefreshGuard } from '@/common/guard/refresh.guard';
 import { AuthService } from '@/modules/auth/auth.service';
 import {
     ChangePasswordRequestDto,
+    ForgotPasswordRequestDto,
     LoginRequestDto,
     LogoutRequestDto,
     RegisterRequestDto,
     ResendVerifyEmailRequestDto,
+    ResetPasswordRequestDto,
+    ResetPasswordValidateRequestDto,
     VerifyEmailRequestDto
 } from '@/modules/auth/dto/request';
 import { ChangePasswordResponseDto } from '@/modules/auth/dto/response/changePassword.response.dto';
+import { ForgotPasswordResponseDto } from '@/modules/auth/dto/response/forgotPassword.response.dto';
 import { LoginResponseDto } from '@/modules/auth/dto/response/login.response.dto';
 import { RegisterResponseDto } from '@/modules/auth/dto/response/register.response.dto';
 import { ResendEmailResponseDto } from '@/modules/auth/dto/response/resendEmail.response.dto';
+import { ResetPasswordResponseDto } from '@/modules/auth/dto/response/resetPassword.response.dto';
+import { ResetPasswordValidateResponseDto } from '@/modules/auth/dto/response/resetPasswordValidate.response.dto';
 import { VerifyEmailResponseDto } from '@/modules/auth/dto/response/verifyEmail.response.dto';
 import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -83,9 +89,13 @@ export class AuthController {
         return this.authService.logout({ accessToken, ...body });
     }
 
-    // @Post('forgot-password')
-    // forgotPassword(@Body() body: ForgotPasswordRequestDto) {
-    // }
+    @Public()
+    @HttpCode(HttpStatus.OK)
+    @Post('forgot-password')
+    @ApiOkResponse({ type: ResponseDto<ForgotPasswordResponseDto> })
+    forgotPassword(@Body() body: ForgotPasswordRequestDto) {
+        return this.authService.forgotPassword(body);
+    }
 
     @Public()
     @Get('verify-email')
@@ -107,6 +117,22 @@ export class AuthController {
     @ApiOkResponse({ type: ResponseDto<ChangePasswordResponseDto> })
     changePassword(@GetUser() user: JwtPayload, @Body() body: ChangePasswordRequestDto) {
         return this.authService.changePassword(BigInt(user.sub), body);
+    }
+
+    @Public()
+    @HttpCode(HttpStatus.OK)
+    @Post('reset-password/validate')
+    @ApiOkResponse({ type: ResponseDto<ResetPasswordValidateResponseDto> })
+    validateResetPassword(@Body() body: ResetPasswordValidateRequestDto) {
+        return this.authService.validateResetPasswordToken(body);
+    }
+
+    @Public()
+    @HttpCode(HttpStatus.OK)
+    @Post('reset-password')
+    @ApiOkResponse({ type: ResponseDto<ResetPasswordResponseDto> })
+    resetPassword(@Body() body: ResetPasswordRequestDto) {
+        return this.authService.resetPassword(body);
     }
 
     private getDeviceFingerprintCookieOptions(): CookieOptions {

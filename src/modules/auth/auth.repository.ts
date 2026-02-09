@@ -31,6 +31,17 @@ export class AuthRepository {
         });
     }
 
+    findUserPasswordByEmail(email: string): Promise<{ id: bigint; email: string; password: string } | null> {
+        return this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                password: true,
+            },
+        });
+    }
+
     findUserRoleById(id: bigint) {
         return this.prisma.userRole.findMany({
             where: { userId: id },

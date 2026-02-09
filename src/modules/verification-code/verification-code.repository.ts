@@ -8,12 +8,12 @@ export class VerificationRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async createVerifyCationCode(params: CreateVerifyCodeRequestDto) {
-        const { userId, email, expiresAt } = params;
+        const { userId, email, expiresAt, type } = params;
         const record = await this.prisma.verificationCode.create({
             data: {
                 userId,
                 email,
-                type: VerificationType.REGISTER,
+                type,
                 expiresAt,
             },
         });
@@ -35,6 +35,17 @@ export class VerificationRepository {
             where: {
                 type: VerificationType.REGISTER,
                 codeHash,
+                usedAt: null,
+            },
+        });
+    }
+
+    findActiveForgotByCodeHash(codeHash: string, email?: string) {
+        return this.prisma.verificationCode.findFirst({
+            where: {
+                type: VerificationType.FORGOT_PASSWORD,
+                codeHash,
+                email,
                 usedAt: null,
             },
         });

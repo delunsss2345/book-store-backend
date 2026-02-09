@@ -11,6 +11,10 @@ export class EmailOutboxService {
         return this.emailOutboxRepository.createOtpRegisterEmail(params);
     }
 
+    createOutboxForgotPasswordEmail(params: CreateOtpRegisterEmailRequestDto) {
+        return this.emailOutboxRepository.createOtpForgotPasswordEmail(params);
+    }
+
 
     findByIdEmailBox(id: bigint) {
         return this.emailOutboxRepository.findByIdEmailPending(id)

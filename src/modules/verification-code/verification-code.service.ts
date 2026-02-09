@@ -1,6 +1,7 @@
 import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
 import { RegisterVerificationRequestDto } from '@/modules/verification-code/dto/request/register-verification.request.dto';
 import { Injectable } from '@nestjs/common';
+import { VerificationType } from '@prisma/client';
 import { VerificationRepository } from './verification-code.repository';
 @Injectable()
 export class VerificationCodeService {
@@ -14,12 +15,29 @@ export class VerificationCodeService {
         const { record } = await this.verificationRepository.createVerifyCationCode({
             userId,
             email,
-            expiresAt
+            expiresAt,
+            type: VerificationType.REGISTER,
         });
 
 
         const outbox = await this.emailOutboxService.createOutboxRegisterEmail({
             toEmail: email
+        });
+
+        return { verification: record, outbox };
+    }
+
+    async createForgotPasswordVerification(params: RegisterVerificationRequestDto) {
+        const { email, userId, expiresAt } = params;
+        const { record } = await this.verificationRepository.createVerifyCationCode({
+            userId,
+            email,
+            expiresAt,
+            type: VerificationType.FORGOT_PASSWORD,
+        });
+
+        const outbox = await this.emailOutboxService.createOutboxForgotPasswordEmail({
+            toEmail: email,
         });
 
         return { verification: record, outbox };
@@ -31,6 +49,10 @@ export class VerificationCodeService {
 
     findActiveRegisterByCodeHash(codeHash: string) {
         return this.verificationRepository.findActiveRegisterByCodeHash(codeHash);
+    }
+
+    findActiveForgotByCodeHash(codeHash: string, email?: string) {
+        return this.verificationRepository.findActiveForgotByCodeHash(codeHash, email);
     }
 
     markUsedById(id: bigint, usedAt: Date) {

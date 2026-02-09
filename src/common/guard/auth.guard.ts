@@ -40,7 +40,7 @@ export class AuthGuard implements CanActivate {
         if (!token) throw new UnauthorizedException();
         try {
             const payload = await this.jwtService.verifyAsync(token);
-            const hashedToken = await tokenHash(token);
+            const hashedToken = tokenHash(token);
 
             // check xem accessToken đã bị revoked ch
             const isRevoked = await this.revokedTokenService.isRevoked(hashedToken);

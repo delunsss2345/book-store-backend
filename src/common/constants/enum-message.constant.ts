@@ -16,8 +16,14 @@ export enum ChangePasswordMessage {
     NEW_PASSWORD_CONFIRM_MISMATCH = 'Mật khẩu mới xác nhận không khớp',
 }
 
+export enum ForgotPasswordMessage {
+    INVALID_OR_EXPIRED_RESET_TOKEN = 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
+    RESET_PASSWORD_CONFIRM_MISMATCH = 'Mật khẩu xác nhận không khớp',
+}
+
 export const StatusMessage = {
     LoginMessage,
     RegisterMessage,
     ChangePasswordMessage,
+    ForgotPasswordMessage,
 } as const;

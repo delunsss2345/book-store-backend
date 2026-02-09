@@ -3,7 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { EmailStatus } from '@prisma/client';
 import { CreateOtpRegisterEmailRequestDto } from './dto/request/create-otp-register-email.request.dto';
 
-const OTP_REGISTER_TEMPLATE_KEY = 'OTP_REGISTER';
+export const OTP_REGISTER_TEMPLATE_KEY = 'OTP_REGISTER';
+export const OTP_FORGOT_PASSWORD_TEMPLATE_KEY = 'OTP_FORGOT_PASSWORD';
 
 @Injectable()
 export class EmailOutboxRepository {
@@ -15,6 +16,17 @@ export class EmailOutboxRepository {
             data: {
                 toEmail,
                 templateKey: OTP_REGISTER_TEMPLATE_KEY,
+                status: EmailStatus.PENDING,
+            },
+        });
+    }
+
+    createOtpForgotPasswordEmail(params: CreateOtpRegisterEmailRequestDto) {
+        const { toEmail } = params;
+        return this.prisma.emailOutbox.create({
+            data: {
+                toEmail,
+                templateKey: OTP_FORGOT_PASSWORD_TEMPLATE_KEY,
                 status: EmailStatus.PENDING,
             },
         });

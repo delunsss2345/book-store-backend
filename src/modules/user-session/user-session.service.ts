@@ -20,7 +20,7 @@ export class UserSessionService {
         if (params.deviceId) {
             console.log(params.deviceId);
         }
-        const refreshTokenHash = await hashToken(params.refreshToken);
+        const refreshTokenHash = hashToken(params.refreshToken);
         const expiresAt = this.getRefreshTokenExpiresAt();
 
         return this.userSessionRepository.createUserSession({
@@ -41,7 +41,7 @@ export class UserSessionService {
         refreshToken: string;
         userAgent?: string | null;
     }) {
-        const refreshTokenHash = await hashToken(params.refreshToken);
+        const refreshTokenHash = hashToken(params.refreshToken);
         const expiresAt = this.getRefreshTokenExpiresAt();
         return this.userSessionRepository.updateUserSession(params.sessionId, {
             refreshTokenHash,
@@ -60,7 +60,7 @@ export class UserSessionService {
     }
 
     async revokeSessionByRefreshToken(refreshToken: string) {
-        const refreshTokenHash = await hashToken(refreshToken);
+        const refreshTokenHash = hashToken(refreshToken);
         const session = await this.userSessionRepository.findByRefreshTokenHash(refreshTokenHash);
         if (!session) return null;
         return this.userSessionRepository.updateUserSession(session.id, {

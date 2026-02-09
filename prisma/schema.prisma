@@ -46,6 +46,7 @@ enum VerificationType {
   REGISTER
   FORGOT_PASSWORD
   CHANGE_EMAIL
+  CHANGE_PASSWORD
 }
 
 enum BookFormat {

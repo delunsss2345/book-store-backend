@@ -10,4 +10,4 @@ COPY . .
 RUN DATABASE_URL="mysql://root:root@localhost:3306/nest_auth" npx prisma generate && npm run build
 
 EXPOSE 3300
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main.js"]

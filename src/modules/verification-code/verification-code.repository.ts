@@ -57,7 +57,7 @@ export class VerificationRepository {
             data: { usedAt },
         });
     }
-
+    // Đánh dấu đã bị dùng
     markAllRegisterUnusedByEmail(email: string, usedAt: Date) {
         return this.prisma.verificationCode.updateMany({
             where: {

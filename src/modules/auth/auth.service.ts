@@ -78,8 +78,6 @@ export class AuthService {
             roles: [RoleCode.CUSTOMER]
         });
 
-
-
         const role = await this.roleService.findRoleByName('customer');
 
         if (!role) throw new BadRequestException('Không tạo được tài khoản')
@@ -109,10 +107,12 @@ export class AuthService {
             userId: user.id,
             expiresAt
         })
+        // Add queue
         await this.emailProducer.enqueueOutboxEmail(
             verificationBundle.outbox.id,
             verificationBundle.verification.id,
         );
+
         return { user, ...signature }
     }
 
@@ -132,7 +132,7 @@ export class AuthService {
 
     async verifyEmail(params: VerifyEmailRequestDto) {
         const { token } = params;
-        const codeHash = await hashToken(token);
+        const codeHash = hashToken(token);
         const verification = await this.verificationCodeService.findActiveRegisterByCodeHash(codeHash);
 
         if (!verification) {
@@ -141,56 +141,68 @@ export class AuthService {
 
         const now = new Date();
         if (verification.expiresAt.getTime() < now.getTime()) {
+            // Đánh dẫu đã dùng
             await this.verificationCodeService.markUsedById(verification.id, now);
             throw new BadRequestException(RegisterMessage.INVALID_OR_EXPIRED_VERIFY_TOKEN);
         }
-
+        // Verify thành công cũng đánh dấu
         await this.verificationCodeService.markUsedById(verification.id, now);
 
+        // Nếu không có userId thì có thể do người dùng bị xoá 
         if (!verification.userId) {
             throw new BadRequestException(RegisterMessage.INVALID_OR_EXPIRED_VERIFY_TOKEN);
         }
 
+        // Đánh dấu tài khoản đã verify 
         await this.authRepository.markEmailVerified(verification.userId);
         return { success: true };
     }
 
     async resendEmail(params: ResendVerifyEmailRequestDto) {
         const { email } = params;
+
         const user = await this.authRepository.findUserByEmail(email);
         if (!user || user.isEmailVerified) {
             return { success: true };
         }
 
+        //  thời gian trong ngày 
         const since = new Date(Date.now() - ONE_DAY_IN_MS);
+        // Check số lượng email đã gửi trong khoảng thời gian 1 ngày 
         const [countRecentOtp, latestRecentOtp] = await Promise.all([
             this.emailOutboxService.countOtpRegisterByEmailSince(email, since),
             this.emailOutboxService.findLatestOtpRegisterByEmailSince(email, since),
         ]);
 
+        // Nếu số lượng đã gửi lớn >= 5 và lần gửi otp gần nhất nhiều + khoảng cách lần cuối cùng gửi quá gần 5 giờ thì chặn
         if (
             countRecentOtp >= RESEND_MAX_ATTEMPTS_PER_DAY &&
             latestRecentOtp &&
             latestRecentOtp.createdAt.getTime() + RESEND_BLOCK_WINDOW_IN_MS > Date.now()
         ) {
+            // Chặn resend-email
             throw new HttpException(
                 RegisterMessage.RESEND_VERIFY_EMAIL_QUOTA_EXCEEDED,
                 HttpStatus.TOO_MANY_REQUESTS,
             );
         }
 
+
         const now = new Date();
         await Promise.all([
-            this.verificationCodeService.markAllRegisterUnusedByEmail(email, now),
+            this.verificationCodeService.markAllRegisterUnusedByEmail(email, now), // ??
             this.emailOutboxService.cancelOtpRegisterInProgressByEmail(email),
         ]);
 
+        // Đăng kí tạo mới
         const verificationBundle = await this.verificationCodeService.createRegisterVerification({
             email: user.email,
             userId: user.id,
             expiresAt: this.signVerifyCode(),
         });
 
+
+        // thêm ngăn xếp 
         await this.emailProducer.enqueueOutboxEmail(
             verificationBundle.outbox.id,
             verificationBundle.verification.id,
@@ -342,7 +354,7 @@ export class AuthService {
     }
 
     async validateResetPasswordToken(body: ResetPasswordValidateRequestDto) {
-        const codeHash = await hashToken(body.token);
+        const codeHash = hashToken(body.token);
         const verification = await this.verificationCodeService.findActiveForgotByCodeHash(codeHash);
 
         if (!verification) {
@@ -363,7 +375,7 @@ export class AuthService {
             throw new BadRequestException(ForgotPasswordMessage.RESET_PASSWORD_CONFIRM_MISMATCH);
         }
 
-        const codeHash = await hashToken(body.token);
+        const codeHash = hashToken(body.token);
         const verification = await this.verificationCodeService.findActiveForgotByCodeHash(codeHash, body.email);
 
         if (!verification) {

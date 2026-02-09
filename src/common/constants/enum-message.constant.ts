@@ -7,6 +7,8 @@ export enum RegisterMessage {
     PASSWORD_CONFIRM_MISMATCH = 'Mật khẩu xác nhận không khớp',
     EMAIL_EXISTS = 'Email đã tồn tại',
     REGISTER_SUCCESS = 'Đăng ký thành công',
+    INVALID_OR_EXPIRED_VERIFY_TOKEN = 'Token xác thực không hợp lệ hoặc đã hết hạn',
+    RESEND_VERIFY_EMAIL_QUOTA_EXCEEDED = 'Bạn đã gửi lại quá nhiều lần, vui lòng thử lại sau',
 }
 
 export const StatusMessage = {

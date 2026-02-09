@@ -25,7 +25,6 @@ export class EmailProcessor extends WorkerHost {
 
             if (!outBox) return;
             const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
-            console.log(link);
             const codeHash = await hashToken(token);
             await this.verificationCodeService.updateCodeHash(BigInt(outBox.id), codeHash)
 

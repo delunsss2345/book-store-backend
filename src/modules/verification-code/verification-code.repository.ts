@@ -30,4 +30,31 @@ export class VerificationRepository {
         return { record };
     }
 
+    findActiveRegisterByCodeHash(codeHash: string) {
+        return this.prisma.verificationCode.findFirst({
+            where: {
+                type: VerificationType.REGISTER,
+                codeHash,
+                usedAt: null,
+            },
+        });
+    }
+
+    markUsedById(id: bigint, usedAt: Date) {
+        return this.prisma.verificationCode.update({
+            where: { id },
+            data: { usedAt },
+        });
+    }
+
+    markAllRegisterUnusedByEmail(email: string, usedAt: Date) {
+        return this.prisma.verificationCode.updateMany({
+            where: {
+                email,
+                type: VerificationType.REGISTER,
+                usedAt: null,
+            },
+            data: { usedAt },
+        });
+    }
 }

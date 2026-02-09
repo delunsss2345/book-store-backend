@@ -18,27 +18,26 @@ export class VerificationCodeService {
         });
 
 
-        await this.emailOutboxService.createOutboxRegisterEmail({
+        const outbox = await this.emailOutboxService.createOutboxRegisterEmail({
             toEmail: email
         });
 
-        return { verification: record };
+        return { verification: record, outbox };
     }
 
     updateCodeHash(id: bigint, codeHash: string) {
         return this.verificationRepository.updateCodeHash(id, codeHash)
     }
 
+    findActiveRegisterByCodeHash(codeHash: string) {
+        return this.verificationRepository.findActiveRegisterByCodeHash(codeHash);
+    }
 
-    // Có vấn đề chưa nghĩa ra
-    private resolveVerifyUrl(verifyUrl: string, token: string) {
-        const placeholders = ['***', '{{token}}', ':token'];
-        for (const placeholder of placeholders) {
-            if (verifyUrl.includes(placeholder)) {
-                return verifyUrl.replace(placeholder, encodeURIComponent(token));
-            }
-        }
-        const separator = verifyUrl.includes('?') ? '&' : '?';
-        return `${verifyUrl}${separator}token=${encodeURIComponent(token)}`;
+    markUsedById(id: bigint, usedAt: Date) {
+        return this.verificationRepository.markUsedById(id, usedAt);
+    }
+
+    markAllRegisterUnusedByEmail(email: string, usedAt: Date) {
+        return this.verificationRepository.markAllRegisterUnusedByEmail(email, usedAt);
     }
 }

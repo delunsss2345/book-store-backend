@@ -11,11 +11,15 @@ import { AuthService } from '@/modules/auth/auth.service';
 import {
     LoginRequestDto,
     LogoutRequestDto,
-    RegisterRequestDto
+    RegisterRequestDto,
+    ResendVerifyEmailRequestDto,
+    VerifyEmailRequestDto
 } from '@/modules/auth/dto/request';
 import { LoginResponseDto } from '@/modules/auth/dto/response/login.response.dto';
+import { ResendEmailResponseDto } from '@/modules/auth/dto/response/resendEmail.response.dto';
 import { RegisterResponseDto } from '@/modules/auth/dto/response/register.response.dto';
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { VerifyEmailResponseDto } from '@/modules/auth/dto/response/verifyEmail.response.dto';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse } from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
@@ -81,13 +85,21 @@ export class AuthController {
     // forgotPassword(@Body() body: ForgotPasswordRequestDto) {
     // }
 
-    // @Post('verify-email')
-    // verifyEmail(@Body() body: VerifyEmailRequestDto) {
-    // }
+    @Public()
+    @Get('verify-email')
+    @ApiOkResponse({ type: ResponseDto<VerifyEmailResponseDto> })
+    verifyEmail(@Query() query: VerifyEmailRequestDto) {
+        return this.authService.verifyEmail(query);
+    }
 
-    // @Post('resend-verify-email')
-    // resendVerifyEmail(@Body() body: ResendVerifyEmailRequestDto) {
-    // }
+    @Public()
+    @HttpCode(HttpStatus.OK)
+    @Post('resend-email')
+    @ApiOkResponse({ type: ResponseDto<ResendEmailResponseDto> })
+    resendEmail(@Body() body: ResendVerifyEmailRequestDto) {
+        return this.authService.resendEmail(body);
+    }
+
     private getDeviceFingerprintCookieOptions(): CookieOptions {
         const isDev = !!this.configService.get('IS_DEV');
         const refreshTokenSeconds = Number(this.configService.get('REFRESH_TOKEN_TIME'));

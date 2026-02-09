@@ -20,4 +20,16 @@ export class EmailOutboxService {
     markSending(id: bigint, status: EmailStatus) {
         return this.emailOutboxRepository.updateByIdEmailStatus(id, status)
     }
+
+    countOtpRegisterByEmailSince(email: string, since: Date) {
+        return this.emailOutboxRepository.countOtpRegisterByEmailSince(email, since);
+    }
+
+    findLatestOtpRegisterByEmailSince(email: string, since: Date) {
+        return this.emailOutboxRepository.findLatestOtpRegisterByEmailSince(email, since);
+    }
+
+    cancelOtpRegisterInProgressByEmail(email: string) {
+        return this.emailOutboxRepository.cancelOtpRegisterInProgressByEmail(email);
+    }
 }

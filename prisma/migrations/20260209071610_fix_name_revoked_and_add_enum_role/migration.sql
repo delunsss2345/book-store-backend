@@ -8,7 +8,8 @@
 ALTER TABLE `roles` MODIFY `code` ENUM('GUEST', 'ADMIN', 'STAFF', 'CUSTOMER', 'WAREHOUSE') NOT NULL;
 
 -- DropTable
-DROP TABLE `revokedtoken`;
+DROP TABLE IF EXISTS `revokedtoken`;
+DROP TABLE IF EXISTS `RevokedToken`;
 
 -- CreateTable
 CREATE TABLE `revoked_tokens` (

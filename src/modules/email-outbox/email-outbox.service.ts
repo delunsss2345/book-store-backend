@@ -7,9 +7,10 @@ import { EmailOutboxRepository } from './email-outbox.repository';
 export class EmailOutboxService {
     constructor(private readonly emailOutboxRepository: EmailOutboxRepository) { }
 
-    createOtpRegisterEmail(params: CreateOtpRegisterEmailRequestDto) {
+    createOutboxRegisterEmail(params: CreateOtpRegisterEmailRequestDto) {
         return this.emailOutboxRepository.createOtpRegisterEmail(params);
     }
+
 
     findByIdEmailBox(id: bigint) {
         return this.emailOutboxRepository.findByIdEmailPending(id)

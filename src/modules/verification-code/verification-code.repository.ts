@@ -8,17 +8,26 @@ export class VerificationRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     async createVerifyCationCode(params: CreateVerifyCodeRequestDto) {
-        const { userId, email, codeHash, expiresAt } = params;
+        const { userId, email, expiresAt } = params;
         const record = await this.prisma.verificationCode.create({
             data: {
                 userId,
                 email,
                 type: VerificationType.REGISTER,
-                codeHash,
                 expiresAt,
             },
         });
 
         return { record };
     }
+
+    async updateCodeHash(id: bigint, codeHash: string) {
+        const record = await this.prisma.verificationCode.update({
+            where: { id },
+            data: { codeHash },
+        });
+
+        return { record };
+    }
+
 }

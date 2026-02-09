@@ -15,11 +15,6 @@ export class CreateVerifyCodeRequestDto {
 
     @ApiProperty()
     @IsNotEmpty()
-    @IsString()
-    codeHash: string;
-
-    @ApiProperty()
-    @IsNotEmpty()
     @IsDate()
     expiresAt: Date;
 

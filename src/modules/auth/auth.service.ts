@@ -1,4 +1,4 @@
-import { LoginMessage, RegisterMessage, VerifyCodePath } from '@/common/';
+import { LoginMessage, RegisterMessage } from '@/common/';
 import { JwtPayload } from '@/common/dto/jwt.dto';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import {
@@ -12,7 +12,6 @@ import { UserDeviceService } from '@/modules/user-device/user-device.service';
 import { UserSessionService } from '@/modules/user-session/user-session.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
-import { generateLinkWithType } from '@/utils/generateLink.utils';
 import { tokenHash } from '@/utils/hashToken.utils';
 import { randomKey } from '@/utils/randomKey.utils';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
@@ -76,16 +75,11 @@ export class AuthService {
             })
         ])
 
-        const { link, token } = generateLinkWithType({ path: VerifyCodePath.VERIFY_EMAIL })
-        const { codeHash, expiresAt } = await this.signVerifyCode(token)
+        const expiresAt = this.signVerifyCode();
 
         const outBox = await this.verificationCodeService.createRegisterVerification({
             email: user.email,
-            verifyUrl: link,
-            fullName: user.lastName!.concat(" ", user.firstName!),
             userId: user.id,
-            codeHash,
-            token,
             expiresAt
         })
         await this.emailProducer.enqueueOutboxEmail(outBox.verification.id)
@@ -101,10 +95,9 @@ export class AuthService {
         }
     }
 
-    async signVerifyCode(token: string) {
-        const codeHash = await bcrypt.hash(token, 10);
+    signVerifyCode() {
         const expiresAt = new Date(Date.now() + OTP_TIME_SECONDS * 1000);
-        return { codeHash, expiresAt };
+        return expiresAt;
     }
 
     async login(body: LoginRequestDto, userAgent: string, ip: string) {

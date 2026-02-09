@@ -13,28 +13,9 @@ export class RegisterVerificationRequestDto {
     @IsNotEmpty()
     email: string;
 
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    fullName: string;
-
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    verifyUrl: string
-
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    codeHash: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @IsDate()
     expiresAt: Date;
-
-    @ApiProperty()
-    @IsNotEmpty()
-    @IsString()
-    token: string
 }

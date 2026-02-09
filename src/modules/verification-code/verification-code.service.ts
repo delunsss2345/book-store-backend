@@ -1,6 +1,5 @@
 import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
 import { RegisterVerificationRequestDto } from '@/modules/verification-code/dto/request/register-verification.request.dto';
-import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
 import { Injectable } from '@nestjs/common';
 import { VerificationRepository } from './verification-code.repository';
 @Injectable()
@@ -11,29 +10,25 @@ export class VerificationCodeService {
     ) { }
 
     async createRegisterVerification(params: RegisterVerificationRequestDto) {
-        const { email, fullName, verifyUrl, userId, expiresAt, codeHash, token } = params;
+        const { email, userId, expiresAt } = params;
         const { record } = await this.verificationRepository.createVerifyCationCode({
             userId,
             email,
-            expiresAt,
-            codeHash
+            expiresAt
         });
 
-        const resolvedUrl = this.resolveVerifyUrl(verifyUrl, token);
 
-        const payload = {
-            full_name: fullName ?? '',
-            verify_url: resolvedUrl,
-            expires_minutes: OTP_EXPIRES_MINUTES,
-        };
-
-        await this.emailOutboxService.createOtpRegisterEmail({
-            toEmail: email,
-            payload,
+        await this.emailOutboxService.createOutboxRegisterEmail({
+            toEmail: email
         });
 
-        return { token, verification: record };
+        return { verification: record };
     }
+
+    updateCodeHash(id: bigint, codeHash: string) {
+        return this.verificationRepository.updateCodeHash(id, codeHash)
+    }
+
 
     // Có vấn đề chưa nghĩa ra
     private resolveVerifyUrl(verifyUrl: string, token: string) {

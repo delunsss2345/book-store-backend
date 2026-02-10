@@ -6,6 +6,7 @@ import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './modules/mail/mail.module';
+import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
 
@@ -17,6 +18,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     VerificationCodeModule,
     MailModule,
     JobsModule,
+    PermissionModule,
     RoleModule,
     HealthModule
   ],

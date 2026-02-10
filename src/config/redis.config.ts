@@ -1,7 +1,9 @@
+import KeyvRedis, { Keyv } from '@keyv/redis';
 import { BullModule } from '@nestjs/bullmq';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheableMemory } from 'cacheable';
 import { IsNotEmpty, IsNumber, IsString, validateSync } from 'class-validator';
-
 
 export class RedisConfiguration {
     @IsNumber()
@@ -46,7 +48,7 @@ export const RedisProvider = BullModule.forRootAsync({
 
         if (!host || !Number.isFinite(port)) {
             throw new Error('Invalid Redis config (REDIS_HOST/REDIS_PORT)');
-        }   
+        }
 
         return {
             connection: {
@@ -58,7 +60,24 @@ export const RedisProvider = BullModule.forRootAsync({
         };
     },
 });
+export const CacheProvider = CacheModule.registerAsync({
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => {
+        const host = config.get<string>('REDIS_HOST');
+        const port = Number(config.get<number | string>('REDIS_PORT'));
+        const password = config.get<string>('REDIS_PASSWORD') || undefined;
 
+        return {
+            stores: [
+                new Keyv({
+                    store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
+                }),
+                new KeyvRedis(`redis://default:${password}@${host}:${port}`),
+            ],
+        };
+    }
+})
 export const EmailQueueProvider = BullModule.registerQueue({
     name: 'email',
 });

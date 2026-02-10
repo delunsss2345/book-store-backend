@@ -3,16 +3,11 @@ services:
     image: mysql:8.4
     restart: always
     env_file:
-      - .env
+      - .env.prod
     volumes:
       - ./docker/mysql_data:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - '3307:3306'
+      - '3306:3306'
 
     healthcheck:
       test:
@@ -23,16 +18,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - '8080:8080'
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   ports:
+  #     - '8080:8080'
   redis:
     image: redis:7-alpine
     restart: always
     env_file:
-      - .env
+      - .env.prod
     command: ['sh', '-c', 'redis-server --requirepass "$${REDIS_PASSWORD}"']
     ports:
       - '6379:6379'
@@ -44,7 +39,7 @@ services:
       context: .
     restart: always
     env_file:
-      - .env
+      - .env.prod
     depends_on:
       mysql:
         condition: service_healthy

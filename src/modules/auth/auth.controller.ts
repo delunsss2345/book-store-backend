@@ -1,5 +1,6 @@
 import { ResponseDto } from '@/common';
 import { GetAccessToken } from '@/common/decorators/getAccessToken.decorator';
+import { GetOriginUrl } from '@/common/decorators/getOrginUrl.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/decorators/public.decorator';
 import { RefreshSession } from '@/common/decorators/refresh-session.decorator';
@@ -108,8 +109,8 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @Post('resend-email')
     @ApiOkResponse({ type: ResponseDto<ResendEmailResponseDto> })
-    resendEmail(@Body() body: ResendVerifyEmailRequestDto) {
-        return this.authService.resendEmail(body);
+    resendEmail(@GetOriginUrl() url, @Body() body: ResendVerifyEmailRequestDto) {
+        return this.authService.resendEmail(body, url);
     }
 
     @HttpCode(HttpStatus.OK)

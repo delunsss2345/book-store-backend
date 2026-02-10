@@ -158,7 +158,7 @@ export class AuthService {
         return { success: true };
     }
 
-    async resendEmail(params: ResendVerifyEmailRequestDto) {
+    async resendEmail(params: ResendVerifyEmailRequestDto, url: string) {
         const { email } = params;
 
         const user = await this.authRepository.findUserByEmail(email);
@@ -200,7 +200,6 @@ export class AuthService {
             userId: user.id,
             expiresAt: this.signVerifyCode(),
         });
-
 
         // thêm ngăn xếp 
         await this.emailProducer.enqueueOutboxEmail(

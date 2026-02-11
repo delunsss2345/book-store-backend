@@ -1,5 +1,6 @@
 import { SecurityModule } from '@/common/security/security.module';
 import { CONFIGURATION, TConfiguration } from '@/config';
+import { CatalogModule } from '@/modules/catalog';
 import { HealthModule } from '@/modules/health/health.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, } from '@nestjs/config';
@@ -24,6 +25,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     RoleModule,
     HealthModule,
     UserAddressModule,
+    CatalogModule,
   ],
 })
 export class AppModule {

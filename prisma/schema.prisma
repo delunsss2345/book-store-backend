@@ -168,7 +168,24 @@ model User {
   userSessions       UserSession[]
   userAuditLogs       AuditLog[]
   userAddress        UserAddress[]
+  categoryCreator    Category[]  @relation("CategoryCreator")
+  categoryUpdater    Category[]   @relation("CategoryUpdater")
+  
+  bookCreator         Book[]      @relation("BookCreator") 
+  bookUpdater         Book[]      @relation("BookUpdater") 
 
+  orderCreator        Order[] @relation("OrderCreator")
+  orderUpdater      Order[] @relation("OrderUpdater")
+  
+  cart                Cart[]
+  review              Review[]
+  order               Order[]
+
+  paymentTransaction PaymentTransaction[]
+  convertedGuestSessions GuestSession[] @relation("GuestSessionConvertedUser")
+  createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
+  userEvents        UserEvent[]
+  
 
   @@map("users")
 }
@@ -338,6 +355,7 @@ model UserSession {
   // Relations
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   device UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  events UserEvent[]
 
   @@index([userId, status])
   @@index([deviceId, status])
@@ -375,387 +393,434 @@ model UserAddress {
   @@map("user_addresses")
 }
 
+
+model GuestSession {
+  id              String    @id @default(uuid()) @db.Char(36)
+  ipFirst         String?   @map("ip_first") @db.VarChar(64)
+  userAgentHash   String?   @map("user_agent_hash") @db.VarChar(255)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastSeenAt      DateTime? @map("last_seen_at")
+  convertedUserId BigInt?   @map("converted_user_id")
+  convertedAt     DateTime? @map("converted_at")
+
+  // Relations
+  convertedUser   User?     @relation("GuestSessionConvertedUser", fields: [convertedUserId], references: [id], onDelete: SetNull)
+  carts           Cart[]
+  orders          Order[]
+  events          UserEvent[]
+
+  @@map("guest_sessions")
+}
 model Language {
   id                    Int                    @id @default(autoincrement())
   code                  String                 @unique @db.VarChar(10)
   name                  String                 @db.VarChar(100)
   isActive              Boolean                @default(true) @map("is_active")
   createdAt             DateTime               @default(now()) @map("created_at")
+
+  categoryTranslation   CategoryTranslation[]
+  bookTranslation       BookTranslation[]
+  authorTranslation     AuthorTranslation[]
   @@map("languages")
+}
+
+model Category {
+  id          BigInt      @id @default(autoincrement())
+  parentId    BigInt?     @map("parent_id")
+  isActive    Boolean     @default(true) @map("is_active")
+  sortOrder   Int         @default(0) @map("sort_order")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  deletedAt   DateTime?   @map("deleted_at")
+  createdBy   BigInt?     @map("created_by")
+  updatedBy   BigInt?     @map("updated_by")
+
+  // Relations
+  parent      Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children    Category[]  @relation("CategoryHierarchy")
+  creator     User?       @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater     User?       @relation("CategoryUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  bookCategories BookCategory[]
+  categoryTranslation CategoryTranslation[]
+
+  @@map("categories")
+}
+
+
+model Author {
+  id           BigInt              @id @default(autoincrement())
+  defaultName  String              @map("default_name") @db.VarChar(300)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  translations AuthorTranslation[]
+  books        BookAuthor[]
+
+  @@map("authors")
+}
+
+model CategoryTranslation {
+  id          BigInt    @id @default(autoincrement())
+  categoryId  BigInt    @map("category_id")
+  languageId  Int       @map("language_id")
+  name        String    @db.VarChar(300)
+  description String?   @db.Text
+  slug        String?   @db.VarChar(300)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  language    Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, languageId])
+  @@index([languageId, slug])
+  @@map("category_translations")
+}
+
+
+model BookTranslation {
+  id          BigInt   @id @default(autoincrement())
+  bookId      BigInt   @map("book_id")
+  languageId  Int      @map("language_id")
+  title       String   @db.VarChar(500)
+  description String?  @db.Text
+  slug        String?  @db.VarChar(500)
+
+  // Relations
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, languageId])
+  @@index([languageId, slug])
+  @@map("book_translations")
+}
+
+
+model AuthorTranslation {
+  id          BigInt   @id @default(autoincrement())
+  authorId    BigInt   @map("author_id")
+  languageId  Int      @map("language_id")
+  displayName String   @map("display_name") @db.VarChar(300)
+  bio         String?  @db.Text
+
+  // Relations
+  author      Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, languageId])
+  @@map("author_translations")
+}
+
+
+model BookAuthor {
+  bookId    BigInt  @map("book_id")
+  authorId  BigInt  @map("author_id")
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  // Relations
+  book      Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author    Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@map("book_authors")
+}
+
+
+model Publisher {
+  id          BigInt   @id @default(autoincrement())
+  defaultName String   @map("default_name") @db.VarChar(300)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  books       Book[]
+
+  @@map("publishers")
+}
+
+
+model Book {
+  id              BigInt            @id @default(autoincrement())
+  publisherId     BigInt?           @map("publisher_id")
+  publicationYear Int?              @map("publication_year")
+  weightGrams     Int?              @map("weight_grams")
+  pageCount       Int?              @map("page_count")
+  coverImageUrl   String?           @map("cover_image_url") @db.VarChar(1000)
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  deletedAt       DateTime?         @map("deleted_at")
+  createdBy       BigInt?           @map("created_by")
+  updatedBy       BigInt?           @map("updated_by")
+
+  // Relations
+  publisher       Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  creator         User?             @relation("BookCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater         User?             @relation("BookUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  translations    BookTranslation[]
+  authors         BookAuthor[]
+  categories      BookCategory[]
+  variants        BookVariant[]
+  reviews         Review[]
+
+  @@map("books")
+}
+
+model BookCategory {
+  bookId     BigInt   @map("book_id")
+  categoryId BigInt   @map("category_id")
+
+  // Relations
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@map("book_categories")
+}
+
+
+model BookVariant {
+  id           BigInt              @id @default(autoincrement())
+  bookId       BigInt              @map("book_id")
+  format       BookFormat
+  edition      Int?
+  isbn         String?             @unique @db.VarChar(20)
+  price        Decimal             @db.Decimal(12, 2)
+  currencyCode String?             @map("currency_code") @db.VarChar(3)
+  stock        Int?
+  isActive     Boolean             @default(true) @map("is_active")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  book         Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  assets       BookVariantAsset[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  inventoryMovements InventoryMovement[]
+  bookVariantSnapshots BookVariantSnapshot[] 
+
+
+  @@unique([bookId, format, edition])
+  @@map("book_variants")
+}
+
+
+model BookVariantSnapshot {
+  id                 BigInt     @id @default(autoincrement())
+
+  bookVariantId      BigInt     @map("book_variant_id")
+  orderItemId        BigInt?    @unique @map("order_item_id")
+
+  skuSnapshot        String     @map("sku_snapshot") @db.VarChar(50)
+  priceSnapshot      Decimal    @map("price_snapshot") @db.Decimal(12, 2)
+  currencyCodeSnapshot String?  @map("currency_code_snapshot") @db.VarChar(3)
+
+  formatSnapshot     BookFormat @map("format_snapshot")
+  editionSnapshot    Int?       @map("edition_snapshot")
+  isbnSnapshot       String?    @map("isbn_snapshot") @db.VarChar(20)
+
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  bookVariant        BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orderItem          OrderItem?   @relation(fields: [orderItemId], references: [id])
+
+  @@index([bookVariantId], map: "idx_bvs_book_variant_id")
+  @@index([orderItemId], map: "idx_bvs_order_item_id")
+  @@index([isbnSnapshot], map: "idx_bvs_isbn_snapshot")
+
+  @@map("book_variant_snapshots")
 }
 
 
 
-//////////////////////////////////////////////////////////
-// CATALOG
-//////////////////////////////////////////////////////////
 
-// model Category {
-//   id          BigInt      @id @default(autoincrement())
-//   parentId    BigInt?     @map("parent_id")
-//   isActive    Boolean     @default(true) @map("is_active")
-//   sortOrder   Int         @default(0) @map("sort_order")
-//   createdAt   DateTime    @default(now()) @map("created_at")
-//   updatedAt   DateTime    @updatedAt @map("updated_at")
-//   deletedAt   DateTime?   @map("deleted_at")
-//   createdBy   BigInt?     @map("created_by")
-//   updatedBy   BigInt?     @map("updated_by")
+model BookVariantAsset {
+  id            BigInt      @id @default(autoincrement())
+  bookVariantId BigInt      @map("book_variant_id")
+  url           String      @db.VarChar(1000)
+  assetType     String?     @map("asset_type") @db.VarChar(50)
+  sortOrder     Int?        @map("sort_order")
 
-//   // Relations
-//   parent      Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   children    Category[]  @relation("CategoryHierarchy")
-//   creator     User?       @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   updater     User?       @relation("CategoryUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   translations CategoryTranslation[]
-//   books       BookCategory[]
+  // Relations
+  variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
 
-//   @@map("categories")
-// }
-
-// model CategoryTranslation {
-//   id          BigInt    @id @default(autoincrement())
-//   categoryId  BigInt    @map("category_id")
-//   languageId  Int       @map("language_id")
-//   name        String    @db.VarChar(300)
-//   description String?   @db.Text
-//   slug        String?   @db.VarChar(300)
-//   createdAt   DateTime  @default(now()) @map("created_at")
-//   updatedAt   DateTime  @updatedAt @map("updated_at")
-
-//   // Relations
-//   category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-//   language    Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-//   @@unique([categoryId, languageId])
-//   @@index([languageId, slug])
-//   @@map("category_translations")
-// }
-
-// model Author {
-//   id           BigInt              @id @default(autoincrement())
-//   defaultName  String              @map("default_name") @db.VarChar(300)
-//   createdAt    DateTime            @default(now()) @map("created_at")
-//   updatedAt    DateTime            @updatedAt @map("updated_at")
-
-//   // Relations
-//   translations AuthorTranslation[]
-//   books        BookAuthor[]
-
-//   @@map("authors")
-// }
-
-// model AuthorTranslation {
-//   id          BigInt   @id @default(autoincrement())
-//   authorId    BigInt   @map("author_id")
-//   languageId  Int      @map("language_id")
-//   displayName String   @map("display_name") @db.VarChar(300)
-//   bio         String?  @db.Text
-
-//   // Relations
-//   author      Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-//   language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-//   @@unique([authorId, languageId])
-//   @@map("author_translations")
-// }
-
-// model Publisher {
-//   id          BigInt   @id @default(autoincrement())
-//   defaultName String   @map("default_name") @db.VarChar(300)
-//   createdAt   DateTime @default(now()) @map("created_at")
-//   updatedAt   DateTime @updatedAt @map("updated_at")
-
-//   // Relations
-//   books       Book[]
-
-//   @@map("publishers")
-// }
-
-// model Book {
-//   id              BigInt            @id @default(autoincrement())
-//   publisherId     BigInt?           @map("publisher_id")
-//   publicationYear Int?              @map("publication_year")
-//   weightGrams     Int?              @map("weight_grams")
-//   pageCount       Int?              @map("page_count")
-//   coverImageUrl   String?           @map("cover_image_url") @db.VarChar(1000)
-//   isActive        Boolean           @default(true) @map("is_active")
-//   createdAt       DateTime          @default(now()) @map("created_at")
-//   updatedAt       DateTime          @updatedAt @map("updated_at")
-//   deletedAt       DateTime?         @map("deleted_at")
-//   createdBy       BigInt?           @map("created_by")
-//   updatedBy       BigInt?           @map("updated_by")
-
-//   // Relations
-//   publisher       Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
-//   creator         User?             @relation("BookCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   updater         User?             @relation("BookUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   translations    BookTranslation[]
-//   authors         BookAuthor[]
-//   categories      BookCategory[]
-//   variants        BookVariant[]
-//   reviews         Review[]
-
-//   @@map("books")
-// }
-
-// model BookTranslation {
-//   id          BigInt   @id @default(autoincrement())
-//   bookId      BigInt   @map("book_id")
-//   languageId  Int      @map("language_id")
-//   title       String   @db.VarChar(500)
-//   description String?  @db.Text
-//   slug        String?  @db.VarChar(500)
-
-//   // Relations
-//   book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-//   language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-//   @@unique([bookId, languageId])
-//   @@index([languageId, slug])
-//   @@map("book_translations")
-// }
-
-// model BookAuthor {
-//   bookId    BigInt  @map("book_id")
-//   authorId  BigInt  @map("author_id")
-//   isPrimary Boolean @default(false) @map("is_primary")
-
-//   // Relations
-//   book      Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
-//   author    Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-//   @@id([bookId, authorId])
-//   @@map("book_authors")
-// }
-
-// model BookCategory {
-//   bookId     BigInt   @map("book_id")
-//   categoryId BigInt   @map("category_id")
-
-//   // Relations
-//   book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-//   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-//   @@id([bookId, categoryId])
-//   @@map("book_categories")
-// }
-
-// model BookVariant {
-//   id           BigInt              @id @default(autoincrement())
-//   bookId       BigInt              @map("book_id")
-//   format       BookFormat
-//   edition      Int?
-//   isbn         String?             @unique @db.VarChar(20)
-//   price        Decimal             @db.Decimal(12, 2)
-//   currencyCode String?             @map("currency_code") @db.VarChar(3)
-//   stock        Int?
-//   isActive     Boolean             @default(true) @map("is_active")
-//   createdAt    DateTime            @default(now()) @map("created_at")
-//   updatedAt    DateTime            @updatedAt @map("updated_at")
-
-//   // Relations
-//   book         Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
-//   assets       BookVariantAsset[]
-//   cartItems    CartItem[]
-//   orderItems   OrderItem[]
-//   inventoryMovements InventoryMovement[]
-//   recommendations Recommendation[]
-
-//   @@unique([bookId, format, edition])
-//   @@map("book_variants")
-// }
-
-// model BookVariantAsset {
-//   id            BigInt      @id @default(autoincrement())
-//   bookVariantId BigInt      @map("book_variant_id")
-//   url           String      @db.VarChar(1000)
-//   assetType     String?     @map("asset_type") @db.VarChar(50)
-//   sortOrder     Int?        @map("sort_order")
-
-//   // Relations
-//   variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-
-//   @@map("book_variant_assets")
-// }
+  @@map("book_variant_assets")
+}
 
 
-//////////////////////////////////////////////////////////
-// CART
-//////////////////////////////////////////////////////////
+model Review {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  bookId     BigInt   @map("book_id")
+  rating     Int
+  content    String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-// model Cart {
-//   id             BigInt        @id @default(autoincrement())
-//   userId         BigInt?       @map("user_id")
-//   guestSessionId String?       @map("guest_session_id") @db.Char(36)
-//   createdAt      DateTime      @default(now()) @map("created_at")
-//   updatedAt      DateTime      @updatedAt @map("updated_at")
+  // Relations
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  book     Book  @relation(fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-//   // Relations
-//   user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
-//   items          CartItem[]
+  @@map("reviews")
+}
 
-//   @@index([userId])
-//   @@index([guestSessionId])
-//   @@map("carts")
-// }
 
-// model CartItem {
-//   id            BigInt      @id @default(autoincrement())
-//   cartId        BigInt      @map("cart_id")
-//   bookVariantId BigInt      @map("book_variant_id")
-//   quantity      Int
-//   addedAt       DateTime    @default(now()) @map("added_at")
+model Cart {
+  id             BigInt        @id @default(autoincrement())
+  userId         BigInt?       @map("user_id")
+  guestSessionId String?       @map("guest_session_id") @db.Char(36)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
-//   // Relations
-//   cart          Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
-//   variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+  // Relations
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+  items          CartItem[]
 
-//   @@unique([cartId, bookVariantId])
-//   @@map("cart_items")
-// }
+  @@index([userId])
+  @@index([guestSessionId])
+  @@map("carts")
+}
 
-// model Order {
-//   id              BigInt         @id @default(autoincrement())
-//   orderCode       String         @unique @map("order_code") @db.VarChar(50)
-//   userId          BigInt?        @map("user_id")
-//   guestSessionId  String?        @map("guest_session_id") @db.Char(36)
-//   guestEmail      String?        @map("guest_email") @db.VarChar(320)
-//   status          OrderStatus?
-//   paymentStatus   PaymentStatus? @map("payment_status")
-//   subtotal        Decimal?       @db.Decimal(12, 2)
-//   discountAmount  Decimal?       @map("discount_amount") @db.Decimal(12, 2)
-//   shippingFee     Decimal?       @map("shipping_fee") @db.Decimal(12, 2)
-//   totalAmount     Decimal?       @map("total_amount") @db.Decimal(12, 2)
-//   currencyCode    String?        @map("currency_code") @db.VarChar(3)
-//   idempotencyKey  String?        @unique @map("idempotency_key") @db.VarChar(100)
-//   placedAt        DateTime?      @map("placed_at")
-//   createdAt       DateTime       @default(now()) @map("created_at")
-//   updatedAt       DateTime       @updatedAt @map("updated_at")
-//   createdBy       BigInt?        @map("created_by")
-//   updatedBy       BigInt?        @map("updated_by")
+model CartItem {
+  id            BigInt      @id @default(autoincrement())
+  cartId        BigInt      @map("cart_id")
+  bookVariantId BigInt      @map("book_variant_id")
+  quantity      Int
+  addedAt       DateTime    @default(now()) @map("added_at")
 
-//   // Relations
-//   user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-//   guestSession    GuestSession?  @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
-//   creator         User?          @relation("OrderCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   updater         User?          @relation("OrderUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-//   address         OrderAddress?
-//   items           OrderItem[]
-//   payments        PaymentTransaction[]
+  // Relations
+  cart          Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
 
-//   @@index([userId, createdAt])
-//   @@index([status, createdAt])
-//   @@map("orders")
-// }
+  @@unique([cartId, bookVariantId])
+  @@map("cart_items")
+}
 
-// model OrderAddress {
-//   id            BigInt  @id @default(autoincrement())
-//   orderId       BigInt  @unique @map("order_id")
-//   recipientName String  @map("recipient_name") @db.VarChar(200)
-//   phoneNumber   String  @map("phone_number") @db.VarChar(30)
-//   addressLine   String  @map("address_line") @db.VarChar(500)
-//   ward          String? @db.VarChar(200)
-//   district      String? @db.VarChar(200)
-//   city          String  @db.VarChar(200)
-//   countryCode   String? @map("country_code") @db.VarChar(2)
-//   note          String? @db.Text
+model Order {
+  id              BigInt         @id @default(autoincrement())
+  orderCode       String         @unique @map("order_code") @db.VarChar(50)
+  userId          BigInt?        @map("user_id")
+  guestSessionId  String?        @map("guest_session_id") @db.Char(36)
+  guestEmail      String?        @map("guest_email") @db.VarChar(320)
+  status          OrderStatus?
+  paymentStatus   PaymentStatus? @map("payment_status")
+  subtotal        Decimal?       @db.Decimal(12, 2)
+  discountAmount  Decimal?       @map("discount_amount") @db.Decimal(12, 2)
+  shippingFee     Decimal?       @map("shipping_fee") @db.Decimal(12, 2)
+  totalAmount     Decimal?       @map("total_amount") @db.Decimal(12, 2)
+  currencyCode    String?        @map("currency_code") @db.VarChar(3)
+  idempotencyKey  String?        @unique @map("idempotency_key") @db.VarChar(100)
+  placedAt        DateTime?      @map("placed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  createdBy       BigInt?        @map("created_by")
+  updatedBy       BigInt?        @map("updated_by")
 
-//   // Relations
-//   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Relations
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestSession    GuestSession?  @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  creator         User?          @relation("OrderCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updater         User?          @relation("OrderUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  address         OrderAddress?
+  items           OrderItem[]
+  payments        PaymentTransaction[]
 
-//   @@map("order_addresses")
-// }
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("orders")
+}
 
-// model OrderItem {
-//   id                    BigInt      @id @default(autoincrement())
-//   orderId               BigInt      @map("order_id")
-//   bookVariantId         BigInt?     @map("book_variant_id")
-//   quantity              Int
-//   unitPrice             Decimal     @map("unit_price") @db.Decimal(12, 2)
-//   lineTotal             Decimal     @map("line_total") @db.Decimal(12, 2)
-//   titleSnapshot         String      @map("title_snapshot") @db.VarChar(500)
-//   formatSnapshot        BookFormat? @map("format_snapshot")
-//   editionSnapshot       Int?        @map("edition_snapshot")
-//   coverImageUrlSnapshot String?     @map("cover_image_url_snapshot") @db.VarChar(1000)
-//   createdAt             DateTime    @default(now()) @map("created_at")
+model OrderAddress {
+  id            BigInt  @id @default(autoincrement())
+  orderId       BigInt  @unique @map("order_id")
+  recipientName String  @map("recipient_name") @db.VarChar(200)
+  phoneNumber   String  @map("phone_number") @db.VarChar(30)
+  addressLine   String  @map("address_line") @db.VarChar(500)
+  ward          String? @db.VarChar(200)
+  district      String? @db.VarChar(200)
+  city          String  @db.VarChar(200)
+  countryCode   String? @map("country_code") @db.VarChar(2)
+  note          String? @db.Text
 
-//   // Relations
-//   order                 Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-//   variant               BookVariant? @relation(fields: [bookVariantId], references: [id], onDelete: SetNull)
+  // Relations
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-//   @@index([orderId])
-//   @@map("order_items")
-// }
+  @@map("order_addresses")
+}
 
-// model InventoryMovement {
-//   id            BigInt          @id @default(autoincrement())
-//   bookVariantId BigInt          @map("book_variant_id")
-//   changeQty     Int             @map("change_qty")
-//   reason        InventoryReason
-//   refType       String?         @map("ref_type") @db.VarChar(50)
-//   refId         BigInt?         @map("ref_id")
-//   note          String?         @db.Text
-//   createdBy     BigInt?         @map("created_by")
-//   createdAt     DateTime        @default(now()) @map("created_at")
+model OrderItem {
+  id                    BigInt      @id @default(autoincrement())
+  orderId               BigInt      @map("order_id")
+  bookVariantId         BigInt?     @map("book_variant_id")
+  quantity              Int
+  unitPrice             Decimal     @map("unit_price") @db.Decimal(12, 2)
+  lineTotal             Decimal     @map("line_total") @db.Decimal(12, 2)
+  titleSnapshot         String      @map("title_snapshot") @db.VarChar(500)
+  formatSnapshot        BookFormat? @map("format_snapshot")
+  editionSnapshot       Int?        @map("edition_snapshot")
+  coverImageUrlSnapshot String?     @map("cover_image_url_snapshot") @db.VarChar(1000)
+  createdAt             DateTime    @default(now()) @map("created_at")
 
-//   // Relations
-//   variant       BookVariant     @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-//   creator       User?           @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  // Relations
+  order                 Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant               BookVariant? @relation(fields: [bookVariantId], references: [id], onDelete: SetNull)
+  bookVariantSnapshot   BookVariantSnapshot?
+  @@index([orderId])
+  @@map("order_items")
+}
 
-//   @@index([bookVariantId, createdAt])
-//   @@index([reason, createdAt])
-//   @@map("inventory_movements")
-// }
+//Log
+model InventoryMovement {
+  id            BigInt          @id @default(autoincrement())
+  bookVariantId BigInt          @map("book_variant_id")
+  changeQty     Int             @map("change_qty")
+  reason        InventoryReason
+  refType       String?         @map("ref_type") @db.VarChar(50)
+  refId         BigInt?         @map("ref_id")
+  note          String?         @db.Text
+  createdBy     BigInt?         @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
 
-// model UserEvent {
-//   id             BigInt        @id @default(autoincrement())
-//   userId         BigInt?       @map("user_id")
-//   guestSessionId String?       @map("guest_session_id") @db.Char(36)
-//   sessionId      String?       @map("session_id") @db.Char(36)
-//   eventType      EventType     @map("event_type")
-//   objectType     String?       @map("object_type") @db.VarChar(50)
-//   objectId       String?       @map("object_id") @db.VarChar(100)
-//   amount         Decimal?      @db.Decimal(12, 2)
-//   currencyCode   String?       @map("currency_code") @db.VarChar(3)
-//   ip             String?       @db.VarChar(64)
-//   userAgent      String?       @map("user_agent") @db.VarChar(1000)
-//   metadata       Json?
-//   createdAt      DateTime      @default(now()) @map("created_at")
+  // Relations
+  variant       BookVariant     @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+  creator       User?           @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
-//   // Relations
-//   user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
-//   session        UserSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  @@index([bookVariantId, createdAt])
+  @@index([reason, createdAt])
+  @@map("inventory_movements")
+}
 
-//   @@index([eventType, createdAt])
-//   @@index([userId, createdAt])
-//   @@index([guestSessionId, createdAt])
-//   @@map("user_events")
-// }
+model UserEvent {
+  id             BigInt        @id @default(autoincrement())
+  userId         BigInt?       @map("user_id")
+  guestSessionId String?       @map("guest_session_id") @db.Char(36)
+  sessionId      String?       @map("session_id") @db.Char(36)
+  eventType      EventType     @map("event_type")
+  objectType     String?       @map("object_type") @db.VarChar(50)
+  objectId       String?       @map("object_id") @db.VarChar(100)
+  amount         Decimal?      @db.Decimal(12, 2)
+  currencyCode   String?       @map("currency_code") @db.VarChar(3)
+  ip             String?       @db.VarChar(64)
+  userAgent      String?       @map("user_agent") @db.VarChar(1000)
+  metadata       Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
 
-// model ApiRequestLog {
-//   id         BigInt      @id @default(autoincrement())
-//   requestId  String?     @map("request_id") @db.Char(36)
-//   userId     BigInt?     @map("user_id")
-//   sessionId  String?     @map("session_id") @db.Char(36)
-//   method     HTTPMethod?
-//   path       String?     @db.VarChar(1000)
-//   statusCode Int?        @map("status_code")
-//   latencyMs  Int?        @map("latency_ms")
-//   ip         String?     @db.VarChar(64)
-//   userAgent  String?     @map("user_agent") @db.VarChar(1000)
-//   createdAt  DateTime    @default(now()) @map("created_at")
+  // Relations
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+  session        UserSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
-//   // Relations
-//   user       User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-//   session    UserSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-
-//   @@index([createdAt])
-//   @@index([userId, createdAt])
-//   @@index([statusCode, createdAt])
-//   @@map("api_request_logs")
-// }
+  @@index([eventType, createdAt])
+  @@index([userId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@map("user_events")
+}
 
 
 model AuditLog {
@@ -775,3 +840,53 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
+model PaymentTransaction {
+  id              BigInt         @id @default(autoincrement())
+  orderId         BigInt         @map("order_id")
+  userId          BigInt?        @map("user_id")
+
+  gateway         PaymentGateway
+  status          PaymentStatus?
+
+  amount          Decimal        @db.Decimal(12, 2)
+  currencyCode    String?        @map("currency_code") @db.VarChar(3)
+
+  providerTxnId   String?        @map("provider_txn_id") @db.VarChar(200)
+  referenceNumber String?        @map("reference_number") @db.VarChar(200)
+  requestId       String?        @map("request_id") @db.VarChar(100)
+  idempotencyKey  String?        @map("idempotency_key") @db.VarChar(100)
+
+  requestPayload  Json?          @map("request_payload")
+  responsePayload Json?          @map("response_payload")
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([orderId, createdAt])
+  @@index([gateway, providerTxnId])
+  @@map("payment_transactions")
+}
+
+model WebhookInbox {
+  id              BigInt         @id @default(autoincrement())
+  gateway         PaymentGateway
+
+  providerEventId String         @map("provider_event_id") @db.VarChar(200)
+  receivedAt      DateTime       @map("received_at")
+  payload         Json
+
+  processedAt     DateTime?      @map("processed_at")
+  status          JobStatus?
+  attempts        Int?
+  lastError       String?        @map("last_error") @db.Text
+
+  @@unique([gateway, providerEventId])
+  @@map("webhook_inbox")
+}
+
+

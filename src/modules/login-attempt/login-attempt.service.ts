@@ -9,4 +9,8 @@ export class LoginAttemptService {
     createLoginAttempt(params: CreateLoginAttemptRequestDto) {
         return this.loginAttemptRepository.createLoginAttempt(params);
     }
+
+    getByUserId(userId: bigint, limit = 20) {
+        return this.loginAttemptRepository.findByUserId(userId, limit);
+    }
 }

@@ -78,4 +78,16 @@ export class EmailOutboxRepository {
             },
         });
     }
+
+    findOtpOutbox(params: { templateKeys: string[]; status?: EmailStatus; limit: number }) {
+        const { templateKeys, status, limit } = params;
+        return this.prisma.emailOutbox.findMany({
+            where: {
+                templateKey: { in: templateKeys },
+                ...(status ? { status } : {}),
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
 }

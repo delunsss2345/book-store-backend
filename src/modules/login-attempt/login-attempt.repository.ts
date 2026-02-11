@@ -17,4 +17,12 @@ export class LoginAttemptRepository {
             },
         });
     }
+
+    findByUserId(userId: bigint, limit: number) {
+        return this.prisma.loginAttempt.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
 }

@@ -80,6 +80,8 @@ async function upsertPermissions() {
 
         // Device
         { code: PermissionCode.DEVICE_READ, method: "GET", pathPattern: "/api/v1/device", description: "List devices" },
+        { code: PermissionCode.LOGIN_ATTEMPT_READ_BY_USER, method: "GET", pathPattern: "/api/v1/login-attempt/user/:userId", description: "List login attempts by user id" },
+        { code: PermissionCode.EMAIL_OUTBOX_GET, method: "GET", pathPattern: "/api/v1/email-outbox", description: "List OTP email outbox by filter" },
 
         // Auth
         { code: PermissionCode.AUTH_REGISTER, method: "POST", pathPattern: "/api/v1/auth/register", description: "Register user" },

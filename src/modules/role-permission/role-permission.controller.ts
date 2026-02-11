@@ -1,12 +1,10 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { RequirePermissions } from '@/common/decorators/requirePermission.decorator';
-import { PermissionsGuard } from '@/common/guard/permission.guard';
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { CreateRolePermissionRequestDto } from './dto/request';
 import { RolePermissionService } from './role-permission.service';
 
 @Controller('role-permission')
-@UseGuards(PermissionsGuard)
 export class RolePermissionController {
     constructor(private readonly rolePermissionService: RolePermissionService) { }
 

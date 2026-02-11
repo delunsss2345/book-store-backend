@@ -1,5 +1,4 @@
-import { AuthGuard } from '@/common/guard/auth.guard';
-import { RefreshGuard } from '@/common/guard/refresh.guard';
+import { RefreshGuard } from '@/common/security/guard/refresh.guard';
 import { JwtProvider } from '@/config/jwt.config';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
@@ -12,7 +11,6 @@ import { UserRoleModule } from '@/modules/user-role/user-role.module';
 import { UserSessionModule } from '@/modules/user-session/user-session.module';
 import { VerificationCodeModule } from '@/modules/verification-code/verification-code.module';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 @Module({
@@ -29,7 +27,7 @@ import { AuthService } from './auth.service';
         RoleModule
     ],
     controllers: [AuthController],
-    providers: [AuthService, AuthRepository, RefreshGuard, { provide: APP_GUARD, useClass: AuthGuard }],
+    providers: [AuthService, AuthRepository, RefreshGuard],
 
 })
 export class AuthModule { }

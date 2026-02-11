@@ -1,5 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { PERMISSION_KEY } from '@/common/decorators/requirePermission.decorator';
+import { PERMISSION_KEY } from '@/common/security/decorators/requirePermission.decorator';
 import { RolePermissionService } from '@/modules/role-permission/role-permission.service';
 import { UserRoleService } from '@/modules/user-role/user-role.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -58,4 +58,4 @@ export const PermissionProviderGuard = {
     provide: PermissionsGuard,
     useClass: PermissionsGuard,
 } as Provider;
-    
+

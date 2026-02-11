@@ -3,6 +3,5 @@ import { Module } from '@nestjs/common';
 
 @Module({
     controllers: [HealthController],
-    providers: [],
 })
 export class HealthModule { };

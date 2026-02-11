@@ -2,12 +2,12 @@ import { ResponseDto } from '@/common';
 import { GetAccessToken } from '@/common/decorators/getAccessToken.decorator';
 import { GetOriginUrl } from '@/common/decorators/getOrginUrl.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { Public } from '@/common/decorators/public.decorator';
-import { RefreshSession } from '@/common/decorators/refresh-session.decorator';
-import { Refresh } from '@/common/decorators/refresh.decorator';
 import { UserAgent } from '@/common/decorators/userAgent.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
-import { RefreshGuard } from '@/common/guard/refresh.guard';
+import { Public } from '@/common/security/decorators/public.decorator';
+import { RefreshSession } from '@/common/security/decorators/refresh-session.decorator';
+import { Refresh } from '@/common/security/decorators/refresh.decorator';
+import { RefreshGuard } from '@/common/security/guard/refresh.guard';
 import { AuthService } from '@/modules/auth/auth.service';
 import {
     ChangePasswordRequestDto,

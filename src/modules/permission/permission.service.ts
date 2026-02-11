@@ -10,6 +10,9 @@ export class PermissionService {
         return this.permissionRepository.findAllPermissions();
     }
 
+    findPermissionByName(name: string) {
+        return this.permissionRepository.findPermissionByName(new String(name).toLowerCase());
+    }
     createPermission(body: CreatePermissionRequestDto, actorUserId: bigint) {
         return this.permissionRepository.createPermission(body, actorUserId);
     }
@@ -21,4 +24,6 @@ export class PermissionService {
     deletePermission(id: bigint, actorUserId: bigint) {
         return this.permissionRepository.softDeletePermission(id, actorUserId);
     }
+
+
 }

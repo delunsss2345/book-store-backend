@@ -1,13 +1,12 @@
+import { PermissionsGuard } from '@/common/security/guard/permission.guard';
 import { CacheProvider } from '@/config/redis.config';
 import { RolePermissionModule } from '@/modules/role-permission/role-permission.module';
 import { UserRoleModule } from '@/modules/user-role/user-role.module';
-import { Global, Module } from '@nestjs/common';
-import { PermissionProviderGuard, PermissionsGuard } from './permission.guard';
+import { Module } from '@nestjs/common';
 
-@Global()
 @Module({
     imports: [RolePermissionModule, UserRoleModule, CacheProvider],
-    providers: [PermissionProviderGuard],
+    providers: [PermissionsGuard],
     exports: [PermissionsGuard],
 })
 export class PermissionGuardModule { }

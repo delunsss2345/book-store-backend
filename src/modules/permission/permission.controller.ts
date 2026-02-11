@@ -1,20 +1,23 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { RequirePermissions } from '@/common/decorators/requirePermission.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
-import { PermissionsGuard } from '@/common/guard/permission.guard';
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CreatePermissionRequestDto, UpdatePermissionRequestDto } from './dto/request';
 import { PermissionService } from './permission.service';
 
 @Controller('permission')
-@UseGuards(PermissionsGuard)
 export class PermissionController {
     constructor(private readonly permissionService: PermissionService) { }
 
     @Get()
     getAllPermissions() {
         return this.permissionService.findAllPermissions();
+    }
+
+    @Get('/:permissionName')
+    getPermissionByName(@Param('permissionName') name: string) {
+        return this.permissionService.findPermissionByName(name)
     }
 
     @Post()

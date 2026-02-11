@@ -1,4 +1,4 @@
-import { Public } from '@/common/decorators/public.decorator';
+import { Public } from '@/common/security/decorators/public.decorator';
 import { Controller, Get, Param } from '@nestjs/common';
 import { RoleService } from './role.service';
 

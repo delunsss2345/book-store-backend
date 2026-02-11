@@ -1,6 +1,6 @@
 import { PrismaService } from '@/database';
-import { HTTPMethod, Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
+import { HTTPMethod, Prisma } from '@prisma/client';
 
 export type CreatePermissionParams = {
     code?: string;
@@ -28,6 +28,16 @@ export class PermissionRepository {
                 id: 'desc',
             },
         });
+    }
+
+    findPermissionByName(name: string) {
+        return this.prisma.permission.findMany({
+            where: {
+                code: {
+                    startsWith: name,
+                }
+            }
+        })
     }
 
     createPermission(params: CreatePermissionParams, actorUserId: bigint) {

@@ -3,7 +3,7 @@ import { PERMISSION_KEY } from '@/common/decorators/requirePermission.decorator'
 import { RolePermissionService } from '@/modules/role-permission/role-permission.service';
 import { UserRoleService } from '@/modules/user-role/user-role.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, type Provider } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Cache } from 'cache-manager';
 
@@ -43,7 +43,6 @@ export class PermissionsGuard implements CanActivate {
                 }
 
                 const permissions = await this.rolePermissionService.getByRoleId(roleId); // nếu chưa thì get và cached
-                // console.log(keyOf(roleId), permissions); 
                 await this.cacheManager.set(keyOf(roleId), permissions);
                 return permissions;
             })
@@ -52,6 +51,11 @@ export class PermissionsGuard implements CanActivate {
 
         if (!userPerms.has(requireRemission)) throw new ForbiddenException();
         return true;
-
     }
 }
+
+export const PermissionProviderGuard = {
+    provide: PermissionsGuard,
+    useClass: PermissionsGuard,
+} as Provider;
+    

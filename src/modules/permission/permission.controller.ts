@@ -1,10 +1,14 @@
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetUser } from '@/common/decorators/getUser.decorator';
+import { RequirePermissions } from '@/common/decorators/requirePermission.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { PermissionsGuard } from '@/common/guard/permission.guard';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CreatePermissionRequestDto, UpdatePermissionRequestDto } from './dto/request';
 import { PermissionService } from './permission.service';
 
 @Controller('permission')
+@UseGuards(PermissionsGuard)
 export class PermissionController {
     constructor(private readonly permissionService: PermissionService) { }
 
@@ -14,12 +18,14 @@ export class PermissionController {
     }
 
     @Post()
+    @RequirePermissions(PermissionCode.PERMISSION_CREATE)
     createPermission(@Body() body: CreatePermissionRequestDto, @GetUser() user: JwtPayload) {
         const actorUserId = this.parseBigInt(user?.sub, 'user.sub');
         return this.permissionService.createPermission(body, actorUserId);
     }
 
     @Patch(':id')
+    @RequirePermissions(PermissionCode.PERMISSION_UPDATE)
     updatePermission(
         @Param('id') id: string,
         @Body() body: UpdatePermissionRequestDto,
@@ -31,6 +37,7 @@ export class PermissionController {
     }
 
     @Delete(':id')
+    @RequirePermissions(PermissionCode.PERMISSION_DELETE)
     deletePermission(@Param('id') id: string, @GetUser() user: JwtPayload) {
         const permissionId = this.parseBigInt(id, 'id');
         const actorUserId = this.parseBigInt(user?.sub, 'user.sub');

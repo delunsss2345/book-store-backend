@@ -4,7 +4,6 @@ export enum PermissionCode {
     ROLE_READ = "role:read",
     ROLE_READ_ONE = "role:read_one",
 
-    PERMISSION_TEST = "permission:test",
     PERMISSION_READ = "permission:read",
     PERMISSION_CREATE = "permission:create",
     PERMISSION_UPDATE = "permission:update",

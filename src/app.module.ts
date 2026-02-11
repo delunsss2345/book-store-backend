@@ -9,6 +9,7 @@ import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './modules/mail/mail.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
+import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
 
 @Module({
@@ -21,7 +22,8 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     JobsModule,
     PermissionModule,
     RoleModule,
-    HealthModule
+    HealthModule,
+    UserAddressModule,
   ],
 })
 export class AppModule {

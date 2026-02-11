@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { HTTPMethod, Prisma } from '@prisma/client';
 
 export type CreatePermissionParams = {
-    code?: string;
+    code: string;
     description?: string;
     method: HTTPMethod;
     pathPattern: string;
@@ -42,6 +42,7 @@ export class PermissionRepository {
 
     createPermission(params: CreatePermissionParams, actorUserId: bigint) {
         const data: Prisma.PermissionUncheckedCreateInput = {
+            code: params.code,
             method: params.method,
             pathPattern: params.pathPattern,
             createdById: actorUserId,

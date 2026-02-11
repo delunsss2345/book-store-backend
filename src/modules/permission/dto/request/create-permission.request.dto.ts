@@ -14,7 +14,7 @@ export class CreatePermissionRequestDto {
     @IsOptional()
     @IsString()
     @MaxLength(100)
-    code?: string;
+    code: string;
 
     @ApiPropertyOptional({ example: 'Allow reading user information' })
     @IsOptional()

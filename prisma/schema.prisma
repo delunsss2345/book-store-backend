@@ -220,7 +220,7 @@ model UserRole {
 
 model Permission {
   id          BigInt     @id @default(autoincrement())
-  code        String?    @unique @db.VarChar(100)
+  code        String    @unique @db.VarChar(100)
   description String?    @db.Text
   method      HTTPMethod
   pathPattern String     @map("path_pattern") @db.VarChar(500)
@@ -367,11 +367,10 @@ model UserAddress {
   ward          String   @db.VarChar(200)  // Buộc có đường
   district      String   @db.VarChar(200) // Buộc có quận
   city          String   @db.VarChar(200) // Buộc có thành phố 
-  countryCode   String   @map("country_code") @db.VarChar(2)
   isDefault     Boolean?  @map("is_default") // thêm lần đầu mặc định true , lần sau thì false (code nghiệp vụ)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
-
+  deletedAt     DateTime?  @map("deleted_at")      
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("user_addresses")
 }

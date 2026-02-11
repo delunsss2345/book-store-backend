@@ -166,6 +166,27 @@ async function upsertUserWithRoles(user: SeedUser, roleIdByCode: Map<RoleCode, b
 
     return u;
 }
+async function upsertLanguages() {
+    const languages = [
+        { code: "en", name: "English", isActive: true },
+        { code: "vi", name: "Tiếng Việt", isActive: true },
+    ];
+
+    for (const l of languages) {
+        await prisma.language.upsert({
+            where: { code: l.code },
+            update: {
+                name: l.name,
+                isActive: l.isActive,
+            },
+            create: {
+                code: l.code,
+                name: l.name,
+                isActive: l.isActive,
+            },
+        });
+    }
+}
 
 async function upsertRolePermissions(
     roleIdByCode: Map<RoleCode, bigint>,
@@ -214,6 +235,7 @@ async function upsertRolePermissions(
 }
 
 async function main() {
+    await upsertLanguages();
     const roleIdByCode = await upsertRoles();
     const permissionIdByCode = await upsertPermissions();
     await upsertRolePermissions(roleIdByCode, permissionIdByCode);

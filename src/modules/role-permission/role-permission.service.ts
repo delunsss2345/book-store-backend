@@ -43,9 +43,10 @@ export class RolePermissionService {
         return this.toResponse(created);
     }
 
-    async getByRoleId(roleId: bigint): Promise<RolePermissionResponseDto[]> {
+    async getByRoleId(roleId: bigint) {
+        console.log('vô ko')
         const rows = await this.rolePermissionRepository.findByRoleId(roleId);
-        return rows.map((row) => this.toResponse(row));
+        return rows.map((row) => row.permission.code);
     }
 
     async getByPermissionId(permissionId: bigint): Promise<RolePermissionResponseDto[]> {

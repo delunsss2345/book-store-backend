@@ -30,7 +30,7 @@ export class EmailProcessor extends WorkerHost {
 
             if (!outBox) return;
             let path = VerifyCodePath.VERIFY_EMAIL;
-            
+
             if (outBox.templateKey === OTP_FORGOT_PASSWORD_TEMPLATE_KEY) {
                 path = VerifyCodePath.RESET_PASSWORD;
             } else if (outBox.templateKey !== OTP_REGISTER_TEMPLATE_KEY) {
@@ -38,7 +38,7 @@ export class EmailProcessor extends WorkerHost {
             }
 
             const { link, token } = generateLinkWithType({ path });
-            const codeHash = await hashToken(token);
+            const codeHash = hashToken(token);
             await this.verificationCodeService.updateCodeHash(verificationCodeId, codeHash)
 
 

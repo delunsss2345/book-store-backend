@@ -67,7 +67,6 @@ export const CacheProvider = CacheModule.registerAsync({
         const host = config.get<string>('REDIS_HOST');
         const port = Number(config.get<number | string>('REDIS_PORT'));
         const password = config.get<string>('REDIS_PASSWORD') || undefined;
-
         return {
             stores: [
                 new Keyv({

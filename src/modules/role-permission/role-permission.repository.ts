@@ -43,6 +43,11 @@ export class RolePermissionRepository {
         return this.prisma.rolePermission.findMany({
             where: { roleId },
             orderBy: { createdAt: 'desc' },
+            select: {
+                permission: {
+                    select: { code: true }
+                }
+            }
         });
     }
 

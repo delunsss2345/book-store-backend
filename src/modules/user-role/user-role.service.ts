@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
     CreateUserRoleParams,
     DeleteUserRoleParams,
@@ -26,6 +26,13 @@ export class UserRoleService {
     async getRolesByUserId(userId: bigint) {
         const rows = await this.userRoleRepository.findRolesByUserId(userId);
         return rows.map((row) => row.role.code);
+    }
+
+    async getRoleIdsByUserId(userId: bigint) {
+        const rows = await this.userRoleRepository.findRolesByUserId(userId);
+        Logger.debug('role user')
+        console.log(rows);
+        return rows.map((row) => row.role.id);
     }
 
     getUserRolesByUserId(userId: bigint) {

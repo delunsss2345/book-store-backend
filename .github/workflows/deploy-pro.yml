@@ -75,14 +75,14 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
           EC2_SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_GITHUB || secrets.GITHUB_SSH_PRIVATE_KEY || secrets.EC2_SSH_PRIVATE_KEY }}
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
         run: |
           set -euo pipefail
           [ -n "$EC2_HOST" ] || (echo "Missing secret: EC2_HOST" && exit 1)
           [ -n "$EC2_USER" ] || (echo "Missing secret: EC2_USER" && exit 1)
-          [ -n "$EC2_APP_DIR" ] || (echo "Missing secret: EC2_APP_DIR" && exit 1)
+          [ -n "$EC2_APP_DIR" ] || (echo "EC2_APP_DIR resolved empty" && exit 1)
           [ -n "$EC2_SSH_PRIVATE_KEY" ] || (echo "Missing secret: SSH_PRIVATE_KEY_GITHUB (or GITHUB_SSH_PRIVATE_KEY or EC2_SSH_PRIVATE_KEY)" && exit 1)
           [ -n "$PROD_ENV_FILE" ] || (echo "Missing secret: PROD_ENV_FILE" && exit 1)
 
@@ -119,9 +119,22 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
         run: |
           set -euo pipefail
+          ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "bash -s" << EOF
+          set -euo pipefail
+          if [ ! -d "$EC2_APP_DIR" ]; then
+            echo "EC2_APP_DIR does not exist: $EC2_APP_DIR"
+            exit 1
+          fi
+          if [ ! -w "$EC2_APP_DIR" ]; then
+            echo "No write permission on EC2_APP_DIR for current user."
+            ls -ld "$EC2_APP_DIR"
+            id
+            exit 1
+          fi
+          EOF
           scp -P "$EC2_PORT" .env.prod "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/.env.prod"
 
       - name: Deploy to EC2
@@ -129,7 +142,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
           EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
           IMAGE_URI: ${{ needs.build.outputs.image_uri }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.actor }}

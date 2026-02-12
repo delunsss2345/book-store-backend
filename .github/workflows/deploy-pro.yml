@@ -46,7 +46,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
-          ssh-keyscan -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          timeout 15 bash -c "cat < /dev/null > /dev/tcp/$EC2_HOST/$EC2_PORT" || {
+            echo "Cannot connect to $EC2_HOST:$EC2_PORT from GitHub runner."
+            echo "Check EC2 public IP, Security Group inbound TCP $EC2_PORT, and SSH service."
+            exit 1
+          }
+          ssh-keyscan -T 10 -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
         env:

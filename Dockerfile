@@ -8,7 +8,7 @@ RUN npm ci
 COPY . .
 # Prisma reads DATABASE_URL while generating client at build-time.
 # Use a dummy value so image build does not depend on runtime secrets.
-RUN DATABASE_URL="mysql://root:root@localhost:3306/nest_auth" npx prisma generate && npm run build
+RUN DATABASE_URL="mysql://admin:huy123@mysql:3306/book_store?allowPublicKeyRetrieval=true" npx prisma generate && npm run build
 
 EXPOSE 3301
 CMD ["node", "dist/src/main.js"]

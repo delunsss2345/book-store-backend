@@ -32,7 +32,8 @@ git push -u origin production
   - Steps: install -> lint -> test -> build.
 - `CD Production`: `.github/workflows/deploy-pro.yml`
   - Runs on push to `production` and manual dispatch.
-  - SSH to EC2, pull branch `production`, auto-copy `.env.production.local` -> `.env.prod`, run docker compose, run prisma migrate, health check.
+  - Build Docker image on GitHub Actions and push to GHCR.
+  - SSH to EC2, pull branch `production`, upload `.env.prod` from secret, pull image from GHCR, run docker compose, run prisma migrate, health check.
 
 ## 4) Required GitHub secrets
 
@@ -40,10 +41,12 @@ Create these in `Settings -> Secrets and variables -> Actions`:
 
 - `EC2_HOST`
 - `EC2_USER`
-- `GITHUB_SSH_PRIVATE_KEY` (preferred) or `EC2_SSH_PRIVATE_KEY`
+- `SSH_PRIVATE_KEY_GITHUB` (preferred) or `GITHUB_SSH_PRIVATE_KEY` or `EC2_SSH_PRIVATE_KEY`
 - `EC2_APP_DIR` (example: `/srv/nest-auth`)
+- `PROD_ENV_FILE` (full content of your production `.env` file)
 - `EC2_PORT` (optional, default `22`)
 - `EC2_HEALTHCHECK_URL` (optional, default `http://127.0.0.1:3301/api/v1/docs`)
+- `GHCR_USERNAME` + `GHCR_TOKEN` (optional when package visibility/permissions require explicit GHCR login)
 
 ## 5) Recommended production safeguards
 

@@ -35,8 +35,7 @@ services:
       - ./docker/redis_data:/data
 
   app:
-    build:
-      context: .
+    image: ${APP_IMAGE}
     restart: always
     env_file:
       - .env.prod

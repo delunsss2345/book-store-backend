@@ -20,6 +20,7 @@ export type BookFilterParams = {
 export class CatalogRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+
     findLanguageByCode(code: string) {
         return this.prisma.language.findFirst({
             where: { code, isActive: true },
@@ -153,116 +154,177 @@ export class CatalogRepository {
         });
     }
 
-    findBookDetailById(bookId: bigint, languageId: number) {
-        return this.prisma.book.findFirst({
+    findBooksVariantByIds(bookVariantId: bigint[], languageId: number) {
+        if (!bookVariantId.length) {
+            return Promise.resolve([]);
+        }
+
+        return this.prisma.bookVariant.findMany({
             where: {
-                id: bookId,
+                id: { in: bookVariantId },
                 isActive: true,
-                deletedAt: null,
             },
             select: {
-                id: true,
-                coverImageUrl: true,
-                publicationYear: true,
-                pageCount: true,
-                weightGrams: true,
-                createdAt: true,
-                publisher: {
+                book: {
                     select: {
-                        defaultName: true,
-                    },
-                },
-                translations: {
-                    where: { languageId },
-                    select: {
-                        title: true,
-                        slug: true,
-                        description: true,
-                    },
-                    take: 1,
-                },
-                categories: {
-                    select: {
-                        category: {
+                        id: true,
+                        coverImageUrl: true,
+                        publicationYear: true,
+                        pageCount: true,
+                        weightGrams: true,
+                        createdAt: true,
+                        publisher: {
                             select: {
-                                id: true,
-                                parentId: true,
-                                sortOrder: true,
-                                categoryTranslation: {
-                                    where: { languageId },
+                                defaultName: true,
+                            },
+                        },
+                        translations: {
+                            where: { languageId },
+                            select: {
+                                title: true,
+                                slug: true,
+                                description: true,
+                            },
+                            take: 1,
+                        },
+                        categories: {
+                            select: {
+                                category: {
                                     select: {
-                                        name: true,
-                                        slug: true,
+                                        id: true,
+                                        parentId: true,
+                                        sortOrder: true,
+                                        categoryTranslation: {
+                                            where: { languageId },
+                                            select: {
+                                                name: true,
+                                                slug: true,
+                                            },
+                                            take: 1,
+                                        },
                                     },
-                                    take: 1,
+                                },
+                            },
+                        }
+                    },
+                },
+                id: true,
+                format: true,
+                edition: true,
+                isbn: true,
+                price: true,
+                currencyCode: true,
+                stock: true,
+            }
+        });
+    }
+
+    // repo
+    async findBookDetailById(bookId: bigint, languageId: number) {
+        const [bookDetail, ratingAgg] = await Promise.all([
+            this.prisma.book.findFirst({
+                where: { id: bookId, isActive: true, deletedAt: null },
+                select: {
+                    id: true,
+                    coverImageUrl: true,
+                    publicationYear: true,
+                    pageCount: true,
+                    weightGrams: true,
+                    createdAt: true,
+                    publisher: { select: { defaultName: true } },
+                    translations: {
+                        where: { languageId },
+                        select: { title: true, slug: true, description: true },
+                        take: 1,
+                    },
+                    categories: {
+                        select: {
+                            category: {
+                                select: {
+                                    id: true,
+                                    parentId: true,
+                                    sortOrder: true,
+                                    categoryTranslation: {
+                                        where: { languageId },
+                                        select: { name: true, slug: true },
+                                        take: 1,
+                                    },
                                 },
                             },
                         },
                     },
-                },
-                variants: {
-                    where: { isActive: true },
-                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
-                    select: {
-                        id: true,
-                        format: true,
-                        edition: true,
-                        isbn: true,
-                        price: true,
-                        currencyCode: true,
-                        stock: true,
-                    },
-                },
-            },
-        });
-    }
-
-    groupBookRatings(bookIds?: bigint[]) {
-        return this.prisma.review.groupBy({
-            by: ['bookId'],
-            where: {
-                ...(bookIds?.length ? { bookId: { in: bookIds } } : {}),
-            },
-            _avg: {
-                rating: true,
-            },
-            _count: {
-                bookId: true,
-            },
-        });
-    }
-
-    async groupBookSales(bookIds?: bigint[]) {
-        const rows = await this.prisma.orderItem.findMany({
-            where: {
-                bookVariantId: { not: null },
-                order: {
-                    status: {
-                        in: VALID_SALES_ORDER_STATUSES,
-                    },
-                },
-                ...(bookIds?.length
-                    ? {
-                        variant: {
-                            is: {
-                                bookId: { in: bookIds },
-                            },
+                    variants: {
+                        where: { isActive: true },
+                        orderBy: [{ price: "asc" }, { id: "asc" }],
+                        select: {
+                            id: true,
+                            format: true,
+                            edition: true,
+                            isbn: true,
+                            price: true,
+                            currencyCode: true,
+                            stock: true,
                         },
-                    }
-                    : {}),
-            },
-            select: {
-                quantity: true,
-                variant: {
-                    select: {
-                        bookId: true,
                     },
                 },
-            },
-        });
+            }),
 
-        return rows;
+            this.prisma.review.aggregate({
+                where: { bookVariant: { bookId, isActive: true } },
+                _avg: { rating: true },
+                _count: { rating: true },
+            }),
+        ]);
+
+        if (!bookDetail) return null;
+
+        return {
+            ...bookDetail,
+            ratingAvg: ratingAgg._avg.rating ?? null,
+            ratingCount: ratingAgg._count.rating ?? 0,
+        };
     }
+
+
+    // Gom review lại sau đó tính trung bình rate của review là bao nhiêu sao 
+    // Điểm số lượng sách được review 
+    async groupBookRatings(limit = 10) {
+        const rows = await this.prisma.$queryRaw<{ bookId: bigint | string | number; bookVariantId: bigint | string | number; avgRating: bigint | number }[]>(Prisma.sql`
+        SELECT reviews.book_id as bookId, reviews.book_variant_id as bookVariantId , AVG(reviews.rating) as avgRating FROM reviews 
+        GROUP BY reviews.book_id , reviews.book_variant_id
+        ORDER BY AVG(reviews.rating) DESC LIMIT ${limit}
+        `);
+
+        return rows.map(r => ({
+            bookId: r.bookId,
+            bookVariantId: r.bookVariantId,
+            avgRating: r.avgRating
+        }))
+    }
+    // Gom lại số sản phẩm đã bán tìm varariant đã được bán và sách gốc là sách nào 
+    // biến thể được bán đó là có sách gốc là gì
+    async groupBookSales(limit = 10) {
+        const rows = await this.prisma.$queryRaw<
+            { bookId: bigint | string | number; bookVariantId: string | number | bigint, soldQty: bigint | string | number }[]
+        >(Prisma.sql`
+    SELECT bv.book_id AS bookId, bvs.book_variant_id as bookVariantId , SUM(oi.quantity) AS soldQty
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    JOIN book_variant_snapshots bvs ON bvs.id = oi.book_variant_snapshot_id
+    JOIN book_variants bv ON bv.id = bvs.book_variant_id
+    WHERE o.status IN (${Prisma.join(VALID_SALES_ORDER_STATUSES)})
+    GROUP BY bv.book_id , bvs.book_variant_id
+    ORDER BY soldQty DESC
+    LIMIT ${limit}
+  `);
+
+        return rows.map(r => ({
+            bookId: BigInt(r.bookId),
+            bookVariantId: BigInt(r.bookVariantId),
+            soldQty: BigInt(r.soldQty) // tổng số lượng đã bán
+        }));
+    }
+
 
     private buildBookWhere(filter: BookFilterParams): Prisma.BookWhereInput {
         return {

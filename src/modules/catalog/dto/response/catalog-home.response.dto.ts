@@ -1,10 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CatalogBookCardDto, CatalogCategoryDto } from './catalog-book-card.dto';
+import { CatalogBookCardDto } from './catalog-book-card.dto';
 
 export class CatalogHomeResponseDto {
-    @ApiProperty({ type: () => [CatalogCategoryDto] })
-    categories: CatalogCategoryDto[];
-
     @ApiProperty({ type: () => [CatalogBookCardDto] })
     newArrivals: CatalogBookCardDto[];
 

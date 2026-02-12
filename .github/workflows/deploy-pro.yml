@@ -163,14 +163,6 @@ jobs:
           fi
 
           cd "$EC2_APP_DIR"
-          if [ ! -d .git ]; then
-            git clone -b production git@github.com:Delunsss2345/book-store-backend.git .
-          else
-            git fetch --all --prune
-            git checkout production
-            git pull --ff-only origin production
-          fi
-
           git fetch --all --prune
           git checkout production
           git pull --ff-only origin production

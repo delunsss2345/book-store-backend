@@ -178,7 +178,6 @@ jobs:
           docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
           docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
           docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate deploy
-          docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma db seed
           docker compose -f docker-compose.prod.yml --env-file .env.prod ps
 
           curl -fsS "$EC2_HEALTHCHECK_URL" >/dev/null

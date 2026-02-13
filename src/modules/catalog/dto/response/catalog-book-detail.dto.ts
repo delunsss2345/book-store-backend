@@ -29,15 +29,6 @@ export class CatalogBookDetailDto {
     @ApiPropertyOptional({ example: 'O\'Reilly' })
     publisherName?: string | null;
 
-    @ApiPropertyOptional({ example: '10.00' })
-    minPrice?: string | null;
-
-    @ApiPropertyOptional({ example: '20.00' })
-    maxPrice?: string | null;
-
-    @ApiPropertyOptional({ example: 'USD' })
-    currencyCode?: string | null;
-
     @ApiPropertyOptional({ example: 4.7 })
     ratingAvg?: number | null;
 

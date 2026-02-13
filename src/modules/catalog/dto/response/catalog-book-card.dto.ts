@@ -31,6 +31,9 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: 530 })
     soldCount?: number;
 
+    @ApiPropertyOptional({ example: false })
+    isOutOfStock?: boolean;
+
     @ApiProperty({ type: Date })
     createdAt: Date;
 }
@@ -50,6 +53,26 @@ export class CatalogCategoryDto {
 
     @ApiProperty({ example: 0 })
     sortOrder: number;
+}
+
+export class CatalogCategoryTreeDto {
+    @ApiProperty({ example: '1' })
+    id: string;
+
+    @ApiPropertyOptional({ example: null })
+    parentId?: string | null;
+
+    @ApiProperty({ example: 'Programming' })
+    name: string;
+
+    @ApiPropertyOptional({ example: 'programming' })
+    slug?: string | null;
+
+    @ApiProperty({ example: 1 })
+    sortOrder: number;
+
+    @ApiProperty({ type: () => [CatalogCategoryTreeDto] })
+    children: CatalogCategoryTreeDto[];
 }
 
 export class CatalogBookVariantDto {

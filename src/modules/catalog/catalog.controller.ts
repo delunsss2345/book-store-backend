@@ -3,10 +3,14 @@ import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/comm
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import {
+    CatalogBookListQueryDto,
+    CatalogCategoriesQueryDto,
     CatalogHomeQueryDto
 } from './dto/request';
 import {
     CatalogBookDetailDto,
+    CatalogBookListResponseDto,
+    CatalogCategoryTreeDto,
     CatalogHomeResponseDto
 } from './dto/response';
 
@@ -22,12 +26,12 @@ export class CatalogController {
         return this.catalogService.getCatalogHome(query);
     }
 
-    // @Public()
-    // @Get('books')
-    // @ApiOkResponse({ type: CatalogBookListResponseDto })
-    // listBooks(@Query() query: CatalogBookListQueryDto) {
-    //     return this.catalogService.listBooks(query);
-    // }
+    @Public()
+    @Get('books')
+    @ApiOkResponse({ type: CatalogBookListResponseDto })
+    listBooks(@Query() query: CatalogBookListQueryDto) {
+        return this.catalogService.listBooks(query);
+    }
 
     @Public()
     @Get('books/:bookId')
@@ -39,12 +43,22 @@ export class CatalogController {
         return this.catalogService.getBookDetail(this.parseBigInt(bookId, 'bookId'), lang);
     }
 
-    // @Public()
-    // @Get('categories')
-    // @ApiOkResponse({ type: [CatalogCategoryDto] })
-    // listCategories(@Query('lang') lang?: string) {
-    //     return this.catalogService.listCategories(lang);
-    // }
+    @Public()
+    @Get('books/slug/:slug')
+    @ApiOkResponse({ type: CatalogBookDetailDto })
+    getBookDetailBySlug(
+        @Param('slug') slug: string,
+        @Query('lang') lang?: string,
+    ) {
+        return this.catalogService.getBookDetailBySlug(slug, lang);
+    }
+
+    @Public()
+    @Get('categories')
+    @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
+    getCategories(@Query() query: CatalogCategoriesQueryDto) {
+        return this.catalogService.getCategories(query.lang);
+    }
 
     // @Public()
     // @Get('categories/:categoryId/books')

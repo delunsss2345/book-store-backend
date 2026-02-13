@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export enum CatalogBookSort {
     NEWEST = 'newest',
@@ -11,9 +11,9 @@ export enum CatalogBookSort {
 }
 
 export class CatalogBookListQueryDto {
-    @ApiPropertyOptional({ example: 'vi', default: 'vi' })
+    @ApiPropertyOptional({ example: 'en', default: 'en', enum: ['vi', 'en'] })
     @IsOptional()
-    @IsString()
+    @IsIn(['vi', 'en'])
     lang?: string;
 
     @ApiPropertyOptional({ example: 1, minimum: 1, default: 1 })
@@ -30,19 +30,4 @@ export class CatalogBookListQueryDto {
     @Min(1)
     @Max(100)
     limit?: number;
-
-    @ApiPropertyOptional({ example: 'harry potter' })
-    @IsOptional()
-    @IsString()
-    q?: string;
-
-    @ApiPropertyOptional({ example: '1' })
-    @IsOptional()
-    @IsString()
-    categoryId?: string;
-
-    @ApiPropertyOptional({ enum: CatalogBookSort, default: CatalogBookSort.NEWEST })
-    @IsOptional()
-    @IsEnum(CatalogBookSort)
-    sort?: CatalogBookSort;
 }

@@ -1,7 +1,19 @@
-import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
-import { CatalogBookCardDto, CatalogBookDetailDto, CatalogBookVariantDto, CatalogCategoryDto } from '@/modules/catalog/dto/response';
+import { CatalogBookListQueryDto, CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
+import {
+    CatalogBookCardDto,
+    CatalogBookDetailDto,
+    CatalogBookListResponseDto,
+    CatalogBookVariantDto,
+    CatalogCategoryDto,
+    CatalogCategoryTreeDto,
+} from '@/modules/catalog/dto/response';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    Inject,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { CatalogRepository } from './catalog.repository';
 
@@ -12,6 +24,9 @@ const CATEGORY_CACHE_TTL = 60_000;
 
 type RatingInfo = { value: number; count: number };
 type SalesInfo = { value: number };
+type CategoryRow = Awaited<
+    ReturnType<CatalogRepository['findActiveCategoriesByLanguage']>
+>[number];
 
 @Injectable()
 export class CatalogService {
@@ -59,6 +74,16 @@ export class CatalogService {
         });
     }
 
+    async getCategories(lang?: string): Promise<CatalogCategoryTreeDto[]> {
+        const language = await this.resolveCategoryLanguage(lang);
+        const cacheKey = `catalog:categories:${language.code}`;
+
+        return this.withCache(cacheKey, CATEGORY_CACHE_TTL, async () => {
+            const rows = await this.repo.findActiveCategoriesByLanguage(language.id);
+            return this.buildCategoryTree(rows);
+        });
+    }
+
     private async buildCardMap(
         ids: bigint[],
         languageId: number,
@@ -85,63 +110,91 @@ export class CatalogService {
         );
     }
 
-    // async listBooks(query: CatalogBookListQueryDto): Promise<CatalogBookListResponseDto> {
-    //     const page = query.page ?? 1;
-    //     const limit = query.limit ?? 20;
-    //     const sort = query.sort ?? CatalogBookSort.NEWEST;
-    //     const lang = await this.resolveLanguage(query.lang);
+    private buildCategoryTree(rows: CategoryRow[]): CatalogCategoryTreeDto[] {
+        const nodes = new Map<string, CatalogCategoryTreeDto>();
 
-    //     const q = query.q?.trim();
-    //     const categoryId = this.parseBigInt(query.categoryId);
+        for (const row of rows) {
+            const translation = row.categoryTranslation?.[0];
+            if (!translation?.name) continue;
 
-    //     const cacheKey = `catalog:list:${lang.code}:p${page}:l${limit}:q=${q ?? ''}:cat=${query.categoryId ?? ''}:sort=${sort}`;
+            const id = row.id.toString();
+            nodes.set(id, {
+                id,
+                parentId: row.parentId ? row.parentId.toString() : null,
+                name: translation.name,
+                slug: translation.slug ?? null,
+                sortOrder: row.sortOrder ?? 0,
+                children: [],
+            });
+        }
 
-    //     return this.withCache(cacheKey, LIST_CACHE_TTL, async () => {
-    //         const candidates = await this.repo.findActiveBookRows({
-    //             languageId: lang.id,
-    //             q,
-    //             categoryId,
-    //         });
+        const roots: CatalogCategoryTreeDto[] = [];
+        for (const node of nodes.values()) {
+            if (!node.parentId) {
+                roots.push(node);
+                continue;
+            }
 
-    //         const total = candidates.length;
-    //         if (!total) {
-    //             return { page, limit, total: 0, totalPages: 0, items: [] };
-    //         }
+            const parent = nodes.get(node.parentId);
+            if (!parent) continue;
+            parent.children.push(node);
+        }
 
-    //         const candidateIds = candidates.map((r) => r.id);
-    //         const createdAtMap = new Map<string, Date>(candidates.map((r) => [r.id.toString(), r.createdAt]));
+        this.sortCategoryTree(roots);
+        return roots;
+    }
 
-    //         const sortedIds = await this.sortBookIds({
-    //             sort,
-    //             candidateIds,
-    //             createdAtMap,
-    //             languageId: lang.id,
-    //         });
+    private sortCategoryTree(nodes: CatalogCategoryTreeDto[]): void {
+        nodes.sort((a, b) => {
+            if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+            return a.id.localeCompare(b.id);
+        });
 
-    //         const offset = (page - 1) * limit;
-    //         const pageIds = sortedIds.slice(offset, offset + limit);
+        for (const node of nodes) {
+            this.sortCategoryTree(node.children);
+        }
+    }
 
-    //         const [books, ratingRows, salesRows] = await Promise.all([
-    //             this.repo.findBooksByIds(pageIds, lang.id),
-    //             this.repo.groupBookRatings(pageIds),
-    //             this.repo.groupBookSales(pageIds),
-    //         ]);
+    async listBooks(query: CatalogBookListQueryDto): Promise<CatalogBookListResponseDto> {
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 20;
+        const language = await this.resolveCategoryLanguage(query.lang);
 
-    //         const ratingMap = this.buildRatingMap(ratingRows);
-    //         const salesMap = this.buildSalesMap(salesRows);
+        const cacheKey = `catalog:books:lang=${language.code}:p${page}:l${limit}`;
 
-    //         const cardMap = this.buildCardMapFromBooks(books, salesMap, ratingMap);
+        return this.withCache(cacheKey, LIST_CACHE_TTL, async () => {
+            const [total, rows] = await Promise.all([
+                this.repo.countBooksForList(language.id),
+                this.repo.findBooksForList(language.id, page, limit),
+            ]);
 
-    //         return {
-    //             page,
-    //             limit,
-    //             total,
-    //             totalPages: Math.ceil(total / limit),
-    //             items: this.pickCards(pageIds, cardMap),
-    //         };
-    //     });
-    // }
-    // service
+            const items: CatalogBookCardDto[] = rows.map((book) => {
+                const translation = book.translations[0];
+                const cheapestVariant = book.variants[0];
+                const stock = cheapestVariant?.stock ?? 0;
+
+                return {
+                    id: book.id.toString(),
+                    title: translation?.title ?? `Book ${book.id.toString()}`,
+                    slug: translation?.slug ?? null,
+                    coverImageUrl: book.coverImageUrl ?? null,
+                    minPrice: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
+                    currencyCode: cheapestVariant?.currencyCode ?? null,
+                    isOutOfStock: !cheapestVariant || stock <= 0,
+                    createdAt: book.createdAt,
+                };
+            });
+
+            return {
+                page,
+                limit,
+                total,
+                totalPages: total ? Math.ceil(total / limit) : 0,
+                items,
+            };
+        });
+    }
+
     async getBookDetail(bookId: bigint, lang?: string): Promise<CatalogBookDetailDto> {
         const language = await this.resolveLanguage(lang);
         const cacheKey = `catalog:detail:${bookId.toString()}:${language.code}`;
@@ -151,7 +204,6 @@ export class CatalogService {
             if (!book) throw new NotFoundException("Book not found");
 
             const t = book.translations[0];
-            const priceRange = this.getVariantPriceRange(book.variants);
 
             const categories: CatalogCategoryDto[] = (book.categories ?? []).map((x) => {
                 const c = x.category;
@@ -185,9 +237,62 @@ export class CatalogService {
                 pageCount: book.pageCount ?? null,
                 weightGrams: book.weightGrams ?? null,
                 publisherName: book.publisher?.defaultName ?? null,
-                minPrice: priceRange.minPrice,
-                maxPrice: priceRange.maxPrice,
-                currencyCode: priceRange.currencyCode,
+                ratingAvg: book.ratingAvg,
+                ratingCount: book.ratingCount,
+                variants,
+                categories,
+                createdAt: book.createdAt,
+            };
+        });
+    }
+
+    async getBookDetailBySlug(slug: string, lang?: string): Promise<CatalogBookDetailDto> {
+        const language = await this.resolveLanguage(lang);
+        const normalizedSlug = slug?.trim();
+        if (!normalizedSlug) {
+            throw new BadRequestException('slug is required');
+        }
+
+        const cacheKey = `catalog:detail:slug:${normalizedSlug}:${language.code}`;
+
+        return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
+            const book = await this.repo.findBookDetailBySlug(normalizedSlug, language.id);
+            if (!book) throw new NotFoundException('Book not found');
+
+            const t = book.translations[0];
+
+            const categories: CatalogCategoryDto[] = (book.categories ?? []).map((x) => {
+                const c = x.category;
+                const ct = c.categoryTranslation?.[0];
+                return {
+                    id: c.id.toString(),
+                    parentId: c.parentId ? c.parentId.toString() : null,
+                    sortOrder: c.sortOrder ?? null,
+                    name: ct?.name ?? null,
+                    slug: ct?.slug ?? null,
+                };
+            });
+
+            const variants: CatalogBookVariantDto[] = (book.variants ?? []).map((v) => ({
+                id: v.id.toString(),
+                format: v.format,
+                edition: v.edition ?? null,
+                isbn: v.isbn ?? null,
+                price: v.price?.toString?.() ?? String(v.price),
+                currencyCode: v.currencyCode ?? null,
+                stock: v.stock ?? null,
+            }));
+
+            return {
+                id: book.id.toString(),
+                title: t?.title ?? `Book ${book.id.toString()}`,
+                slug: t?.slug ?? normalizedSlug,
+                description: t?.description ?? null,
+                coverImageUrl: book.coverImageUrl ?? null,
+                publicationYear: book.publicationYear ?? null,
+                pageCount: book.pageCount ?? null,
+                weightGrams: book.weightGrams ?? null,
+                publisherName: book.publisher?.defaultName ?? null,
                 ratingAvg: book.ratingAvg,
                 ratingCount: book.ratingCount,
                 variants,
@@ -227,7 +332,6 @@ export class CatalogService {
         ratingCount?: number,
     ): CatalogBookCardDto {
         const t = book.translations[0];
-        // const variant = this.getVariantPriceRange(variant);
         return {
             id: book.id.toString(),
             title: t?.title ?? `Book ${book.id.toString()}`,
@@ -250,41 +354,22 @@ export class CatalogService {
     ): CatalogBookCardDto {
         const book = variant.book;
         const t = book.translations[0];
-        const priceRange = this.getVariantPriceRange([
-            { price: variant.price, currencyCode: variant.currencyCode },
-        ]);
+        const price = Number.isFinite(Number(variant.price))
+            ? Number(variant.price).toFixed(2)
+            : null;
 
         return {
             id: book.id.toString(),
             title: t?.title ?? `Book ${book.id.toString()}`,
             slug: t?.slug ?? null,
             coverImageUrl: book.coverImageUrl,
-            minPrice: priceRange.minPrice,
-            maxPrice: priceRange.maxPrice,
-            currencyCode: priceRange.currencyCode,
+            minPrice: price,
+            maxPrice: price,
+            currencyCode: variant.currencyCode ?? null,
             ratingAvg: ratingAvg ?? null,
             ratingCount: ratingCount ?? 0,
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
-        };
-    }
-
-    private getVariantPriceRange(
-        variants: Array<{ price: any; currencyCode: string | null }>,
-    ) {
-        if (!variants.length)
-            return { minPrice: null, maxPrice: null, currencyCode: null };
-
-        const prices = variants.map((v) => Number(v.price));
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        const currencyCode =
-            variants.find((v) => !!v.currencyCode)?.currencyCode ?? null;
-
-        return {
-            minPrice: Number.isFinite(minPrice) ? minPrice.toFixed(2) : null,
-            maxPrice: Number.isFinite(maxPrice) ? maxPrice.toFixed(2) : null,
-            currencyCode,
         };
     }
 
@@ -300,6 +385,27 @@ export class CatalogService {
         } catch {
             return undefined;
         }
+    }
+
+    private async resolveCategoryLanguage(
+        lang?: string,
+    ): Promise<{ id: number; code: string }> {
+        const normalized = (lang ?? 'en').trim().toLowerCase();
+        if (normalized !== 'vi' && normalized !== 'en') {
+            throw new BadRequestException('lang must be one of: vi, en');
+        }
+
+        const cacheKey = `catalog:lang:${normalized}`;
+        const cached = await this.cache.get<{ id: number; code: string }>(cacheKey);
+        if (cached) return cached;
+
+        const found = await this.repo.findLanguageByCode(normalized);
+        if (!found) {
+            throw new NotFoundException(`Language "${normalized}" is not active`);
+        }
+
+        await this.cache.set(cacheKey, found, CATEGORY_CACHE_TTL);
+        return found;
     }
 
     private async resolveLanguage(

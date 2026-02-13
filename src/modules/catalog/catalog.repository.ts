@@ -16,6 +16,10 @@ export type BookFilterParams = {
     categoryId?: bigint;
 };
 
+export type BookListFilterParams = {
+    languageId: number;
+};
+
 @Injectable()
 export class CatalogRepository {
     constructor(private readonly prisma: PrismaService) { }
@@ -41,6 +45,9 @@ export class CatalogRepository {
             where: {
                 isActive: true,
                 deletedAt: null,
+                categoryTranslation: {
+                    some: { languageId },
+                },
             },
             orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
             select: {
@@ -54,6 +61,45 @@ export class CatalogRepository {
                         slug: true,
                     },
                     take: 1,
+                },
+            },
+        });
+    }
+
+    countBooksForList(languageId: number) {
+        return this.prisma.book.count({
+            where: this.buildBookListWhere({ languageId }),
+        });
+    }
+
+    findBooksForList(languageId: number, page: number, limit: number) {
+        return this.prisma.book.findMany({
+            where: this.buildBookListWhere({ languageId }),
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            skip: (page - 1) * limit,
+            take: limit,
+            select: {
+                id: true,
+                coverImageUrl: true,
+                createdAt: true,
+                translations: {
+                    where: { languageId },
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                    },
+                    take: 1,
+                },
+                variants: {
+                    where: { isActive: true },
+                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
+                    take: 1,
+                    select: {
+                        price: true,
+                        currencyCode: true,
+                        stock: true,
+                    },
                 },
             },
         });
@@ -285,6 +331,78 @@ export class CatalogRepository {
         };
     }
 
+    async findBookDetailBySlug(slug: string, languageId: number) {
+        const bookDetail = await this.prisma.book.findFirst({
+            where: {
+                isActive: true,
+                deletedAt: null,
+                translations: {
+                    some: {
+                        languageId,
+                        slug,
+                    },
+                },
+            },
+            select: {
+                id: true,
+                coverImageUrl: true,
+                publicationYear: true,
+                pageCount: true,
+                weightGrams: true,
+                createdAt: true,
+                publisher: { select: { defaultName: true } },
+                translations: {
+                    where: { languageId, slug },
+                    select: { title: true, slug: true, description: true },
+                    take: 1,
+                },
+                categories: {
+                    select: {
+                        category: {
+                            select: {
+                                id: true,
+                                parentId: true,
+                                sortOrder: true,
+                                categoryTranslation: {
+                                    where: { languageId },
+                                    select: { name: true, slug: true },
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+                variants: {
+                    where: { isActive: true },
+                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
+                    select: {
+                        id: true,
+                        format: true,
+                        edition: true,
+                        isbn: true,
+                        price: true,
+                        currencyCode: true,
+                        stock: true,
+                    },
+                },
+            },
+        });
+
+        if (!bookDetail) return null;
+
+        const ratingAgg = await this.prisma.review.aggregate({
+            where: { bookVariant: { bookId: bookDetail.id, isActive: true } },
+            _avg: { rating: true },
+            _count: { rating: true },
+        });
+
+        return {
+            ...bookDetail,
+            ratingAvg: ratingAgg._avg.rating ?? null,
+            ratingCount: ratingAgg._count.rating ?? 0,
+        };
+    }
+
 
     // Gom review lại sau đó tính trung bình rate của review là bao nhiêu sao 
     // Điểm số lượng sách được review 
@@ -357,6 +475,18 @@ export class CatalogRepository {
                     },
                 }
                 : {}),
+        };
+    }
+
+    private buildBookListWhere(filter: BookListFilterParams): Prisma.BookWhereInput {
+        return {
+            isActive: true,
+            deletedAt: null,
+            translations: {
+                some: {
+                    languageId: filter.languageId,
+                },
+            },
         };
     }
 }

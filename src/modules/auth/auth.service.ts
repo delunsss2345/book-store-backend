@@ -12,6 +12,7 @@ import {
     VerifyEmailRequestDto
 } from '@/modules/auth/dto/request';
 import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
+import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
 import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
@@ -45,7 +46,8 @@ export class AuthService {
         private readonly userDeviceService: UserDeviceService,
         private readonly emailProducer: EmailProducer,
         private readonly userRoleService: UserRoleService,
-        private readonly roleService: RoleService
+        private readonly roleService: RoleService,
+        private readonly guestSessionService: GuestSessionService,
     ) {
     }
 
@@ -53,7 +55,7 @@ export class AuthService {
         return this.authRepository.findUserById(id);
     }
 
-    async register(body: RegisterRequestDto, userAgent: string, ip: string) {
+    async register(body: RegisterRequestDto, userAgent: string, ip: string, guestSessionId?: string) {
         if (body.password !== body.confirmPassword) {
             throw new BadRequestException(RegisterMessage.PASSWORD_CONFIRM_MISMATCH);
         }
@@ -112,6 +114,10 @@ export class AuthService {
             verificationBundle.outbox.id,
             verificationBundle.verification.id,
         );
+
+        if (guestSessionId) {
+            await this.guestSessionService.convertGuestSessionToUser(guestSessionId, user.id);
+        }
 
         return { user, ...signature }
     }

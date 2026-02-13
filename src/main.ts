@@ -25,10 +25,25 @@ async function bootstrap() {
     .setTitle('Book Store Api')
     .setVersion('1.0')
     .addTag('bookstore')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        in: 'header',
+        name: 'Authorization',
+        description: 'JWT access token',
+      },
+      'access-token',
+    )
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${globalPrefix}/docs`, app, documentFactory);
+  SwaggerModule.setup(`${globalPrefix}/docs`, app, documentFactory, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
   await app.listen(port);
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,

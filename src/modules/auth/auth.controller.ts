@@ -30,7 +30,7 @@ import { ResetPasswordValidateResponseDto } from '@/modules/auth/dto/response/re
 import { VerifyEmailResponseDto } from '@/modules/auth/dto/response/verifyEmail.response.dto';
 import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiOkResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
 import type { CookieOptions, Request, Response } from 'express';
 import { v4 } from 'uuid';
@@ -46,8 +46,14 @@ export class AuthController {
     @Public()
     @Post('register')
     @ApiOkResponse({ type: ResponseDto<RegisterResponseDto> })
-    register(@Body() body: RegisterRequestDto, @UserAgent() userAgent: string, @Ip() ip: string) {
-        return this.authService.register(body, userAgent, ip);
+    register(
+        @Body() body: RegisterRequestDto,
+        @UserAgent() userAgent: string,
+        @Ip() ip: string,
+        @Req() req: Request,
+    ) {
+        const guestSessionId = req.cookies?.guestSessionId as string | undefined;
+        return this.authService.register(body, userAgent, ip, guestSessionId);
     }
 
     @Public()
@@ -74,6 +80,7 @@ export class AuthController {
 
 
     @Get('me')
+    @ApiBearerAuth('access-token')
     me(@GetUser() user: JwtPayload) {
         return this.authService.getMe(BigInt(user.sub));
     }
@@ -86,6 +93,7 @@ export class AuthController {
 
     @HttpCode(HttpStatus.OK)
     @Post('logout')
+    @ApiBearerAuth('access-token')
     logout(@GetAccessToken() accessToken: string, @Body() body: LogoutRequestDto) {
         return this.authService.logout({ accessToken, ...body });
     }
@@ -115,6 +123,7 @@ export class AuthController {
 
     @HttpCode(HttpStatus.OK)
     @Post('change-password')
+    @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: ResponseDto<ChangePasswordResponseDto> })
     changePassword(@GetUser() user: JwtPayload, @Body() body: ChangePasswordRequestDto) {
         return this.authService.changePassword(BigInt(user.sub), body);

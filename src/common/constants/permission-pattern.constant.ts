@@ -1,5 +1,6 @@
 export enum PermissionCode {
     HEALTH_READ = "health:read",
+    GUEST_SESSION_GET_ALL = "guest:get-all",
 
     ROLE_READ = "role:read",
     ROLE_READ_ONE = "role:read_one",

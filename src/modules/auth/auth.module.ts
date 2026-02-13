@@ -6,6 +6,7 @@ import { JobsModule } from '@/modules/jobs/jobs.module';
 import { LoginAttemptModule } from '@/modules/login-attempt/login-attempt.module';
 import { RevokedTokenModule } from '@/modules/revoked-token/revoked-token.module';
 import { RoleModule } from '@/modules/role/role.module';
+import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
 import { UserDeviceModule } from '@/modules/user-device/user-device.module';
 import { UserRoleModule } from '@/modules/user-role/user-role.module';
 import { UserSessionModule } from '@/modules/user-session/user-session.module';
@@ -19,6 +20,7 @@ import { AuthService } from './auth.service';
         VerificationCodeModule,
         EmailOutboxModule,
         LoginAttemptModule,
+        GuestSessionModule,
         UserSessionModule,
         RevokedTokenModule,
         UserDeviceModule,

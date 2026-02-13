@@ -100,3 +100,18 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 ## Auth + Permission Flow
 
 ![Auth Permission Flow](doc/images/JwtAndRBAC.png)
+
+## Cart Add Item Workflow
+
+- Endpoint: `POST /cart/items`
+- Rule: every request increments quantity by `+1`.
+- Guest flow:
+- Use `guestSessionId` from request context.
+- Persist guest cart/cart-items in DB (not local-only).
+- Update `lastSeenAt` when guest returns with existing session cookie.
+- Old guest data is cleaned at `00:00` daily if inactive for more than 3 days.
+- User flow:
+- Validate user from token context.
+- Create cart if missing, then upsert item quantity (`+1` each call).
+
+Detailed workflow log: `docs/workflow-docs.md`

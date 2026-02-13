@@ -110,13 +110,13 @@ type SeededPurchase = {
 };
 
 const CURRENCY_CODE_VND = 'VND';
-const CUSTOMER_COUNT = 50;
-const BOOK_COUNT = 100;
-const VARIANTS_PER_BOOK = 4;
+const CUSTOMER_COUNT = 20;
+const BOOK_COUNT = 20;
+const VARIANTS_PER_BOOK = 2;
 const SNAPSHOTS_PER_VARIANT = 2;
-const ORDER_COUNT = 50;
-const MIN_REVIEW_PER_BOOK = 50;
-const MAX_REVIEW_PER_BOOK = 70;
+const ORDER_COUNT = 20;
+const MIN_REVIEW_PER_BOOK = 20;
+const MAX_REVIEW_PER_BOOK = 40;
 const ORDER_CODE_PREFIX = 'SEED-ORD-';
 const REVIEW_CONTENT_PREFIX = '[seed-review]';
 
@@ -1067,32 +1067,32 @@ async function upsertVariantSnapshots(variants: SeededVariant[]) {
 
       const row = existing
         ? await prisma.bookVariantSnapshot.update({
-            where: { id: existing.id },
-            data: payload,
-            select: {
-              id: true,
-              bookVariantId: true,
-              priceSnapshot: true,
-              formatSnapshot: true,
-              editionSnapshot: true,
-            },
-          })
+          where: { id: existing.id },
+          data: payload,
+          select: {
+            id: true,
+            bookVariantId: true,
+            priceSnapshot: true,
+            formatSnapshot: true,
+            editionSnapshot: true,
+          },
+        })
         : await prisma.bookVariantSnapshot.create({
-            data: payload,
-            select: {
-              id: true,
-              bookVariantId: true,
-              priceSnapshot: true,
-              formatSnapshot: true,
-              editionSnapshot: true,
-            },
-          });
+          data: payload,
+          select: {
+            id: true,
+            bookVariantId: true,
+            priceSnapshot: true,
+            formatSnapshot: true,
+            editionSnapshot: true,
+          },
+        });
 
       keepIds.push(row.id);
       snapshots.push({
         id: row.id,
         bookId: variant.bookId,
-        bookVariantId: row.bookVariantId!,
+        bookVariantId: row.bookVariantId,
         priceSnapshot: Number(row.priceSnapshot),
         formatSnapshot: row.formatSnapshot,
         editionSnapshot: row.editionSnapshot,

@@ -2,6 +2,9 @@ import { SecurityModule } from '@/common/security/security.module';
 import { CONFIGURATION, TConfiguration } from '@/config';
 import { CatalogModule } from '@/modules/catalog';
 import { HealthModule } from '@/modules/health/health.module';
+import { AuthorModule } from '@/modules/author/author.module';
+import { PublisherModule } from '@/modules/publisher/publisher.module';
+import { ReviewModule } from '@/modules/review/review.module';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -55,6 +58,9 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     HealthModule,
     UserAddressModule,
     CatalogModule,
+    ReviewModule,
+    PublisherModule,
+    AuthorModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

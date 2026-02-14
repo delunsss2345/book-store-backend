@@ -70,7 +70,6 @@ export class UserRoleRepository {
     }
 
     findRolesByUserId(userId: bigint) {
-        console.log(userId);
         return this.prisma.userRole.findMany({
             where: { userId, deletedAt: null },
             select: {

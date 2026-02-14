@@ -31,7 +31,6 @@ export class UserRoleService {
     async getRoleIdsByUserId(userId: bigint) {
         const rows = await this.userRoleRepository.findRolesByUserId(userId);
         Logger.debug('role user')
-        console.log(rows);
         return rows.map((row) => row.role.id);
     }
 

@@ -1,895 +1,895 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "mysql"
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  BLOCKED
-}
-
-enum HTTPMethod {
-  GET
-  POST
-  PUT
-  DELETE
-  PATCH
-  OPTIONS
-  HEAD
-}
-
-enum DevicePlatform {
-  WEB
-  ANDROID
-  IOS
-  DESKTOP
-  OTHER
-}
-
-enum SessionStatus {
-  ACTIVE
-  REVOKED
-  EXPIRED
-}
-
-enum VerificationType {
-  REGISTER
-  FORGOT_PASSWORD
-  CHANGE_EMAIL
-  CHANGE_PASSWORD
-}
-
-enum BookFormat {
-  HARDCOVER
-  PAPERBACK
-  EBOOK
-  AUDIOBOOK
-}
-
-enum OrderStatus {
-  PENDING_PAYMENT
-  PAID
-  CONFIRMED
-  PACKING
-  SHIPPING
-  DELIVERED
-  CANCELLED
-  RETURN_REQUESTED
-  RETURNED
-  REFUNDED
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  REFUNDED
-  PARTIAL_REFUND
-}
-
-enum PaymentGateway {
-  COD
-  VNPAY
-  MOMO
-  STRIPE
-  PAYPAL
-  OTHER
-}
-
-enum EmailStatus {
-  PENDING
-  SENDING
-  SENT
-  FAILED
-  CANCELLED
-}
-
-enum JobStatus {
-  PENDING
-  PROCESSING
-  DONE
-  FAILED
-  CANCELLED
-}
-
-enum InventoryReason {
-  PURCHASE
-  RESTOCK
-  ADJUSTMENT
-  RETURN
-}
-
-enum ConsentType {
-  ANALYTICS
-  MARKETING
-}
-
-enum EventType {
-  VIEW_BOOK
-  SEARCH
-  ADD_TO_CART
-  REMOVE_FROM_CART
-  CHECKOUT_START
-  PLACE_ORDER
-  PAYMENT_SUCCESS
-  PAYMENT_FAILED
-  LOGIN
-  LOGOUT
-}
-
-enum RoleCode {
-  GUEST 
-  ADMIN
-  STAFF 
-  CUSTOMER 
-  WAREHOUSE
-}
-
-model User {
-  id                BigInt    @id @default(autoincrement())
-  email             String    @unique @db.VarChar(255)
-  phoneNumber       String?   @map("phone_number") @db.VarChar(30)
-  firstName         String?   @map("first_name") @db.VarChar(100)
-  lastName          String?   @map("last_name") @db.VarChar(100)
-  gender            String?   @db.VarChar(20)
-  avatarUrl         String?   @map("avatar_url") @db.VarChar(255)
-  password          String    @map("password") @db.VarChar(255)
-  passwordChangedAt DateTime? @map("password_changed_at")
-  isEmailVerified   Boolean   @default(false) @map("is_email_verified")
-  totpSecret        String?   @map("totp_secret") @db.VarChar(255)
-  verifyEmailAt     DateTime? @map("verify_email_at")
-
-  status      UserStatus @default(ACTIVE)
-  lastLoginAt DateTime?  @map("last_login_at")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  userRoles UserRole[]
-
-  userDevices        UserDevice[]
-  loginAttempts      LoginAttempt[]
-  verificationCodes  VerificationCode[]
-  createdPermissions Permission[]       @relation("PermissionCreatedBy")
-  updatedPermissions Permission[]       @relation("PermissionUpdatedBy")
-  createdRoles       Role[]             @relation("RoleCreatedBy")
-  updatedRoles       Role[]             @relation("RoleUpdatedBy")
-  userSessions       UserSession[]
-  userAuditLogs       AuditLog[]
-  userAddress        UserAddress[]
-  categoryCreator    Category[]  @relation("CategoryCreator")
-  categoryUpdater    Category[]   @relation("CategoryUpdater")
-  
-  bookCreator         Book[]      @relation("BookCreator") 
-  bookUpdater         Book[]      @relation("BookUpdater") 
-
-  orderCreator        Order[] @relation("OrderCreator")
-  orderUpdater      Order[] @relation("OrderUpdater")
-  
-  cart                Cart[]
-  review              Review[]
-  order               Order[]
-
-  paymentTransaction PaymentTransaction[]
-  convertedGuestSessions GuestSession[] @relation("GuestSessionConvertedUser")
-  createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
-  userEvents        UserEvent[]
-  
-
-  @@map("users")
-}
-
-model Role {
-  id          BigInt  @id @default(autoincrement())
-  code        RoleCode  @map("code") @unique
-  name        String  @map("name") @db.VarChar(255) @unique
-  description String?  @db.VarChar(255)
-  isActive    Boolean @map("is_active")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  createById BigInt? @map("created_by_id")
-  updateById BigInt? @map("updated_by_id")
-
-  deletedBy BigInt? @map("deleted_by")
-
-  userRoles UserRole[]
-  roles     RolePermission[]
-
-  createdBy User? @relation("RoleCreatedBy", fields: [createById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedBy User? @relation("RoleUpdatedBy", fields: [updateById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@map("roles")
-}
-
-model UserRole {
-  userId BigInt @map("user_id")
-  roleId BigInt @map("role_id")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  createdBy BigInt? @map("created_by")
-  updatedBy BigInt? @map("updated_by")
-  deletedBy BigInt? @map("deleted_by")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
-  @@index([roleId])
-  @@map("user_roles")
-}
-
-model Permission {
-  id          BigInt     @id @default(autoincrement())
-  code        String    @unique @db.VarChar(100)
-  description String?    @db.Text
-  method      HTTPMethod
-  pathPattern String     @map("path_pattern") @db.VarChar(500)
-  isActive    Boolean    @default(true) @map("is_active")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  createdById BigInt? @map("created_by_id")
-  updatedById BigInt? @map("updated_by_id")
-
-  createdBy User? @relation("PermissionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  updatedBy User? @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  roles RolePermission[]
-
-  @@unique([method, pathPattern])
-  @@map("permissions")
-}
-
-model RolePermission {
-  roleId       BigInt @map("role_id")
-  permissionId BigInt @map("permission_id")
-
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@id([roleId, permissionId])
-  @@map("role_permissions")
-}
-
-model VerificationCode {
-  id        BigInt           @id @default(autoincrement())
-  userId    BigInt?          @map("user_id")
-  email     String?          @db.VarChar(200)
-  type      VerificationType
-  codeHash  String?           @map("code_hash") @db.VarChar(200)
-  expiresAt DateTime         @map("expires_at")
-  usedAt    DateTime?        @map("used_at")
-  createdAt DateTime         @default(now()) @map("created_at")
-
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([email, type])
-  @@map("verification_codes")
-}
-
-model EmailOutbox {
-  id          BigInt       @id @default(autoincrement())
-  toEmail     String       @map("to_email") @db.VarChar(320)
-  toName      String?      @map("to_name") @db.VarChar(200)
-  subject     String?      @db.VarChar(500)
-  templateKey String?      @map("template_key") @db.VarChar(200)
-  status      EmailStatus?
-  scheduledAt DateTime?    @map("scheduled_at")
-  sentAt      DateTime?    @map("sent_at")
-  attempts    Int?
-  lastError   String?      @map("last_error") @db.Text
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-
-  @@index([status, scheduledAt])
-  @@map("email_outbox")
-}
-
-model LoginAttempt {
-  id              BigInt   @id @default(autoincrement())
-  userId          BigInt?  @map("user_id")
-  ip              String?  @db.VarChar(64)
-  userAgent       String?  @map("user_agent") @db.VarChar(1000)
-  success         Boolean?
-  failureReason   String?  @map("failure_reason") @db.VarChar(500)
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("login_attempts")
-}
-
-model UserDevice {
-  id                BigInt          @id @default(autoincrement())
-  userId            BigInt          @map("user_id")
-  deviceFingerprint String          @map("device_fingerprint") @db.VarChar(255) // FE gửi chuỗi ngẫu nhiên hoặc BE tự tạo, đây là id của thiết bị
-  deviceName        String?         @map("device_name") @db.VarChar(200) //  Tên thiết bị
-  platform          DevicePlatform? //Nền tảng thiết bị
-  osVersion         String?         @map("os_version") @db.VarChar(50) // Phiên bản hệ điều hành
-  appVersion        String?         @map("app_version") @db.VarChar(50) // Phiên bản ứng dụng
-  isTrusted         Boolean         @default(false) @map("is_trusted") // Có tin tưởng thiết bị này không
-  firstSeenAt       DateTime?       @map("first_seen_at") // Gửi lần đầu tiên
-  lastSeenAt        DateTime?       @map("last_seen_at") // Lần cuối cùng zô
-  revokedAt         DateTime?       @map("revoked_at") // Đã bị chặn khi nào 
-
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions UserSession[]
-
-  @@unique([userId, deviceFingerprint])
-  @@map("user_devices")
-}
-
-model UserSession {
-  id               String         @id @default(uuid()) @db.Char(36)
-  userId           BigInt         @map("user_id")
-  deviceId         BigInt?        @map("device_id")
-  status           SessionStatus  @default(ACTIVE)
-  refreshTokenHash String         @unique @map("refresh_token_hash") @db.VarChar(255)
-  userAgent        String?        @map("user_agent") @db.VarChar(150)
-  createdAt        DateTime       @default(now()) @map("created_at")
-  expiresAt        DateTime?      @map("expires_at")
-  revokedAt        DateTime?      @map("revoked_at")
-
-  // Relations
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-  events UserEvent[]
-
-  @@index([userId, status])
-  @@index([deviceId, status])
-  @@map("user_sessions")
-}
-
-model RevokedToken {
-  id        String   @id @default(uuid()) @db.Char(36)
-  tokenHash String   @unique @map("token_hash") @db.VarChar(150)
-
-  revokedAt DateTime @default(now()) @map("revoked_at")
-  expiresAt DateTime @map("expires_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  @@index([expiresAt])
-  @@map("revoked_tokens")
-}
-
-
-model UserAddress {
-  id            BigInt    @id @default(autoincrement())
-  userId        BigInt    @map("user_id")
-  addressType   String?   @map("address_type") @db.VarChar(50) // mặc định là không có 
-  recipientName String?   @map("recipient_name") @db.VarChar(200) // mặc định là tên thật, thích thì điền không thôi
-  phoneNumber   String   @map("phone_number") @db.VarChar(30) // buộc phải có số
-  addressDetail   String   @map("address_detail") @db.VarChar(255) // buộc phải có địa chỉ
-  ward          String   @db.VarChar(200)  // Buộc có đường
-  district      String   @db.VarChar(200) // Buộc có quận
-  city          String   @db.VarChar(200) // Buộc có thành phố 
-  isDefault     Boolean?  @map("is_default") // thêm lần đầu mặc định true , lần sau thì false (code nghiệp vụ)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  deletedAt     DateTime?  @map("deleted_at")      
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@map("user_addresses")
-}
-
-
-model GuestSession {
-  id              String    @id @default(uuid()) @db.Char(36)
-  ipFirst         String?   @map("ip_first") @db.VarChar(64)
-  userAgentHash   String?   @map("user_agent_hash") @db.VarChar(255)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  lastSeenAt      DateTime? @map("last_seen_at")
-  convertedUserId BigInt?   @map("converted_user_id")
-  convertedAt     DateTime? @map("converted_at")
-
-  // Relations
-  convertedUser   User?     @relation("GuestSessionConvertedUser", fields: [convertedUserId], references: [id], onDelete: SetNull)
-  carts           Cart[]
-  orders          Order[]
-  events          UserEvent[]
-
-  @@map("guest_sessions")
-}
-model Language {
-  id                    Int                    @id @default(autoincrement())
-  code                  String                 @unique @db.VarChar(10)
-  name                  String                 @db.VarChar(100)
-  isActive              Boolean                @default(true) @map("is_active")
-  createdAt             DateTime               @default(now()) @map("created_at")
-
-  categoryTranslation   CategoryTranslation[]
-  bookTranslation       BookTranslation[]
-  authorTranslation     AuthorTranslation[]
-  @@map("languages")
-}
-
-model Category {
-  id          BigInt      @id @default(autoincrement())
-  parentId    BigInt?     @map("parent_id")
-  isActive    Boolean     @default(true) @map("is_active")
-  sortOrder   Int         @default(0) @map("sort_order")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  deletedAt   DateTime?   @map("deleted_at")
-  createdBy   BigInt?     @map("created_by")
-  updatedBy   BigInt?     @map("updated_by")
-
-  // Relations
-  parent      Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children    Category[]  @relation("CategoryHierarchy")
-  creator     User?       @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  updater     User?       @relation("CategoryUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  bookCategories BookCategory[]
-  categoryTranslation CategoryTranslation[]
-
-  @@map("categories")
-}
-
-
-model Author {
-  id           BigInt              @id @default(autoincrement())
-  defaultName  String              @map("default_name") @db.VarChar(300)
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
-
-  // Relations
-  translations AuthorTranslation[]
-  books        BookAuthor[]
-
-  @@map("authors")
-}
-
-model CategoryTranslation {
-  id          BigInt    @id @default(autoincrement())
-  categoryId  BigInt    @map("category_id")
-  languageId  Int       @map("language_id")
-  name        String    @db.VarChar(300)
-  description String?   @db.Text
-  slug        String?   @db.VarChar(300)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  language    Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-  @@unique([categoryId, languageId])
-  @@index([languageId, slug])
-  @@map("category_translations")
-}
-
-
-model BookTranslation {
-  id          BigInt   @id @default(autoincrement())
-  bookId      BigInt   @map("book_id")
-  languageId  Int      @map("language_id")
-  title       String   @db.VarChar(500)
-  description String?  @db.Text
-  slug        String?  @db.VarChar(500)
-
-  // Relations
-  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-  @@unique([bookId, languageId])
-  @@index([languageId, slug])
-  @@map("book_translations")
-}
-
-
-model AuthorTranslation {
-  id          BigInt   @id @default(autoincrement())
-  authorId    BigInt   @map("author_id")
-  languageId  Int      @map("language_id")
-  displayName String   @map("display_name") @db.VarChar(300)
-  bio         String?  @db.Text
-
-  // Relations
-  author      Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
-  @@unique([authorId, languageId])
-  @@map("author_translations")
-}
-
-
-model BookAuthor {
-  bookId    BigInt  @map("book_id")
-  authorId  BigInt  @map("author_id")
-  isPrimary Boolean @default(false) @map("is_primary")
-
-  // Relations
-  book      Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author    Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@id([bookId, authorId])
-  @@map("book_authors")
-}
-
-
-model Publisher {
-  id          BigInt   @id @default(autoincrement())
-  defaultName String   @map("default_name") @db.VarChar(300)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  books       Book[]
-
-  @@map("publishers")
-}
-
-
-model Book {
-  id              BigInt            @id @default(autoincrement())
-  publisherId     BigInt?           @map("publisher_id")
-  publicationYear Int?              @map("publication_year")
-  weightGrams     Int?              @map("weight_grams")
-  pageCount       Int?              @map("page_count")
-  coverImageUrl   String?           @map("cover_image_url") @db.VarChar(1000)
-  isActive        Boolean           @default(true) @map("is_active")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  deletedAt       DateTime?         @map("deleted_at")
-  createdBy       BigInt?           @map("created_by")
-  updatedBy       BigInt?           @map("updated_by")
-
-  // Relations
-  publisher       Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
-  creator         User?             @relation("BookCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  updater         User?             @relation("BookUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  translations    BookTranslation[]
-  authors         BookAuthor[]
-  categories      BookCategory[]
-  variants        BookVariant[]
-
-  reviews         Review[]
-  @@map("books")
-}
-
-model BookCategory {
-  bookId     BigInt   @map("book_id")
-  categoryId BigInt   @map("category_id")
-
-  // Relations
-  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([bookId, categoryId])
-  @@map("book_categories")
-}
-
-
-model BookVariant {
-  id           BigInt              @id @default(autoincrement())
-  bookId       BigInt              @map("book_id")
-  format       BookFormat
-  edition      Int?
-  isbn         String?             @unique @db.VarChar(20)
-  costPrice      Decimal             @db.Decimal(12, 2)   @map("cost_price")
-  price        Decimal             @db.Decimal(12, 2)   
-  currencyCode String?             @map("currency_code") @db.VarChar(3)
-  stock        Int?
-  isActive     Boolean             @default(true) @map("is_active")
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
-
-  // Relationsf
-  book         Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  assets       BookVariantAsset[]
-  cartItems    CartItem[]
-  inventoryMovements InventoryMovement[]
-  bookVariantSnapshots BookVariantSnapshot[] 
-  reviews         Review[]
-
-  @@unique([bookId, format, edition])
-  @@map("book_variants")
-}
-
-model BookVariantSnapshot {
-  id                    BigInt     @id @default(autoincrement())
-  bookVariantId         BigInt     @map("book_variant_id") 
-
-  skuSnapshot           String     @map("sku_snapshot") @db.VarChar(50)
-  priceSnapshot         Decimal    @map("price_snapshot") @db.Decimal(12, 2)
-  currencyCodeSnapshot  String?    @map("currency_code_snapshot") @db.VarChar(3)
-
-  formatSnapshot        BookFormat @map("format_snapshot")
-  editionSnapshot       Int?       @map("edition_snapshot")
-  isbnSnapshot          String?    @map("isbn_snapshot") @db.VarChar(20)  
-
-  createdAt             DateTime   @default(now()) @map("created_at")
-
-  // relations
-  bookVariant           BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  orderItem             OrderItem?   // back relation
-
-  @@index([bookVariantId], map: "idx_bvs_book_variant_id")
-  @@index([isbnSnapshot], map: "idx_bvs_isbn_snapshot")
-  @@map("book_variant_snapshots")
-}
-
-
-model OrderItem {
-  id                    BigInt      @id @default(autoincrement())
-  orderId               BigInt      @map("order_id")
-
-  bookVariantSnapshotId BigInt?     @unique @map("book_variant_snapshot_id")
-  bookVariantSnapshot   BookVariantSnapshot? @relation(fields: [bookVariantSnapshotId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-
-  quantity              Int
-  unitPrice             Decimal     @map("unit_price") @db.Decimal(12, 2)
-  lineTotal             Decimal     @map("line_total") @db.Decimal(12, 2)
-  titleSnapshot         String      @map("title_snapshot") @db.VarChar(500)
-  formatSnapshot        BookFormat? @map("format_snapshot")
-  editionSnapshot       Int?        @map("edition_snapshot")
-  coverImageUrlSnapshot String?     @map("cover_image_url_snapshot") @db.VarChar(1000)
-  createdAt             DateTime    @default(now()) @map("created_at")
-
-  order                 Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@map("order_items")
-}
-
-
-
-model Order {
-  id              BigInt         @id @default(autoincrement())
-  orderCode       String         @unique @map("order_code") @db.VarChar(50)
-  userId          BigInt?        @map("user_id")
-  guestSessionId  String?        @map("guest_session_id") @db.Char(36)
-  guestEmail      String?        @map("guest_email") @db.VarChar(320)
-  status          OrderStatus?
-  paymentStatus   PaymentStatus? @map("payment_status")
-  subtotal        Decimal?       @db.Decimal(12, 2)
-  discountAmount  Decimal?       @map("discount_amount") @db.Decimal(12, 2)
-  shippingFee     Decimal?       @map("shipping_fee") @db.Decimal(12, 2)
-  totalAmount     Decimal?       @map("total_amount") @db.Decimal(12, 2)
-  currencyCode    String?        @map("currency_code") @db.VarChar(3)
-  idempotencyKey  String?        @unique @map("idempotency_key") @db.VarChar(100)
-  placedAt        DateTime?      @map("placed_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  createdBy       BigInt?        @map("created_by")
-  updatedBy       BigInt?        @map("updated_by")
-
-  // Relations
-  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  guestSession    GuestSession?  @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
-  creator         User?          @relation("OrderCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  updater         User?          @relation("OrderUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  address         OrderAddress?
-  items           OrderItem[]
-  payments        PaymentTransaction[]
-
-  @@index([userId, createdAt])
-  @@index([status, createdAt])
-  @@map("orders")
-}
-
-
-
-model BookVariantAsset {
-  id            BigInt      @id @default(autoincrement())
-  bookVariantId BigInt      @map("book_variant_id")
-  url           String      @db.VarChar(1000)
-  assetType     String?     @map("asset_type") @db.VarChar(50)
-  sortOrder     Int?        @map("sort_order")
-
-  // Relations
-  variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-
-  @@map("book_variant_assets")
-}
-
-
-model Review {
-  id         BigInt   @id @default(autoincrement())
-  userId     BigInt   @map("user_id")
-  bookVariantId BigInt   @map("book_variant_id")
-  bookId BigInt   @map("book_id")
-
-  rating     Int
-  content    String?  @db.Text
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  bookVariant BookVariant       @relation(fields: [bookVariantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  book    Book                  @relation(fields: [bookId] , references: [id] , onDelete: Cascade , onUpdate: NoAction)
-
-  @@map("reviews")
-}
-
-
-model Cart {
-  id             BigInt        @id @default(autoincrement())
-  userId         BigInt?       @map("user_id")
-  guestSessionId String?       @map("guest_session_id") @db.Char(36)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
-  items          CartItem[]
-
-  @@index([userId])
-  @@index([guestSessionId])
-  @@map("carts")
-}
-
-model CartItem {
-  id            BigInt      @id @default(autoincrement())
-  cartId        BigInt      @map("cart_id")
-  bookVariantId BigInt      @map("book_variant_id")
-  quantity      Int
-  addedAt       DateTime    @default(now()) @map("added_at")
-
-  // Relations
-  cart          Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-
-  @@unique([cartId, bookVariantId])
-  @@map("cart_items")
-}
-
-
-model OrderAddress {
-  id            BigInt  @id @default(autoincrement())
-  orderId       BigInt  @unique @map("order_id")
-  recipientName String  @map("recipient_name") @db.VarChar(200)
-  phoneNumber   String  @map("phone_number") @db.VarChar(30)
-  addressLine   String  @map("address_line") @db.VarChar(500)
-  ward          String? @db.VarChar(200)
-  district      String? @db.VarChar(200)
-  city          String  @db.VarChar(200)
-  countryCode   String? @map("country_code") @db.VarChar(2)
-  note          String? @db.Text
-
-  // Relations
-  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@map("order_addresses")
-}
-
-
-//Log
-model InventoryMovement {
-  id            BigInt          @id @default(autoincrement())
-  bookVariantId BigInt          @map("book_variant_id")
-  changeQty     Int             @map("change_qty")
-  reason        InventoryReason
-  refType       String?         @map("ref_type") @db.VarChar(50)
-  refId         BigInt?         @map("ref_id")
-  note          String?         @db.Text
-  createdBy     BigInt?         @map("created_by")
-  createdAt     DateTime        @default(now()) @map("created_at")
-
-  // Relations
-  variant       BookVariant     @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-  creator       User?           @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-
-  @@index([bookVariantId, createdAt])
-  @@index([reason, createdAt])
-  @@map("inventory_movements")
-}
-
-model UserEvent {
-  id             BigInt        @id @default(autoincrement())
-  userId         BigInt?       @map("user_id")
-  guestSessionId String?       @map("guest_session_id") @db.Char(36)
-  sessionId      String?       @map("session_id") @db.Char(36)
-  eventType      EventType     @map("event_type")
-  objectType     String?       @map("object_type") @db.VarChar(50)
-  objectId       String?       @map("object_id") @db.VarChar(100)
-  amount         Decimal?      @db.Decimal(12, 2)
-  currencyCode   String?       @map("currency_code") @db.VarChar(3)
-  ip             String?       @db.VarChar(64)
-  userAgent      String?       @map("user_agent") @db.VarChar(1000)
-  metadata       Json?
-  createdAt      DateTime      @default(now()) @map("created_at")
-
-  // Relations
-  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
-  session        UserSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-
-  @@index([eventType, createdAt])
-  @@index([userId, createdAt])
-  @@index([guestSessionId, createdAt])
-  @@map("user_events")
-}
-
-
-model AuditLog {
-  id          BigInt   @id @default(autoincrement())
-  actorUserId BigInt   @map("actor_user_id")
-  action      String   @db.VarChar(200)
-  entityType  String   @map("entity_type") @db.VarChar(100)
-  entityId    String   @map("entity_id") @db.VarChar(100)
-  before      Json?
-  after       Json?
-  ip          String?  @db.VarChar(64)
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
-
-  @@index([actorUserId, createdAt])
-  @@index([entityType, entityId])
-  @@map("audit_logs")
-}
-
-model PaymentTransaction {
-  id              BigInt         @id @default(autoincrement())
-  orderId         BigInt         @map("order_id")
-  userId          BigInt?        @map("user_id")
-
-  gateway         PaymentGateway
-  status          PaymentStatus?
-
-  amount          Decimal        @db.Decimal(12, 2)
-  currencyCode    String?        @map("currency_code") @db.VarChar(3)
-
-  providerTxnId   String?        @map("provider_txn_id") @db.VarChar(200)
-  referenceNumber String?        @map("reference_number") @db.VarChar(200)
-  requestId       String?        @map("request_id") @db.VarChar(100)
-  idempotencyKey  String?        @map("idempotency_key") @db.VarChar(100)
-
-  requestPayload  Json?          @map("request_payload")
-  responsePayload Json?          @map("response_payload")
-
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-
-  // Relations
-  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@index([orderId, createdAt])
-  @@index([gateway, providerTxnId])
-  @@map("payment_transactions")
-}
-
-model WebhookInbox {
-  id              BigInt         @id @default(autoincrement())
-  gateway         PaymentGateway
-
-  providerEventId String         @map("provider_event_id") @db.VarChar(200)
-  receivedAt      DateTime       @map("received_at")
-  payload         Json
-
-  processedAt     DateTime?      @map("processed_at")
-  status          JobStatus?
-  attempts        Int?
-  lastError       String?        @map("last_error") @db.Text
-
-  @@unique([gateway, providerEventId])
-  @@map("webhook_inbox")
-}
+  // This is your Prisma schema file,
+  // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+  // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+  // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+  generator client {
+    provider = "prisma-client-js"
+  }
+
+  datasource db {
+    provider = "mysql"
+  }
+
+  enum UserStatus {
+    ACTIVE
+    INACTIVE
+    BLOCKED
+  }
+
+  enum HTTPMethod {
+    GET
+    POST
+    PUT
+    DELETE
+    PATCH
+    OPTIONS
+    HEAD
+  }
+
+  enum DevicePlatform {
+    WEB
+    ANDROID
+    IOS
+    DESKTOP
+    OTHER
+  }
+
+  enum SessionStatus {
+    ACTIVE
+    REVOKED
+    EXPIRED
+  }
+
+  enum VerificationType {
+    REGISTER
+    FORGOT_PASSWORD
+    CHANGE_EMAIL
+    CHANGE_PASSWORD
+  }
+
+  enum BookFormat {
+    HARDCOVER
+    PAPERBACK
+    EBOOK
+    AUDIOBOOK
+  }
+
+  enum OrderStatus {
+    PENDING_PAYMENT
+    PAID
+    CONFIRMED
+    PACKING
+    SHIPPING
+    DELIVERED
+    CANCELLED
+    RETURN_REQUESTED
+    RETURNED
+    REFUNDED
+  }
+
+  enum PaymentStatus {
+    PENDING
+    SUCCESS
+    FAILED
+    REFUNDED
+    PARTIAL_REFUND
+  }
+
+  enum PaymentGateway {
+    COD
+    VNPAY
+    MOMO
+    STRIPE
+    PAYPAL
+    OTHER
+  }
+
+  enum EmailStatus {
+    PENDING
+    SENDING
+    SENT
+    FAILED
+    CANCELLED
+  }
+
+  enum JobStatus {
+    PENDING
+    PROCESSING
+    DONE
+    FAILED
+    CANCELLED
+  }
+
+  enum InventoryReason {
+    PURCHASE
+    RESTOCK
+    ADJUSTMENT
+    RETURN
+  }
+
+  enum ConsentType {
+    ANALYTICS
+    MARKETING
+  }
+
+  enum EventType {
+    VIEW_BOOK
+    SEARCH
+    ADD_TO_CART
+    REMOVE_FROM_CART
+    CHECKOUT_START
+    PLACE_ORDER
+    PAYMENT_SUCCESS
+    PAYMENT_FAILED
+    LOGIN
+    LOGOUT
+  }
+
+  enum RoleCode {
+    GUEST 
+    ADMIN
+    STAFF 
+    CUSTOMER 
+    WAREHOUSE
+  }
+
+  model User {
+    id                BigInt    @id @default(autoincrement())
+    email             String    @unique @db.VarChar(255)
+    phoneNumber       String?   @map("phone_number") @db.VarChar(30)
+    firstName         String?   @map("first_name") @db.VarChar(100)
+    lastName          String?   @map("last_name") @db.VarChar(100)
+    gender            String?   @db.VarChar(20)
+    avatarUrl         String?   @map("avatar_url") @db.VarChar(255)
+    password          String    @map("password") @db.VarChar(255)
+    passwordChangedAt DateTime? @map("password_changed_at")
+    isEmailVerified   Boolean   @default(false) @map("is_email_verified")
+    totpSecret        String?   @map("totp_secret") @db.VarChar(255)
+    verifyEmailAt     DateTime? @map("verify_email_at")
+
+    status      UserStatus @default(ACTIVE)
+    lastLoginAt DateTime?  @map("last_login_at")
+
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime  @updatedAt @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    userRoles UserRole[]
+
+    userDevices        UserDevice[]
+    loginAttempts      LoginAttempt[]
+    verificationCodes  VerificationCode[]
+    createdPermissions Permission[]       @relation("PermissionCreatedBy")
+    updatedPermissions Permission[]       @relation("PermissionUpdatedBy")
+    createdRoles       Role[]             @relation("RoleCreatedBy")
+    updatedRoles       Role[]             @relation("RoleUpdatedBy")
+    userSessions       UserSession[]
+    userAuditLogs       AuditLog[]
+    userAddress        UserAddress[]
+    categoryCreator    Category[]  @relation("CategoryCreator")
+    categoryUpdater    Category[]   @relation("CategoryUpdater")
+    
+    bookCreator         Book[]      @relation("BookCreator") 
+    bookUpdater         Book[]      @relation("BookUpdater") 
+
+    orderCreator        Order[] @relation("OrderCreator")
+    orderUpdater      Order[] @relation("OrderUpdater")
+    
+    cart                Cart[]
+    review              Review[]
+    order               Order[]
+
+    paymentTransaction PaymentTransaction[]
+    convertedGuestSessions GuestSession[] @relation("GuestSessionConvertedUser")
+    createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
+    userEvents        UserEvent[]
+    
+
+    @@map("users")
+  }
+
+  model Role {
+    id          BigInt  @id @default(autoincrement())
+    code        RoleCode  @map("code") @unique
+    name        String  @map("name") @db.VarChar(255) @unique
+    description String?  @db.VarChar(255)
+    isActive    Boolean @map("is_active")
+
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime  @updatedAt @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    createById BigInt? @map("created_by_id")
+    updateById BigInt? @map("updated_by_id")
+
+    deletedBy BigInt? @map("deleted_by")
+
+    userRoles UserRole[]
+    roles     RolePermission[]
+
+    createdBy User? @relation("RoleCreatedBy", fields: [createById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+    updatedBy User? @relation("RoleUpdatedBy", fields: [updateById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+    @@map("roles")
+  }
+
+  model UserRole {
+    userId BigInt @map("user_id")
+    roleId BigInt @map("role_id")
+
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime  @updatedAt @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    createdBy BigInt? @map("created_by")
+    updatedBy BigInt? @map("updated_by")
+    deletedBy BigInt? @map("deleted_by")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+    @@id([userId, roleId])
+    @@index([roleId])
+    @@map("user_roles")
+  }
+
+  model Permission {
+    id          BigInt     @id @default(autoincrement())
+    code        String    @unique @db.VarChar(100)
+    description String?    @db.Text
+    method      HTTPMethod
+    pathPattern String     @map("path_pattern") @db.VarChar(500)
+    isActive    Boolean    @default(true) @map("is_active")
+
+    createdAt DateTime  @default(now()) @map("created_at")
+    updatedAt DateTime  @updatedAt @map("updated_at")
+    deletedAt DateTime? @map("deleted_at")
+
+    createdById BigInt? @map("created_by_id")
+    updatedById BigInt? @map("updated_by_id")
+
+    createdBy User? @relation("PermissionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+    updatedBy User? @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+    roles RolePermission[]
+
+    @@unique([method, pathPattern])
+    @@map("permissions")
+  }
+
+  model RolePermission {
+    roleId       BigInt @map("role_id")
+    permissionId BigInt @map("permission_id")
+
+    role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+    permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    @@id([roleId, permissionId])
+    @@map("role_permissions")
+  }
+
+  model VerificationCode {
+    id        BigInt           @id @default(autoincrement())
+    userId    BigInt?          @map("user_id")
+    email     String?          @db.VarChar(200)
+    type      VerificationType
+    codeHash  String?           @map("code_hash") @db.VarChar(200)
+    expiresAt DateTime         @map("expires_at")
+    usedAt    DateTime?        @map("used_at")
+    createdAt DateTime         @default(now()) @map("created_at")
+
+    user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([email, type])
+    @@map("verification_codes")
+  }
+
+  model EmailOutbox {
+    id          BigInt       @id @default(autoincrement())
+    toEmail     String       @map("to_email") @db.VarChar(320)
+    toName      String?      @map("to_name") @db.VarChar(200)
+    subject     String?      @db.VarChar(500)
+    templateKey String?      @map("template_key") @db.VarChar(200)
+    status      EmailStatus?
+    scheduledAt DateTime?    @map("scheduled_at")
+    sentAt      DateTime?    @map("sent_at")
+    attempts    Int?
+    lastError   String?      @map("last_error") @db.Text
+    createdAt   DateTime     @default(now()) @map("created_at")
+    updatedAt   DateTime     @updatedAt @map("updated_at")
+
+    @@index([status, scheduledAt])
+    @@map("email_outbox")
+  }
+
+  model LoginAttempt {
+    id              BigInt   @id @default(autoincrement())
+    userId          BigInt?  @map("user_id")
+    ip              String?  @db.VarChar(64)
+    userAgent       String?  @map("user_agent") @db.VarChar(1000)
+    success         Boolean?
+    failureReason   String?  @map("failure_reason") @db.VarChar(500)
+    createdAt       DateTime @default(now()) @map("created_at")
+
+    user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("login_attempts")
+  }
+
+  model UserDevice {
+    id                BigInt          @id @default(autoincrement())
+    userId            BigInt          @map("user_id")
+    deviceFingerprint String          @map("device_fingerprint") @db.VarChar(255) // FE gửi chuỗi ngẫu nhiên hoặc BE tự tạo, đây là id của thiết bị
+    deviceName        String?         @map("device_name") @db.VarChar(200) //  Tên thiết bị
+    platform          DevicePlatform? //Nền tảng thiết bị
+    osVersion         String?         @map("os_version") @db.VarChar(50) // Phiên bản hệ điều hành
+    appVersion        String?         @map("app_version") @db.VarChar(50) // Phiên bản ứng dụng
+    isTrusted         Boolean         @default(false) @map("is_trusted") // Có tin tưởng thiết bị này không
+    firstSeenAt       DateTime?       @map("first_seen_at") // Gửi lần đầu tiên
+    lastSeenAt        DateTime?       @map("last_seen_at") // Lần cuối cùng zô
+    revokedAt         DateTime?       @map("revoked_at") // Đã bị chặn khi nào 
+
+    user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sessions UserSession[]
+
+    @@unique([userId, deviceFingerprint])
+    @@map("user_devices")
+  }
+
+  model UserSession {
+    id               String         @id @default(uuid()) @db.Char(36)
+    userId           BigInt         @map("user_id")
+    deviceId         BigInt?        @map("device_id")
+    status           SessionStatus  @default(ACTIVE)
+    refreshTokenHash String         @unique @map("refresh_token_hash") @db.VarChar(255)
+    userAgent        String?        @map("user_agent") @db.VarChar(150)
+    createdAt        DateTime       @default(now()) @map("created_at")
+    expiresAt        DateTime?      @map("expires_at")
+    revokedAt        DateTime?      @map("revoked_at")
+
+    // Relations
+    user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    device UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+    events UserEvent[]
+
+    @@index([userId, status])
+    @@index([deviceId, status])
+    @@map("user_sessions")
+  }
+
+  model RevokedToken {
+    id        String   @id @default(uuid()) @db.Char(36)
+    tokenHash String   @unique @map("token_hash") @db.VarChar(150)
+
+    revokedAt DateTime @default(now()) @map("revoked_at")
+    expiresAt DateTime @map("expires_at")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    @@index([expiresAt])
+    @@map("revoked_tokens")
+  }
+
+
+  model UserAddress {
+    id            BigInt    @id @default(autoincrement())
+    userId        BigInt    @map("user_id")
+    addressType   String?   @map("address_type") @db.VarChar(50) // mặc định là không có 
+    recipientName String?   @map("recipient_name") @db.VarChar(200) // mặc định là tên thật, thích thì điền không thôi
+    phoneNumber   String   @map("phone_number") @db.VarChar(30) // buộc phải có số
+    addressDetail   String   @map("address_detail") @db.VarChar(255) // buộc phải có địa chỉ
+    ward          String   @db.VarChar(200)  // Buộc có đường
+    district      String   @db.VarChar(200) // Buộc có quận
+    city          String   @db.VarChar(200) // Buộc có thành phố 
+    isDefault     Boolean?  @map("is_default") // thêm lần đầu mặc định true , lần sau thì false (code nghiệp vụ)
+    createdAt     DateTime  @default(now()) @map("created_at")
+    updatedAt     DateTime  @updatedAt @map("updated_at")
+    deletedAt     DateTime?  @map("deleted_at")      
+    user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    @@map("user_addresses")
+  }
+
+
+  model GuestSession {
+    id              String    @id @default(uuid()) @db.Char(36)
+    ipFirst         String?   @map("ip_first") @db.VarChar(64)
+    userAgentHash   String?   @map("user_agent_hash") @db.VarChar(255)
+    createdAt       DateTime  @default(now()) @map("created_at")
+    lastSeenAt      DateTime? @map("last_seen_at")
+    convertedUserId BigInt?   @map("converted_user_id")
+    convertedAt     DateTime? @map("converted_at")
+
+    // Relations
+    convertedUser   User?     @relation("GuestSessionConvertedUser", fields: [convertedUserId], references: [id], onDelete: SetNull)
+    carts           Cart[]
+    orders          Order[]
+    events          UserEvent[]
+
+    @@map("guest_sessions")
+  }
+  model Language {
+    id                    Int                    @id @default(autoincrement())
+    code                  String                 @unique @db.VarChar(10)
+    name                  String                 @db.VarChar(100)
+    isActive              Boolean                @default(true) @map("is_active")
+    createdAt             DateTime               @default(now()) @map("created_at")
+
+    categoryTranslation   CategoryTranslation[]
+    bookTranslation       BookTranslation[]
+    authorTranslation     AuthorTranslation[]
+    @@map("languages")
+  }
+
+  model Category {
+    id          BigInt      @id @default(autoincrement())
+    parentId    BigInt?     @map("parent_id")
+    isActive    Boolean     @default(true) @map("is_active")
+    sortOrder   Int         @default(0) @map("sort_order")
+    createdAt   DateTime    @default(now()) @map("created_at")
+    updatedAt   DateTime    @updatedAt @map("updated_at")
+    deletedAt   DateTime?   @map("deleted_at")
+    createdBy   BigInt?     @map("created_by")
+    updatedBy   BigInt?     @map("updated_by")
+
+    // Relations
+    parent      Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    children    Category[]  @relation("CategoryHierarchy")
+    creator     User?       @relation("CategoryCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater     User?       @relation("CategoryUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+    bookCategories BookCategory[]
+    categoryTranslation CategoryTranslation[]
+
+    @@map("categories")
+  }
+
+
+  model Author {
+    id           BigInt              @id @default(autoincrement())
+    defaultName  String              @map("default_name") @db.VarChar(300)
+    createdAt    DateTime            @default(now()) @map("created_at")
+    updatedAt    DateTime            @updatedAt @map("updated_at")
+
+    // Relations
+    translations AuthorTranslation[]
+    books        BookAuthor[]
+
+    @@map("authors")
+  }
+
+  model CategoryTranslation {
+    id          BigInt    @id @default(autoincrement())
+    categoryId  BigInt    @map("category_id")
+    languageId  Int       @map("language_id")
+    name        String    @db.VarChar(300)
+    description String?   @db.Text
+    slug        String?   @db.VarChar(300)
+    createdAt   DateTime  @default(now()) @map("created_at")
+    updatedAt   DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    language    Language  @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+    @@unique([categoryId, languageId])
+    @@index([languageId, slug])
+    @@map("category_translations")
+  }
+
+
+  model BookTranslation {
+    id          BigInt   @id @default(autoincrement())
+    bookId      BigInt   @map("book_id")
+    languageId  Int      @map("language_id")
+    title       String   @db.VarChar(500)
+    description String?  @db.Text
+    slug        String?  @db.VarChar(500)
+
+    // Relations
+    book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+    language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+    @@unique([bookId, languageId])
+    @@index([languageId, slug])
+    @@map("book_translations")
+  }
+
+
+  model AuthorTranslation {
+    id          BigInt   @id @default(autoincrement())
+    authorId    BigInt   @map("author_id")
+    languageId  Int      @map("language_id")
+    displayName String   @map("display_name") @db.VarChar(300)
+    bio         String?  @db.Text
+
+    // Relations
+    author      Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    language    Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+
+    @@unique([authorId, languageId])
+    @@map("author_translations")
+  }
+
+
+  model BookAuthor {
+    bookId    BigInt  @map("book_id")
+    authorId  BigInt  @map("author_id")
+    isPrimary Boolean @default(false) @map("is_primary")
+
+    // Relations
+    book      Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+    author    Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    @@id([bookId, authorId])
+    @@map("book_authors")
+  }
+
+
+  model Publisher {
+    id          BigInt   @id @default(autoincrement())
+    defaultName String   @map("default_name") @db.VarChar(300)
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    // Relations
+    books       Book[]
+
+    @@map("publishers")
+  }
+
+
+  model Book {
+    id              BigInt            @id @default(autoincrement())
+    publisherId     BigInt?           @map("publisher_id")
+    publicationYear Int?              @map("publication_year")
+    weightGrams     Int?              @map("weight_grams")
+    pageCount       Int?              @map("page_count")
+    coverImageUrl   String?           @map("cover_image_url") @db.VarChar(1000)
+    isActive        Boolean           @default(true) @map("is_active")
+    createdAt       DateTime          @default(now()) @map("created_at")
+    updatedAt       DateTime          @updatedAt @map("updated_at")
+    deletedAt       DateTime?         @map("deleted_at")
+    createdBy       BigInt?           @map("created_by")
+    updatedBy       BigInt?           @map("updated_by")
+
+    // Relations
+    publisher       Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+    creator         User?             @relation("BookCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater         User?             @relation("BookUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    translations    BookTranslation[]
+    authors         BookAuthor[]
+    categories      BookCategory[]
+    variants        BookVariant[]
+
+    reviews         Review[]
+    @@map("books")
+  }
+
+  model BookCategory {
+    bookId     BigInt   @map("book_id")
+    categoryId BigInt   @map("category_id")
+
+    // Relations
+    book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+    category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+    @@id([bookId, categoryId])
+    @@map("book_categories")
+  }
+
+
+  model BookVariant {
+    id           BigInt              @id @default(autoincrement())
+    bookId       BigInt              @map("book_id")
+    format       BookFormat
+    edition      Int?
+    isbn         String?             @unique @db.VarChar(20)
+    costPrice      Decimal             @db.Decimal(12, 2)   @map("cost_price")
+    price        Decimal             @db.Decimal(12, 2)   
+    currencyCode String?             @map("currency_code") @db.VarChar(3)
+    stock        Int?
+    isActive     Boolean             @default(true) @map("is_active")
+    createdAt    DateTime            @default(now()) @map("created_at")
+    updatedAt    DateTime            @updatedAt @map("updated_at")
+
+    // Relationsf
+    book         Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
+    assets       BookVariantAsset[]
+    cartItems    CartItem[]
+    inventoryMovements InventoryMovement[]
+    bookVariantSnapshots BookVariantSnapshot[] 
+    reviews         Review[]
+
+    @@unique([bookId, format, edition])
+    @@map("book_variants")
+  }
+
+  model BookVariantSnapshot {
+    id                    BigInt     @id @default(autoincrement())
+    bookVariantId         BigInt     @map("book_variant_id") 
+
+    skuSnapshot           String     @map("sku_snapshot") @db.VarChar(50)
+    priceSnapshot         Decimal    @map("price_snapshot") @db.Decimal(12, 2)
+    currencyCodeSnapshot  String?    @map("currency_code_snapshot") @db.VarChar(3)
+
+    formatSnapshot        BookFormat @map("format_snapshot")
+    editionSnapshot       Int?       @map("edition_snapshot")
+    isbnSnapshot          String?    @map("isbn_snapshot") @db.VarChar(20)  
+
+    createdAt             DateTime   @default(now()) @map("created_at")
+
+    // relations
+    bookVariant           BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+    orderItem             OrderItem?   // back relation
+
+    @@index([bookVariantId], map: "idx_bvs_book_variant_id")
+    @@index([isbnSnapshot], map: "idx_bvs_isbn_snapshot")
+    @@map("book_variant_snapshots")
+  }
+
+
+  model OrderItem {
+    id                    BigInt      @id @default(autoincrement())
+    orderId               BigInt      @map("order_id")
+
+    bookVariantSnapshotId BigInt?     @unique @map("book_variant_snapshot_id")
+    bookVariantSnapshot   BookVariantSnapshot? @relation(fields: [bookVariantSnapshotId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+    quantity              Int
+    unitPrice             Decimal     @map("unit_price") @db.Decimal(12, 2)
+    lineTotal             Decimal     @map("line_total") @db.Decimal(12, 2)
+    titleSnapshot         String      @map("title_snapshot") @db.VarChar(500)
+    formatSnapshot        BookFormat? @map("format_snapshot")
+    editionSnapshot       Int?        @map("edition_snapshot")
+    coverImageUrlSnapshot String?     @map("cover_image_url_snapshot") @db.VarChar(1000)
+    createdAt             DateTime    @default(now()) @map("created_at")
+
+    order                 Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@index([orderId])
+    @@map("order_items")
+  }
+
+
+
+  model Order {
+    id              BigInt         @id @default(autoincrement())
+    orderCode       String         @unique @map("order_code") @db.VarChar(50)
+    userId          BigInt?        @map("user_id")
+    guestSessionId  String?        @map("guest_session_id") @db.Char(36)
+    guestEmail      String?        @map("guest_email") @db.VarChar(320)
+    status          OrderStatus?
+    paymentStatus   PaymentStatus? @map("payment_status")
+    subtotal        Decimal?       @db.Decimal(12, 2)
+    discountAmount  Decimal?       @map("discount_amount") @db.Decimal(12, 2)
+    shippingFee     Decimal?       @map("shipping_fee") @db.Decimal(12, 2)
+    totalAmount     Decimal?       @map("total_amount") @db.Decimal(12, 2)
+    currencyCode    String?        @map("currency_code") @db.VarChar(3)
+    idempotencyKey  String?        @unique @map("idempotency_key") @db.VarChar(100)
+    placedAt        DateTime?      @map("placed_at")
+    createdAt       DateTime       @default(now()) @map("created_at")
+    updatedAt       DateTime       @updatedAt @map("updated_at")
+    createdBy       BigInt?        @map("created_by")
+    updatedBy       BigInt?        @map("updated_by")
+
+    // Relations
+    user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+    guestSession    GuestSession?  @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+    creator         User?          @relation("OrderCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    updater         User?          @relation("OrderUpdater", fields: [updatedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    address         OrderAddress?
+    items           OrderItem[]
+    payments        PaymentTransaction[]
+
+    @@index([userId, createdAt])
+    @@index([status, createdAt])
+    @@map("orders")
+  }
+
+
+
+  model BookVariantAsset {
+    id            BigInt      @id @default(autoincrement())
+    bookVariantId BigInt      @map("book_variant_id")
+    url           String      @db.VarChar(1000)
+    assetType     String?     @map("asset_type") @db.VarChar(50)
+    sortOrder     Int?        @map("sort_order")
+
+    // Relations
+    variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+
+    @@map("book_variant_assets")
+  }
+
+
+  model Review {
+    id         BigInt   @id @default(autoincrement())
+    userId     BigInt   @map("user_id")
+    bookVariantId BigInt   @map("book_variant_id")
+    bookId BigInt   @map("book_id")
+
+    rating     Int
+    content    String?  @db.Text
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
+
+    // Relations
+    user     User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+    bookVariant BookVariant       @relation(fields: [bookVariantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+    book    Book                  @relation(fields: [bookId] , references: [id] , onDelete: Cascade , onUpdate: NoAction)
+
+    @@map("reviews")
+  }
+
+
+  model Cart {
+    id             BigInt        @id @default(autoincrement())
+    userId         BigInt?       @map("user_id")
+    guestSessionId String?       @map("guest_session_id") @db.Char(36)
+    createdAt      DateTime      @default(now()) @map("created_at")
+    updatedAt      DateTime      @updatedAt @map("updated_at")
+
+    // Relations
+    user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+    guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+    items          CartItem[]
+
+    @@index([userId])
+    @@index([guestSessionId])
+    @@map("carts")
+  }
+
+  model CartItem {
+    id            BigInt      @id @default(autoincrement())
+    cartId        BigInt      @map("cart_id")
+    bookVariantId BigInt      @map("book_variant_id")
+    quantity      Int
+    addedAt       DateTime    @default(now()) @map("added_at")
+
+    // Relations
+    cart          Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
+    variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+
+    @@unique([cartId, bookVariantId])
+    @@map("cart_items")
+  }
+
+
+  model OrderAddress {
+    id            BigInt  @id @default(autoincrement())
+    orderId       BigInt  @unique @map("order_id")
+    recipientName String  @map("recipient_name") @db.VarChar(200)
+    phoneNumber   String  @map("phone_number") @db.VarChar(30)
+    addressLine   String  @map("address_line") @db.VarChar(500)
+    ward          String? @db.VarChar(200)
+    district      String? @db.VarChar(200)
+    city          String  @db.VarChar(200)
+    countryCode   String? @map("country_code") @db.VarChar(2)
+    note          String? @db.Text
+
+    // Relations
+    order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@map("order_addresses")
+  }
+
+
+  //Log
+  model InventoryMovement {
+    id            BigInt          @id @default(autoincrement())
+    bookVariantId BigInt          @map("book_variant_id")
+    changeQty     Int             @map("change_qty")
+    reason        InventoryReason
+    refType       String?         @map("ref_type") @db.VarChar(50)
+    refId         BigInt?         @map("ref_id")
+    note          String?         @db.Text
+    createdBy     BigInt?         @map("created_by")
+    createdAt     DateTime        @default(now()) @map("created_at")
+
+    // Relations
+    variant       BookVariant     @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+    creator       User?           @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+    @@index([bookVariantId, createdAt])
+    @@index([reason, createdAt])
+    @@map("inventory_movements")
+  }
+
+  model UserEvent {
+    id             BigInt        @id @default(autoincrement())
+    userId         BigInt?       @map("user_id")
+    guestSessionId String?       @map("guest_session_id") @db.Char(36)
+    sessionId      String?       @map("session_id") @db.Char(36)
+    eventType      EventType     @map("event_type")
+    objectType     String?       @map("object_type") @db.VarChar(50)
+    objectId       String?       @map("object_id") @db.VarChar(100)
+    amount         Decimal?      @db.Decimal(12, 2)
+    currencyCode   String?       @map("currency_code") @db.VarChar(3)
+    ip             String?       @db.VarChar(64)
+    userAgent      String?       @map("user_agent") @db.VarChar(1000)
+    metadata       Json?
+    createdAt      DateTime      @default(now()) @map("created_at")
+
+    // Relations
+    user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade)
+    session        UserSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+    @@index([eventType, createdAt])
+    @@index([userId, createdAt])
+    @@index([guestSessionId, createdAt])
+    @@map("user_events")
+  }
+
+
+  model AuditLog {
+    id          BigInt   @id @default(autoincrement())
+    actorUserId BigInt   @map("actor_user_id")
+    action      String   @db.VarChar(200)
+    entityType  String   @map("entity_type") @db.VarChar(100)
+    entityId    String   @map("entity_id") @db.VarChar(100)
+    before      Json?
+    after       Json?
+    ip          String?  @db.VarChar(64)
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    actor       User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+    @@index([actorUserId, createdAt])
+    @@index([entityType, entityId])
+    @@map("audit_logs")
+  }
+
+  model PaymentTransaction {
+    id              BigInt         @id @default(autoincrement())
+    orderId         BigInt         @map("order_id")
+    userId          BigInt?        @map("user_id")
+
+    gateway         PaymentGateway
+    status          PaymentStatus?
+
+    amount          Decimal        @db.Decimal(12, 2)
+    currencyCode    String?        @map("currency_code") @db.VarChar(3)
+
+    providerTxnId   String?        @map("provider_txn_id") @db.VarChar(200)
+    referenceNumber String?        @map("reference_number") @db.VarChar(200)
+    requestId       String?        @map("request_id") @db.VarChar(100)
+    idempotencyKey  String?        @map("idempotency_key") @db.VarChar(100)
+
+    requestPayload  Json?          @map("request_payload")
+    responsePayload Json?          @map("response_payload")
+
+    createdAt       DateTime       @default(now()) @map("created_at")
+    updatedAt       DateTime       @updatedAt @map("updated_at")
+
+    // Relations
+    order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+    user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+    @@index([orderId, createdAt])
+    @@index([gateway, providerTxnId])
+    @@map("payment_transactions")
+  }
+
+  model WebhookInbox {
+    id              BigInt         @id @default(autoincrement())
+    gateway         PaymentGateway
+
+    providerEventId String         @map("provider_event_id") @db.VarChar(200)
+    receivedAt      DateTime       @map("received_at")
+    payload         Json
+
+    processedAt     DateTime?      @map("processed_at")
+    status          JobStatus?
+    attempts        Int?
+    lastError       String?        @map("last_error") @db.Text
+
+    @@unique([gateway, providerEventId])
+    @@map("webhook_inbox")
+  }
 
 

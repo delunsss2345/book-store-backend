@@ -17,9 +17,7 @@ export class UserSessionService {
         userAgent?: string;
         deviceId?: bigint | null;
     }) {
-        if (params.deviceId) {
-            console.log(params.deviceId);
-        }
+
         const refreshTokenHash = hashToken(params.refreshToken);
         const expiresAt = this.getRefreshTokenExpiresAt();
 

@@ -200,7 +200,7 @@ export class CatalogRepository {
         });
     }
 
-    findBooksVariantByIds(bookVariantId: bigint[], languageId: number) {
+    findBooksVariantByIds(bookVariantId: bigint[], languageId: number, take: number = 20) {
         if (!bookVariantId.length) {
             return Promise.resolve([]);
         }
@@ -261,7 +261,8 @@ export class CatalogRepository {
                 price: true,
                 currencyCode: true,
                 stock: true,
-            }
+            },
+            take
         });
     }
 

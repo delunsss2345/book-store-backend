@@ -42,5 +42,42 @@ export class OrderItemRepository {
             bookId: row.bookVariantSnapshot?.bookVariant?.bookId ?? null,
         }));
     }
+
+    async findOrderIdsBySnapshotIds(snapshotIds: bigint[]) {
+        const rows = await this.prisma.orderItem.findMany({
+            where: { bookVariantSnapshotId: { in: snapshotIds } },
+            select: { orderId: true },
+        });
+        return rows.map(r => r.orderId);
+    }
+
+    async findSnapshotIdsByOrderIds(orderIds: bigint[]) {
+        const rows = await this.prisma.orderItem.findMany({
+            where: { orderId: { in: orderIds } },
+            select: { bookVariantSnapshotId: true },
+        });
+        return rows.map(r => r.bookVariantSnapshotId);
+    }
+    async groupAlsoBoughtSnapshotCandidates(orderIds: bigint[], excludeSnapshotIds: bigint[], take = 200) {
+        return this.prisma.orderItem.groupBy({
+            by: ['bookVariantSnapshotId'],
+            where: {
+                orderId: { in: orderIds },
+                bookVariantSnapshotId: { notIn: excludeSnapshotIds }, // Không chứa những lần mua trước 
+            },
+            _count: { bookVariantSnapshotId: true },
+            orderBy: { _count: { bookVariantSnapshotId: 'desc' } },
+            take,
+        });
+    }
+
+    async findPurchasedSnapshotIdsByUser(userId: bigint) {
+        const rows = await this.prisma.orderItem.findMany({
+            where: { order: { userId } },
+            select: { bookVariantSnapshotId: true },
+        });
+        return rows.map(r => r.bookVariantSnapshotId);
+    }
+
 }
 

@@ -8,6 +8,6 @@ import { CatalogService } from './catalog.service';
     imports: [CacheProvider],
     controllers: [CatalogController],
     providers: [CatalogService, CatalogRepository],
-    exports: [CatalogService],
+    exports: [CatalogService, CatalogRepository],
 })
 export class CatalogModule { }

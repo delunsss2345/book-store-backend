@@ -60,15 +60,6 @@ export class CatalogController {
         return this.catalogService.getCategories(query.lang);
     }
 
-    // @Public()
-    // @Get('categories/:categoryId/books')
-    // @ApiOkResponse({ type: CatalogBookListResponseDto })
-    // listBooksByCategory(
-    //     @Param('categoryId') categoryId: string,
-    //     @Query() query: CatalogCategoryBooksQueryDto,
-    // ) {
-    //     return this.catalogService.listBooksByCategory(this.parseBigInt(categoryId, 'categoryId'), query);
-    // }
 
     private parseBigInt(value: string | undefined, fieldName: string): bigint {
         if (!value) {

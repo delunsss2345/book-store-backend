@@ -1,15 +1,16 @@
 import { SecurityModule } from '@/common/security/security.module';
 import { CONFIGURATION, TConfiguration } from '@/config';
-import { CatalogModule } from '@/modules/catalog';
-import { CartModule } from '@/modules/cart/cart.module';
-import { HealthModule } from '@/modules/health/health.module';
 import { AuthorModule } from '@/modules/author/author.module';
+import { CartModule } from '@/modules/cart/cart.module';
+import { CatalogModule } from '@/modules/catalog';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
+import { HealthModule } from '@/modules/health/health.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { ReviewModule } from '@/modules/review/review.module';
+import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from './database';
@@ -67,6 +68,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     ReviewModule,
     PublisherModule,
     AuthorModule,
+    UserEventModule
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -1,5 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Badge } from '@prisma/client';
 import { CatalogBookVariantDto, CatalogCategoryDto } from './catalog-book-card.dto';
+
+export class CatalogBookSpecDto {
+    @ApiPropertyOptional({ example: '14.50' })
+    widthCm?: string | null;
+
+    @ApiPropertyOptional({ example: '21.00' })
+    heightCm?: string | null;
+
+    @ApiPropertyOptional({ example: '2.30' })
+    thicknessCm?: string | null;
+
+    @ApiPropertyOptional({ example: 'MANG_CO' })
+    packaging?: string | null;
+}
 
 export class CatalogBookDetailDto {
     @ApiProperty({ example: '1' })
@@ -43,6 +58,12 @@ export class CatalogBookDetailDto {
 
     @ApiProperty({ type: () => [CatalogBookVariantDto] })
     variants: CatalogBookVariantDto[];
+
+    @ApiProperty({ type: () => CatalogBookSpecDto })
+    specs: CatalogBookSpecDto;
+
+    @ApiProperty({ enum: Badge, isArray: true, example: [Badge.NEW, Badge.BESTSELLER] })
+    badges: Badge[];
 
     @ApiProperty({ type: Date })
     createdAt: Date;

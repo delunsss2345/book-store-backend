@@ -1,10 +1,16 @@
 import { EventType, scoreEvent } from '@/common/constants/event-type.constant';
 import { BookSnapshotRepository } from '@/modules/book-snapshot/book-snapshot.repository';
+import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
+import {
+    CatalogBookCardDto,
+    CatalogRecommendRequestDto
+} from '@/modules/catalog/dto/response';
 import { OrderItemRepository } from '@/modules/order-item/order-item.repository';
 import { OrderRepository } from '@/modules/order/order.repository';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { EventType as PrismaEventType } from '@prisma/client';
 import { CatalogRepository } from '../catalog/catalog.repository';
+import { CatalogService } from '../catalog/catalog.service';
 import { CreateUserEventRequestDto } from './dto/request/create-user-event.request.dto';
 import { UserEventRepository } from './user-event.repository';
 type ScoredObj = {
@@ -13,6 +19,9 @@ type ScoredObj = {
     createdAt: Date;
     score: number;
 };
+type VariantBookRow = Awaited<
+    ReturnType<CatalogRepository['findBooksVariantByIds']>
+>[number];
 
 const VARIANT_EVENT_TYPES: EventType[] = [
     EventType.VIEW_BOOK,
@@ -34,7 +43,8 @@ export class UserEventService {
         private readonly orderItemRepository: OrderItemRepository,
         private readonly orderRepository: OrderRepository,
         private readonly bookSnapshotRepository: BookSnapshotRepository,
-        private readonly catalogRepository: CatalogRepository
+        private readonly catalogRepository: CatalogRepository,
+        private readonly catalogService: CatalogService,
     ) { }
 
     findEventTypeByUser(userId: bigint) {
@@ -69,8 +79,25 @@ export class UserEventService {
         );
     }
 
+    async getHyperRecommendHome(
+        userId: bigint,
+        query: CatalogHomeQueryDto,
+    ): Promise<CatalogRecommendRequestDto> {
+        const limit = query.limit ?? 12;
+        const recommend = await this.getRecommend(userId, query.lang, limit);
+
+        return {
+            recommend,
+            generatedAt: new Date(),
+        };
+    }
+
     // Merge 2 luong: event tuong tac variant + event theo don hang.
-    async getRecommend(userId: bigint) {
+    async getRecommend(
+        userId: bigint,
+        lang?: string,
+        limit = 12,
+    ): Promise<CatalogBookCardDto[]> {
         const [scoreVariant, scoreOrder] = await Promise.all([
             this.buildScoreWithRecommendVariant(userId),
             this.buildScoreWithRecommendOrder(userId),
@@ -138,16 +165,16 @@ export class UserEventService {
         ].map((id) => BigInt(id));
         if (!mapToRecommend.length) return [];
 
+        const language = await this.resolveLanguage(lang);
+
         // Variant đề xuất (tìm ra books gốc)
-        const variantRecommend = await this.catalogRepository.findBooksVariantByIds(mapToRecommend, 3);
-        const mapped = variantRecommend.map((vr) => {
-            return {
-                ...vr.book,
-                ...vr.translations,
-                ...vr.categories,
-            };
-        });
-        return mapped;
+        const variantRecommend = await this.catalogRepository.findBooksVariantByIds(
+            mapToRecommend,
+            language.id,
+            limit,
+        );
+
+        return this.pickRecommendCards(mapToRecommend, variantRecommend, limit);
     }
 
     async mergerRecommendVariantAndOrder(variants: Map<string, ScoredObj>, orders: Map<string, ScoredObj>) {
@@ -274,6 +301,59 @@ export class UserEventService {
 
         return this.getTopKMap(map, 20);
     }
+
+    private pickRecommendCards(
+        variantIds: bigint[],
+        variants: VariantBookRow[],
+        limit: number,
+    ): CatalogBookCardDto[] {
+        const cardMap = new Map<string, CatalogBookCardDto>(
+            variants.map((variant) => [
+                variant.id.toString(),
+                this.toVariantBookCard(variant),
+            ] as const),
+        );
+
+        return variantIds
+            .map((id) => cardMap.get(id.toString()))
+            .filter((x): x is CatalogBookCardDto => x != undefined)
+            .slice(0, Math.max(1, limit));
+    }
+
+    private toVariantBookCard(variant: VariantBookRow): CatalogBookCardDto {
+        const book = variant.book;
+        const t = book.translations[0];
+        const price = Number.isFinite(Number(variant.price))
+            ? Number(variant.price).toFixed(2)
+            : null;
+
+        return {
+            id: book.id.toString(),
+            title: t?.title ?? `Book ${book.id.toString()}`,
+            slug: t?.slug ?? null,
+            coverImageUrl: book.coverImageUrl ?? null,
+            minPrice: price,
+            maxPrice: price,
+            currencyCode: variant.currencyCode ?? null,
+            ratingAvg: null,
+            ratingCount: 0,
+            soldCount: 0,
+            createdAt: book.createdAt,
+        };
+    }
+
+    private async resolveLanguage(
+        lang?: string,
+    ): Promise<{ id: number; code: string }> {
+        const normalized = (lang ?? 'vi').trim().toLowerCase();
+        const found = await this.catalogRepository.findLanguageByCode(normalized);
+        if (found) return found;
+
+        const fallback = await this.catalogRepository.findDefaultLanguage();
+        if (!fallback) throw new NotFoundException('No active language found');
+        return fallback;
+    }
+
     private upsertScore(
         map: Map<string, ScoredObj>,
         objectId: string,

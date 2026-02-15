@@ -18,6 +18,13 @@ export class CatalogHomeResponseDto {
     generatedAt: Date;
 }
 
+export class CatalogRecommendRequestDto {
+    @ApiProperty({ type: () => [CatalogBookCardDto] })
+    recommend: CatalogBookCardDto[];
+    @ApiProperty({ type: Date })
+    generatedAt: Date;
+}
+
 export class CatalogBookListResponseDto {
     @ApiProperty({ example: 1 })
     page: number;

@@ -11,7 +11,12 @@
   datasource db {
     provider = "mysql"
   }
-
+  enum Badge {
+      NEW
+      LIMITED
+      BESTSELLER
+      EDITION
+  }
   enum UserStatus {
     ACTIVE
     INACTIVE
@@ -564,9 +569,22 @@
     authors         BookAuthor[]
     categories      BookCategory[]
     variants        BookVariant[]
+    specs        BookSpec?     
+    bookBadge       BookBadge[]
 
     reviews         Review[]
     @@map("books")
+  }
+
+  model BookSpec {
+    bookId      BigInt  @id @map("book_id")
+    widthCm     Decimal? @map("width_cm")     @db.Decimal(6,2)
+    heightCm    Decimal? @map("height_cm")    @db.Decimal(6,2)
+    thicknessCm Decimal? @map("thickness_cm") @db.Decimal(6,2)
+    packaging   String?  @map("packaging")    @db.VarChar(200)
+
+    book        Book     @relation(fields: [bookId], references: [id] , onDelete: Cascade, onUpdate: NoAction)
+    @@map("book_specs")
   }
 
   model BookCategory {
@@ -581,6 +599,15 @@
     @@map("book_categories")
   }
 
+  model BookBadge {
+  id     BigInt @id @default(autoincrement())
+  bookId BigInt @map("book_id") @unique
+  code   Badge  
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade , onUpdate:NoAction)
+
+  @@index([bookId, code])
+  @@map("book_badges")
+}
 
   model BookVariant {
     id           BigInt              @id @default(autoincrement())

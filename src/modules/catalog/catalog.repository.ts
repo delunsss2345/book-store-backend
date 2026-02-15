@@ -279,6 +279,20 @@ export class CatalogRepository {
                     weightGrams: true,
                     createdAt: true,
                     publisher: { select: { defaultName: true } },
+                    specs: {
+                        select: {
+                            widthCm: true,
+                            heightCm: true,
+                            thicknessCm: true,
+                            packaging: true,
+                        },
+                    },
+                    bookBadge: {
+                        orderBy: [{ id: 'asc' }],
+                        select: {
+                            code: true,
+                        },
+                    },
                     translations: {
                         where: { languageId },
                         select: { title: true, slug: true, description: true },
@@ -352,6 +366,20 @@ export class CatalogRepository {
                 weightGrams: true,
                 createdAt: true,
                 publisher: { select: { defaultName: true } },
+                specs: {
+                    select: {
+                        widthCm: true,
+                        heightCm: true,
+                        thicknessCm: true,
+                        packaging: true,
+                    },
+                },
+                bookBadge: {
+                    orderBy: [{ id: 'asc' }],
+                    select: {
+                        code: true,
+                    },
+                },
                 translations: {
                     where: { languageId, slug },
                     select: { title: true, slug: true, description: true },

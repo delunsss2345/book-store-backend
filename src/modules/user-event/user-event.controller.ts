@@ -1,7 +1,9 @@
 import type { JwtPayload } from '@/common';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
+import { CatalogHomeResponseDto } from '@/modules/catalog/dto/response';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { UserEventService } from './user-event.service';
 
 @Controller('user-events')
@@ -10,12 +12,13 @@ export class UserEventController {
 
 
     @Get('hyper-recommend/books')
-    @ApiProperty()
+    @ApiOkResponse({ type: CatalogHomeResponseDto })
     @ApiBearerAuth('access-token')
     async listBooksByCategory(
-        @GetUser() user: JwtPayload
+        @GetUser() user: JwtPayload,
+        @Query() query: CatalogHomeQueryDto,
     ) {
-        return this.userEventService.getRecommend(BigInt(user.sub));
+        return this.userEventService.getHyperRecommendHome(BigInt(user.sub), query);
     }
 
 }

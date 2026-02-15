@@ -3,6 +3,7 @@ import {
     CatalogBookCardDto,
     CatalogBookDetailDto,
     CatalogBookListResponseDto,
+    CatalogBookSpecDto,
     CatalogBookVariantDto,
     CatalogCategoryDto,
     CatalogCategoryTreeDto,
@@ -14,6 +15,7 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
+import { Badge } from '@prisma/client';
 import type { Cache } from 'cache-manager';
 import { CatalogRepository } from './catalog.repository';
 
@@ -27,6 +29,13 @@ type SalesInfo = { value: number };
 type CategoryRow = Awaited<
     ReturnType<CatalogRepository['findActiveCategoriesByLanguage']>
 >[number];
+type BookDetailByIdRow = NonNullable<
+    Awaited<ReturnType<CatalogRepository['findBookDetailById']>>
+>;
+type BookDetailBySlugRow = NonNullable<
+    Awaited<ReturnType<CatalogRepository['findBookDetailBySlug']>>
+>;
+type BookDetailRow = BookDetailByIdRow | BookDetailBySlugRow;
 
 @Injectable()
 export class CatalogService {
@@ -201,48 +210,8 @@ export class CatalogService {
 
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
             const book = await this.repo.findBookDetailById(bookId, language.id);
-            if (!book) throw new NotFoundException("Book not found");
-
-            const t = book.translations[0];
-
-            const categories: CatalogCategoryDto[] = (book.categories ?? []).map((x) => {
-                const c = x.category;
-                const ct = c.categoryTranslation?.[0];
-                return {
-                    id: c.id.toString(),
-                    parentId: c.parentId ? c.parentId.toString() : null,
-                    sortOrder: c.sortOrder ?? null,
-                    name: ct?.name ?? null,
-                    slug: ct?.slug ?? null,
-                };
-            });
-
-            const variants: CatalogBookVariantDto[] = (book.variants ?? []).map((v) => ({
-                id: v.id.toString(),
-                format: v.format,
-                edition: v.edition ?? null,
-                isbn: v.isbn ?? null,
-                price: v.price?.toString?.() ?? String(v.price),
-                currencyCode: v.currencyCode ?? null,
-                stock: v.stock ?? null,
-            }));
-
-            return {
-                id: book.id.toString(),
-                title: t?.title ?? `Book ${book.id.toString()}`,
-                slug: t?.slug ?? null,
-                description: t?.description ?? null,
-                coverImageUrl: book.coverImageUrl ?? null,
-                publicationYear: book.publicationYear ?? null,
-                pageCount: book.pageCount ?? null,
-                weightGrams: book.weightGrams ?? null,
-                publisherName: book.publisher?.defaultName ?? null,
-                ratingAvg: book.ratingAvg,
-                ratingCount: book.ratingCount,
-                variants,
-                categories,
-                createdAt: book.createdAt,
-            };
+            if (!book) throw new NotFoundException('Book not found');
+            return this.toBookDetail(book);
         });
     }
 
@@ -258,48 +227,82 @@ export class CatalogService {
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
             const book = await this.repo.findBookDetailBySlug(normalizedSlug, language.id);
             if (!book) throw new NotFoundException('Book not found');
+            return this.toBookDetail(book, normalizedSlug);
+        });
+    }
 
-            const t = book.translations[0];
+    private toBookDetail(book: BookDetailRow, slugFallback?: string): CatalogBookDetailDto {
+        const t = book.translations[0];
 
-            const categories: CatalogCategoryDto[] = (book.categories ?? []).map((x) => {
-                const c = x.category;
-                const ct = c.categoryTranslation?.[0];
-                return {
-                    id: c.id.toString(),
-                    parentId: c.parentId ? c.parentId.toString() : null,
-                    sortOrder: c.sortOrder ?? null,
-                    name: ct?.name ?? null,
-                    slug: ct?.slug ?? null,
-                };
-            });
+        return {
+            id: book.id.toString(),
+            title: t?.title ?? `Book ${book.id.toString()}`,
+            slug: t?.slug ?? slugFallback ?? null,
+            description: t?.description ?? null,
+            coverImageUrl: book.coverImageUrl ?? null,
+            publicationYear: book.publicationYear ?? null,
+            pageCount: book.pageCount ?? null,
+            weightGrams: book.weightGrams ?? null,
+            publisherName: book.publisher?.defaultName ?? null,
+            ratingAvg: book.ratingAvg,
+            ratingCount: book.ratingCount,
+            variants: this.toBookVariants(book),
+            categories: this.toBookCategories(book),
+            specs: this.toBookSpecs(book),
+            badges: this.toBookBadges(book),
+            createdAt: book.createdAt,
+        };
+    }
 
-            const variants: CatalogBookVariantDto[] = (book.variants ?? []).map((v) => ({
-                id: v.id.toString(),
-                format: v.format,
-                edition: v.edition ?? null,
-                isbn: v.isbn ?? null,
-                price: v.price?.toString?.() ?? String(v.price),
-                currencyCode: v.currencyCode ?? null,
-                stock: v.stock ?? null,
-            }));
-
+    private toBookCategories(book: BookDetailRow): CatalogCategoryDto[] {
+        return (book.categories ?? []).map((x) => {
+            const c = x.category;
+            const ct = c.categoryTranslation?.[0];
             return {
-                id: book.id.toString(),
-                title: t?.title ?? `Book ${book.id.toString()}`,
-                slug: t?.slug ?? normalizedSlug,
-                description: t?.description ?? null,
-                coverImageUrl: book.coverImageUrl ?? null,
-                publicationYear: book.publicationYear ?? null,
-                pageCount: book.pageCount ?? null,
-                weightGrams: book.weightGrams ?? null,
-                publisherName: book.publisher?.defaultName ?? null,
-                ratingAvg: book.ratingAvg,
-                ratingCount: book.ratingCount,
-                variants,
-                categories,
-                createdAt: book.createdAt,
+                id: c.id.toString(),
+                parentId: c.parentId ? c.parentId.toString() : null,
+                sortOrder: c.sortOrder ?? null,
+                name: ct?.name ?? null,
+                slug: ct?.slug ?? null,
             };
         });
+    }
+
+    private toBookVariants(book: BookDetailRow): CatalogBookVariantDto[] {
+        return (book.variants ?? []).map((v) => ({
+            id: v.id.toString(),
+            format: v.format,
+            edition: v.edition ?? null,
+            isbn: v.isbn ?? null,
+            price: v.price?.toString?.() ?? String(v.price),
+            currencyCode: v.currencyCode ?? null,
+            stock: v.stock ?? null,
+        }));
+    }
+
+    private toBookSpecs(book: BookDetailRow): CatalogBookSpecDto {
+        const specs = book.specs;
+        if (!specs) {
+            return {};
+        }
+
+        return {
+            widthCm: this.toNullableString(specs.widthCm),
+            heightCm: this.toNullableString(specs.heightCm),
+            thicknessCm: this.toNullableString(specs.thicknessCm),
+            packaging: specs.packaging ?? null,
+        };
+    }
+
+    private toBookBadges(book: BookDetailRow): Badge[] {
+        return (book.bookBadge ?? []).map((badge) => badge.code);
+    }
+
+    private toNullableString(value: { toString: () => string } | null | undefined): string | null {
+        if (!value) {
+            return null;
+        }
+        return value.toString();
     }
 
 

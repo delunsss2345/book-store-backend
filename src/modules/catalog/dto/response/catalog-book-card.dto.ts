@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Badge } from '@prisma/client';
 
 export class CatalogBookCardDto {
     @ApiProperty({ example: '1' })
@@ -33,6 +34,9 @@ export class CatalogBookCardDto {
 
     @ApiPropertyOptional({ example: false })
     isOutOfStock?: boolean;
+
+    @ApiProperty()
+    badges?: Badge[]
 
     @ApiProperty({ type: Date })
     createdAt: Date;

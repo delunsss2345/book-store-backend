@@ -46,39 +46,33 @@ export class CatalogService {
 
     // Lấy giớ hạn không lấy phân trang
     async getCatalogHome(query: CatalogHomeQueryDto): Promise<any> {
-        const limit = query.limit ?? 10;
+        const limit = query.limit ?? 12;
         const lang = await this.resolveLanguage(query.lang);
         const cacheKey = `catalog:home:${lang.code}:${limit}`;
 
         return this.withCache(cacheKey, HOME_CACHE_TTL, async () => {
-            const [newestRows, ratingTopLimit, saleTopLimit] = await Promise.all([
+            const [newestRows, saleTopLimit] = await Promise.all([
                 this.repo.findNewestActiveBookIds(lang.id, limit),
-                this.repo.groupBookRatings(limit),
                 this.repo.groupBookSales(limit),
             ]);
-            const newestIds = newestRows.map((r) => r.id);
 
-            const topRatedIdsVariant = ratingTopLimit.map((r) =>
-                BigInt(r.bookVariantId),
-            );
+            const newestIds = newestRows.map((r) => r.id);
             const bestSellerIdsVariant = saleTopLimit.map((r) =>
                 BigInt(r.bookVariantId),
             );
 
             const allUniqueIds = this.uniqueBigIntIds([
-                ...topRatedIdsVariant,
                 ...bestSellerIdsVariant,
+                ...newestIds
             ]);
-            const cardMap = await this.buildCardMap(newestIds, lang.id);
-            const cardMapVariant = await this.buildCardVariantMap(
+
+            const cardMap = await this.buildCardMap(
                 allUniqueIds,
                 lang.id,
             );
 
             return {
-                newArrivals: this.pickCards(newestIds, cardMap),
-                bestSeller: this.pickCards(bestSellerIdsVariant, cardMapVariant),
-                topRated: this.pickCards(topRatedIdsVariant, cardMapVariant),
+                newAndTrending: this.pickCards(allUniqueIds, cardMap),
             };
         });
     }
@@ -344,6 +338,7 @@ export class CatalogService {
             ratingCount: ratingCount ?? 0,
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
+            badges: (book.bookBadge ?? []).map((badge) => badge.code),
         };
     }
 
@@ -373,6 +368,7 @@ export class CatalogService {
             ratingCount: ratingCount ?? 0,
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
+            badges: (book.bookBadge ?? []).map((badge) => badge.code)
         };
     }
 

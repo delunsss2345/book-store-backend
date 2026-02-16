@@ -91,6 +91,11 @@ export class CatalogRepository {
                     },
                     take: 1,
                 },
+                bookBadge: {
+                    select: {
+                        code: true
+                    }
+                },
                 variants: {
                     where: { isActive: true },
                     orderBy: [{ price: 'asc' }, { id: 'asc' }],
@@ -155,6 +160,13 @@ export class CatalogRepository {
                     select: {
                         defaultName: true,
                     },
+                },
+                specs: true,
+                bookBadge: {
+                    orderBy: [{ id: 'asc' }],
+                    select: {
+                        code: true
+                    }
                 },
                 translations: {
                     where: { languageId },
@@ -232,6 +244,11 @@ export class CatalogRepository {
                                 description: true,
                             },
                             take: 1,
+                        },
+                        bookBadge: {
+                            select: {
+                                code: true
+                            }
                         },
                         categories: {
                             select: {

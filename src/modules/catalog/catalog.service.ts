@@ -181,10 +181,12 @@ export class CatalogService {
                     title: translation?.title ?? `Book ${book.id.toString()}`,
                     slug: translation?.slug ?? null,
                     coverImageUrl: book.coverImageUrl ?? null,
-                    minPrice: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
+                    price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
                     currencyCode: cheapestVariant?.currencyCode ?? null,
                     isOutOfStock: !cheapestVariant || stock <= 0,
                     createdAt: book.createdAt,
+                    bookVariantId: cheapestVariant.id,
+                    format: cheapestVariant.format
                 };
             });
 
@@ -340,7 +342,7 @@ export class CatalogService {
             createdAt: book.createdAt,
             badges: (book.bookBadge ?? []).map((badge) => badge.code),
             bookVariantId: book.variants[0].id,
-            minPrice: String(book.variants[0].price)
+            price: String(book.variants[0].price)
         };
     }
 
@@ -363,8 +365,7 @@ export class CatalogService {
             title: t?.title ?? `Book ${book.id.toString()}`,
             slug: t?.slug ?? null,
             coverImageUrl: book.coverImageUrl,
-            minPrice: price,
-            maxPrice: price,
+            price: price,
             currencyCode: variant.currencyCode ?? null,
             ratingAvg: ratingAvg ?? null,
             ratingCount: ratingCount ?? 0,

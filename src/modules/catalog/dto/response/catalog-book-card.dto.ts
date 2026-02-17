@@ -15,6 +15,9 @@ export class CatalogBookCardDto {
     coverImageUrl?: string | null;
 
     @ApiPropertyOptional({ example: '10.00' })
+    price?: string | null;
+
+    @ApiPropertyOptional({ example: '10.00' })
     minPrice?: string | null;
 
     @ApiPropertyOptional({ example: '20.00' })
@@ -37,7 +40,6 @@ export class CatalogBookCardDto {
 
     @ApiPropertyOptional({ example: 1 })
     bookVariantId?: bigint;
-
 
     @ApiProperty()
     badges?: Badge[]

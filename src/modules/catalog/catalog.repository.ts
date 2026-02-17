@@ -97,13 +97,15 @@ export class CatalogRepository {
                     }
                 },
                 variants: {
-                    where: { isActive: true },
+                    where: { isActive: true, stock: { gt: 0 } },
                     orderBy: [{ price: 'asc' }, { id: 'asc' }],
                     take: 1,
                     select: {
+                        id: true,
                         price: true,
                         currencyCode: true,
                         stock: true,
+                        format: true
                     },
                 },
             },

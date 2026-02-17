@@ -198,6 +198,9 @@ export class CatalogRepository {
                 },
                 variants: {
                     where: { isActive: true },
+                    orderBy: {
+                        price: 'desc'
+                    },
                     select: {
                         id: true,
                         format: true,
@@ -207,6 +210,7 @@ export class CatalogRepository {
                         currencyCode: true,
                         stock: true,
                     },
+                    take: 1
                 },
             },
         });

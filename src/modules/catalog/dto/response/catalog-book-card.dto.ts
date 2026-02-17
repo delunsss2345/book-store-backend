@@ -35,6 +35,10 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: false })
     isOutOfStock?: boolean;
 
+    @ApiPropertyOptional({ example: 1 })
+    bookVariantId?: bigint;
+
+
     @ApiProperty()
     badges?: Badge[]
 

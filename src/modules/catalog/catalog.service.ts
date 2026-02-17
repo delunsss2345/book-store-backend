@@ -339,6 +339,8 @@ export class CatalogService {
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
             badges: (book.bookBadge ?? []).map((badge) => badge.code),
+            bookVariantId: book.variants[0].id,
+            minPrice: String(book.variants[0].price)
         };
     }
 

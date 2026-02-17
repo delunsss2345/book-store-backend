@@ -12,6 +12,28 @@ export class CartRepository {
             orderBy: { updatedAt: 'desc' },
         });
     }
+    createCartByGuestSessionId(guestSessionId: string) {
+        return this.prisma.cart.create({
+            data: {
+                guestSessionId
+            },
+            select: {
+                items: true
+            }
+        })
+    }
+
+    createCartByUserId(userId: bigint) {
+        return this.prisma.cart.create({
+            data: {
+                userId
+            },
+            select: {
+                items: true
+            }
+        })
+    }
+
 
     createByUserId(userId: bigint): Promise<Cart> {
         return this.prisma.cart.create({
@@ -53,7 +75,7 @@ export class CartRepository {
         });
     }
 
-    getCart() {
-        throw new Error('Method not implemented.');
-    }
+
+
+
 }

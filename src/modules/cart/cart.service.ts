@@ -17,10 +17,17 @@ export class CartService {
         private readonly authRepository: AuthRepository,
     ) { }
 
-    getCart() {
-        return this.cartRepository.getCart();
+    async getCartUser(userId: bigint) {
+        const result = await this.cartRepository.findByUserId(userId);
+        if (result) return result;
+        return this.cartRepository.createCartByUserId(userId);
     }
 
+    async getCartGuest(guestSessionId: string) {
+        const result = await this.cartRepository.findByGuestSessionId(guestSessionId);
+        if (result) return result;
+        return this.cartRepository.createCartByGuestSessionId(guestSessionId);
+    }
     async addCartItem(request: Request, body: AddCartItemRequestDto) {
         const bookVariantId = BigInt(body.bookVariantId);
         const actor = this.resolveActor(request);

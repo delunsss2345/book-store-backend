@@ -1,12 +1,12 @@
 import { JwtPayload } from '@/common';
 import { Public } from '@/common/security/decorators/public.decorator';
-import { CartGuestSessionGuard } from '@/common/security/guard/cart-guest-session.guard';
+import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddCartItemRequestDto, UpdateCartItemDeltaRequestDto } from '@/modules/cart/dto/request';
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { CartService } from './cart.service';
 @Public()
-@UseGuards(CartGuestSessionGuard)
+@UseGuards(ShopperSessionGuard)
 @Controller('cart')
 export class CartController {
     constructor(private readonly cartService: CartService) { }

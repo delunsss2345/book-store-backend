@@ -1,4 +1,4 @@
-import { CartGuestSessionGuard } from '@/common/security/guard/cart-guest-session.guard';
+import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { JwtProvider } from '@/config/jwt.config';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { CartItemModule } from '@/modules/cart-item/cart-item.module';
@@ -11,7 +11,7 @@ import { CartService } from './cart.service';
 @Module({
     imports: [JwtProvider, CartItemModule, GuestSessionModule],
     controllers: [CartController],
-    providers: [CartService, CartRepository, CartGuestSessionGuard, AuthRepository],
+    providers: [CartService, CartRepository, ShopperSessionGuard, AuthRepository],
     exports: [CartService],
 })
 export class CartModule { }

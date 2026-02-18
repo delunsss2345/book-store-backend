@@ -6,7 +6,7 @@ import { createHash } from 'crypto';
 import { Request, Response } from 'express';
 
 @Injectable()
-export class CartGuestSessionGuard implements CanActivate {
+export class ShopperSessionGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly guestSessionService: GuestSessionService,
@@ -18,6 +18,7 @@ export class CartGuestSessionGuard implements CanActivate {
         const response = context.switchToHttp().getResponse<Response>();
         const token = this.extractTokenFromHeader(request);
 
+        // Guard dùng chung cho cart/wishlist: không có token thì chuyển sang guest session.
         if (!token) {
             await this.attachGuestSession(request, response, true);
             return true;

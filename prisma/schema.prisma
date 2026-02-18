@@ -190,6 +190,7 @@
     convertedGuestSessions GuestSession[] @relation("GuestSessionConvertedUser")
     createdInventoryMovements InventoryMovement[] @relation("InventoryMovementCreator")
     userEvents        UserEvent[]
+    wishlists       Wishlist[]
     
 
     @@map("users")
@@ -411,6 +412,7 @@
     // Relations
     convertedUser   User?     @relation("GuestSessionConvertedUser", fields: [convertedUserId], references: [id], onDelete: SetNull)
     carts           Cart[]
+    wishlists       Wishlist[]
     orders          Order[]
     events          UserEvent[]
 
@@ -623,9 +625,10 @@
     createdAt    DateTime            @default(now()) @map("created_at")
     updatedAt    DateTime            @updatedAt @map("updated_at")
 
-    // Relationsf
+    // Relations
     book         Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
     assets       BookVariantAsset[]
+    wishlistItems WishlistItem[]
     cartItems    CartItem[]
     inventoryMovements InventoryMovement[]
     bookVariantSnapshots BookVariantSnapshot[] 
@@ -769,6 +772,39 @@
     @@index([guestSessionId])
     @@map("carts")
   }
+
+  model Wishlist {
+    id             BigInt        @id @default(autoincrement())
+    userId         BigInt?       @map("user_id")
+    guestSessionId String?       @map("guest_session_id") @db.Char(36)
+    createdAt      DateTime      @default(now()) @map("created_at")
+    updatedAt      DateTime      @updatedAt @map("updated_at")
+    deleteAt       DateTime?     @map("delete_at")
+    // Relations
+    user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+    guestSession   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: Cascade , onUpdate: NoAction)
+    items          WishlistItem[]
+
+    @@index([userId])
+    @@index([guestSessionId])
+    @@map("wishlists")
+  }
+
+  model WishlistItem {
+    id            BigInt      @id @default(autoincrement())
+    wishlistId    BigInt      @map("wishlist_id")
+    bookVariantId BigInt      @map("book_variant_id")
+    addedAt       DateTime    @default(now()) @map("added_at")
+
+    // Relations
+    wishlist      Wishlist    @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+    variant       BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+
+    @@unique([wishlistId, bookVariantId])
+
+    @@map("wishlist_items")
+  }
+
 
   model CartItem {
     id            BigInt      @id @default(autoincrement())

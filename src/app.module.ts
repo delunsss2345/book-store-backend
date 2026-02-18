@@ -10,6 +10,7 @@ import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { ReviewModule } from '@/modules/review/review.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
+import { WishlistModule } from '@/modules/wishlist/wishlist.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -49,7 +50,8 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     PublisherModule,
     AuthorModule,
     UserEventModule,
-    SearchModule
+    SearchModule,
+    WishlistModule
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

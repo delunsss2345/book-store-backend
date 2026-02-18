@@ -140,12 +140,14 @@ export class CatalogRepository {
         });
     }
 
-    findBooksByIds(bookIds: bigint[], languageId: number) {
+    findBooksByIds(bookIds: bigint[], languageId: number, page = 1, limit = 20) {
         if (!bookIds.length) {
             return Promise.resolve([]);
         }
 
         return this.prisma.book.findMany({
+            skip: (page - 1) * limit,
+            take: 20,
             where: {
                 id: { in: bookIds },
                 isActive: true,
@@ -286,6 +288,115 @@ export class CatalogRepository {
                 stock: true,
             },
             take
+        });
+    }
+
+    findActiveBookVariantsForSearchIndex() {
+        return this.prisma.bookVariant.findMany({
+            where: {
+                isActive: true,
+                book: {
+                    isActive: true,
+                    deletedAt: null,
+                },
+            },
+            orderBy: [{ id: 'asc' }],
+            select: {
+                id: true,
+                bookId: true,
+                format: true,
+                price: true,
+                currencyCode: true,
+                book: {
+                    select: {
+                        id: true,
+                        publisher: {
+                            select: {
+                                defaultName: true,
+                            },
+                        },
+                        translations: {
+                            select: {
+                                title: true,
+                                description: true,
+                                language: {
+                                    select: {
+                                        code: true,
+                                    },
+                                },
+                            },
+                        },
+                        categories: {
+                            select: {
+                                categoryId: true,
+                                category: {
+                                    select: {
+                                        categoryTranslation: {
+                                            select: {
+                                                name: true,
+                                                language: {
+                                                    select: {
+                                                        code: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    findActiveBookFirstVariant() {
+        return this.prisma.book.findMany({
+            where: {
+                isActive: true,
+                deletedAt: null,
+            },
+            orderBy: { id: 'asc' },
+            select: {
+                id: true,
+                translations: {
+                    select: {
+                        title: true,
+                        slug: true,
+                        description: true,
+                        language: {
+                            select: {
+                                code: true
+                            }
+                        }
+                    },
+                },
+                variants: {
+                    where: { isActive: true },
+                    orderBy: { price: 'asc' },
+                    take: 1,
+                    select: {
+                        id: true,
+                        price: true,
+                        currencyCode: true,
+                    },
+                },
+                categories: {
+                    select: {
+                        category: {
+                            select: {
+                                id: true,
+                                categoryTranslation: {
+                                    select: {
+                                        name: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
         });
     }
 

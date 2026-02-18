@@ -49,7 +49,7 @@ export class GeminiService {
                     responseJsonSchema: DRAFT_SCHEMA,
                     temperature: 0.6,
                     maxOutputTokens: 320,
-                    thinkingConfig: { thinkingBudget: 0 }, // nhanh + re hon
+                    thinkingConfig: { thinkingBudget: 0 },
                 },
             });
 
@@ -65,5 +65,27 @@ export class GeminiService {
             Logger.log(error)
             throw new InternalServerErrorException('Gemini generate draft failed');
         }
+    }
+    // Chuyển đổi 1 mảng text thành vector 
+    async getEmbedding(texts: string[]) {
+        try {
+            const res = await this.client.models.embedContent({
+                model: 'gemini-embedding-001',
+                contents: texts,
+                config: {
+                    outputDimensionality: 768,
+                },
+            });
+            return res.embeddings!.map(e => e.values); // gen ra chuỗi vector có liên quan với nhau
+        } catch (error) {
+            Logger.error(error);
+            throw new InternalServerErrorException('Gemini embedding failed');
+        }
+
+    }
+    // User chỉ thường query 1 lần nên có thể dùng helper 
+    async embedText(text: string) {
+        const [vec] = await this.getEmbedding([text]);
+        return vec;
     }
 }

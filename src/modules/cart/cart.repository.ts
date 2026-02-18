@@ -1,37 +1,69 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
-import { Cart } from '@prisma/client';
+import { Cart, Prisma } from '@prisma/client';
+
+const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
+    items: {
+        orderBy: { addedAt: 'desc' },
+        select: {
+            id: true,
+            bookVariantId: true,
+            quantity: true,
+            addedAt: true,
+            variant: {
+                select: {
+                    id: true,
+                    price: true,
+                    format: true,
+                    currencyCode: true,
+                    book: {
+                        select: {
+                            id: true,
+                            translations: {
+                                orderBy: { languageId: 'asc' },
+                                take: 1,
+                                select: {
+                                    title: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+});
+
+type CartWithItems = Prisma.CartGetPayload<{ include: typeof cartWithItemsInclude }>;
 
 @Injectable()
 export class CartRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findByUserId(userId: bigint): Promise<Cart | null> {
+    findByUserId(userId: bigint): Promise<CartWithItems | null> {
         return this.prisma.cart.findFirst({
             where: { userId },
             orderBy: { updatedAt: 'desc' },
+            include: cartWithItemsInclude,
         });
     }
-    createCartByGuestSessionId(guestSessionId: string) {
+
+    createCartByGuestSessionId(guestSessionId: string): Promise<CartWithItems> {
         return this.prisma.cart.create({
             data: {
-                guestSessionId
+                guestSessionId,
             },
-            select: {
-                items: true
-            }
-        })
+            include: cartWithItemsInclude,
+        });
     }
 
-    createCartByUserId(userId: bigint) {
+    createCartByUserId(userId: bigint): Promise<CartWithItems> {
         return this.prisma.cart.create({
             data: {
-                userId
+                userId,
             },
-            select: {
-                items: true
-            }
-        })
+            include: cartWithItemsInclude,
+        });
     }
 
 
@@ -47,18 +79,10 @@ export class CartRepository {
         });
     }
 
-    findByGuestSessionId(guestSessionId: string) {
+    findByGuestSessionId(guestSessionId: string): Promise<CartWithItems | null> {
         return this.prisma.cart.findFirst({
             where: { guestSessionId },
-            include: {
-                items: {
-                    select: {
-                        id: true,
-                        bookVariantId: true,
-                        quantity: true,
-                    },
-                },
-            },
+            include: cartWithItemsInclude,
             orderBy: { updatedAt: 'desc' },
         });
     }

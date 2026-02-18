@@ -48,8 +48,8 @@ export class CartService {
 
                 return {
                     authError: true,
-                    cartItem: {
-                        itemKey: createdItem.id.toString(),
+                    item: {
+                        id: createdItem.id.toString(),
                         bookVariantId: Number(createdItem.bookVariantId),
                         quantity: createdItem.quantity,
                     },
@@ -57,23 +57,23 @@ export class CartService {
             }
 
             const existed = guestCart.items.find((item) => item.bookVariantId === bookVariantId);
+
             if (existed) {
                 const updatedItem = await this.cartItemService.updateQuantityById(existed.id, existed.quantity + 1);
                 return {
                     authError: true,
-                    cartItem: {
-                        itemKey: updatedItem.id.toString(),
+                    item: {
+                        id: updatedItem.id.toString(),
                         bookVariantId: Number(updatedItem.bookVariantId),
                         quantity: updatedItem.quantity,
                     },
                 };
             }
-
             const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(guestCart.id, bookVariantId, 1);
             return {
                 authError: true,
-                cartItem: {
-                    itemKey: createdItem.id.toString(),
+                item: {
+                    id: createdItem.id.toString(),
                     bookVariantId: Number(createdItem.bookVariantId),
                     quantity: createdItem.quantity,
                 },
@@ -87,7 +87,7 @@ export class CartService {
 
         let cart = await this.cartRepository.findByUserId(user.id);
         if (!cart) {
-            cart = await this.cartRepository.createByUserId(user.id);
+            cart = await this.cartRepository.createCartByUserId(user.id);
         }
 
         const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(cart.id, bookVariantId);

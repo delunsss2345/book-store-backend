@@ -14,6 +14,7 @@ export class CartController {
     @Get()
     getCart(@Req() req: Request) {
         const guestSessionId = req['guestSessionId'] as string;
+        console.log(req)
         const user = req['user'] as JwtPayload;
         if (guestSessionId) {
             return this.cartService.getCartGuest(guestSessionId);

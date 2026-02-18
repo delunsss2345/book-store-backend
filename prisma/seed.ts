@@ -247,6 +247,12 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/email-outbox',
       description: 'List OTP email outbox by filter',
     },
+    {
+      code: PermissionCode.SEARCH_REINDEX_BOOKS,
+      method: 'POST',
+      pathPattern: '/api/v1/search/reindex',
+      description: 'Reindex search vectors in Pinecone',
+    },
 
     {
       code: PermissionCode.AUTH_REGISTER,

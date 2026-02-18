@@ -1,5 +1,5 @@
 import { CreateUserDeviceRequestDto } from '@/modules/user-device/dto/request/create-user-device.request.dto';
-import { parseUserAgent } from '@/utils/parseUserAgent.utils';
+import { parseUserAgent } from '@/utils/parseUserAgent.util';
 import { Injectable } from '@nestjs/common';
 import { UserDevice } from '@prisma/client';
 import { UserDeviceRepository } from './user-device.repository';

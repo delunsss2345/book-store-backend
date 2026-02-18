@@ -24,8 +24,7 @@ const LIST_CACHE_TTL = 45_000;
 const DETAIL_CACHE_TTL = 120_000;
 const CATEGORY_CACHE_TTL = 60_000;
 
-type RatingInfo = { value: number; count: number };
-type SalesInfo = { value: number };
+
 type CategoryRow = Awaited<
     ReturnType<CatalogRepository['findActiveCategoriesByLanguage']>
 >[number];
@@ -87,6 +86,22 @@ export class CatalogService {
         });
     }
 
+    async getBookCardsByVariantIds(
+        variantIds: string[],
+        lang?: string,
+    ): Promise<Map<string, CatalogBookCardDto>> {
+        const parsedIds = variantIds
+            .map((id) => this.parseBigInt(id))
+            .filter((id): id is bigint => id != undefined);
+
+        if (!parsedIds.length) {
+            return new Map<string, CatalogBookCardDto>();
+        }
+
+        const language = await this.resolveLanguage(lang);
+        return this.buildCardVariantMap(parsedIds, language.id);
+    }
+
     private async buildCardMap(
         ids: bigint[],
         languageId: number,
@@ -104,7 +119,7 @@ export class CatalogService {
         ids: bigint[],
         languageId: number,
     ): Promise<Map<string, CatalogBookCardDto>> {
-        const variants = await this.repo.findBooksVariantByIds(ids, languageId);
+        const variants = await this.repo.findBooksVariantByIds(ids, languageId, ids.length);
         return new Map<string, CatalogBookCardDto>(
             variants.map((variant): [string, CatalogBookCardDto] => [
                 variant.id.toString(),
@@ -199,6 +214,44 @@ export class CatalogService {
             };
         });
     }
+
+    async queryListBook(query: CatalogBookListQueryDto, ids: bigint[]): Promise<CatalogBookListResponseDto> {
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 20;
+        const language = await this.resolveCategoryLanguage(query.lang);
+
+        const [total, rows] = await Promise.all([
+            this.repo.countBooksForList(language.id),
+            this.repo.findBooksByIds(ids, language.id, page, limit),
+        ]);
+
+        const items: CatalogBookCardDto[] = rows.map((book) => {
+            const translation = book.translations[0];
+            const cheapestVariant = book.variants[0];
+            const stock = cheapestVariant?.stock ?? 0;
+
+            return {
+                id: book.id.toString(),
+                title: translation?.title ?? `Book ${book.id.toString()}`,
+                slug: translation?.slug ?? null,
+                coverImageUrl: book.coverImageUrl ?? null,
+                price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
+                currencyCode: cheapestVariant?.currencyCode ?? null,
+                isOutOfStock: !cheapestVariant || stock <= 0,
+                createdAt: book.createdAt,
+                bookVariantId: cheapestVariant.id,
+            };
+        });
+
+        return {
+            page,
+            limit,
+            total,
+            totalPages: total ? Math.ceil(total / limit) : 0,
+            items,
+        };
+    }
+
 
     async getBookDetail(bookId: bigint, lang?: string): Promise<CatalogBookDetailDto> {
         const language = await this.resolveLanguage(lang);
@@ -331,6 +384,7 @@ export class CatalogService {
         ratingCount?: number,
     ): CatalogBookCardDto {
         const t = book.translations[0];
+        const cheapestVariant = book.variants[0];
         return {
             id: book.id.toString(),
             title: t?.title ?? `Book ${book.id.toString()}`,
@@ -341,8 +395,13 @@ export class CatalogService {
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
             badges: (book.bookBadge ?? []).map((badge) => badge.code),
-            bookVariantId: book.variants[0].id,
-            price: String(book.variants[0].price)
+            bookVariantId: cheapestVariant?.id,
+            price: cheapestVariant
+                ? Number(cheapestVariant.price).toFixed(2)
+                : null,
+            currencyCode: cheapestVariant?.currencyCode ?? null,
+            format: cheapestVariant?.format ?? null,
+            isOutOfStock: !cheapestVariant || (cheapestVariant.stock ?? 0) <= 0,
         };
     }
 
@@ -371,7 +430,10 @@ export class CatalogService {
             ratingCount: ratingCount ?? 0,
             soldCount: soldCount ?? 0,
             createdAt: book.createdAt,
-            badges: (book.bookBadge ?? []).map((badge) => badge.code)
+            badges: (book.bookBadge ?? []).map((badge) => badge.code),
+            bookVariantId: variant.id,
+            format: variant.format,
+            isOutOfStock: (variant.stock ?? 0) <= 0,
         };
     }
 

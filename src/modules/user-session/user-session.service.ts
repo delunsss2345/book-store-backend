@@ -1,4 +1,4 @@
-import { hashToken } from '@/utils/hashToken.utils';
+import { hashToken } from '@/utils/hashToken.util';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SessionStatus } from '@prisma/client';

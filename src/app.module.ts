@@ -8,6 +8,7 @@ import { GuestSessionModule } from '@/modules/guest-session/guest-session.module
 import { HealthModule } from '@/modules/health/health.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { ReviewModule } from '@/modules/review/review.module';
+import { SearchModule } from '@/modules/search/search.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -47,7 +48,8 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     ReviewModule,
     PublisherModule,
     AuthorModule,
-    UserEventModule
+    UserEventModule,
+    SearchModule
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

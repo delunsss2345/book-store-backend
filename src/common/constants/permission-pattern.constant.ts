@@ -17,6 +17,7 @@ export enum PermissionCode {
     DEVICE_READ = "device:read",
     LOGIN_ATTEMPT_READ_BY_USER = "login_attempt:read_by_user",
     EMAIL_OUTBOX_GET = "email_outbox:get",
+    SEARCH_REINDEX_BOOKS = "search:reindex_books",
 
     AUTH_REGISTER = "auth:register",
     AUTH_LOGIN = "auth:login",

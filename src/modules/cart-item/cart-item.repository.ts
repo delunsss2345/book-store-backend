@@ -40,7 +40,6 @@ export class CartItemRepository {
             data: { quantity },
         });
     }
-
     createByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint, quantity: number): Promise<CartItem> {
         return this.prisma.cartItem.create({
             data: {

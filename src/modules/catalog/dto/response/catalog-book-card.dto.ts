@@ -41,6 +41,9 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: 1 })
     bookVariantId?: bigint;
 
+    @ApiPropertyOptional({ example: 'PAPERBACK' })
+    format?: string | null;
+
     @ApiProperty()
     badges?: Badge[]
 

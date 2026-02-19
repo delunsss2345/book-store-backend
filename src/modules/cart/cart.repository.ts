@@ -16,14 +16,18 @@ const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
                     price: true,
                     format: true,
                     currencyCode: true,
+                    stock: true,
                     book: {
                         select: {
+                            coverImageUrl: true,
                             id: true,
                             translations: {
                                 orderBy: { languageId: 'asc' },
                                 take: 1,
                                 select: {
                                     title: true,
+                                    description: true,
+                                    slug: true
                                 },
                             },
                         },

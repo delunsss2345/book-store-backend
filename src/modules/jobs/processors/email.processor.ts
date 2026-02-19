@@ -8,8 +8,9 @@ import { MailService } from '@/modules/mail/mail.service';
 import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
 import { EMAIL_TEMPLATE, EMAIL_TEMPLATE_RESET_PASSWORD } from '@/template/email.template';
-import { generateLinkWithType } from '@/utils/generateLink.util';
+import { generateLinkWithType, generateOTP } from '@/utils/generateLink.util';
 import { hashToken } from '@/utils/hashToken.util';
+import { randomKey } from '@/utils/randomKey.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { EmailStatus } from '@prisma/client';
 import { Job } from 'bullmq';
@@ -30,19 +31,20 @@ export class EmailProcessor extends WorkerHost {
 
             if (!outBox) return;
             let path = VerifyCodePath.VERIFY_EMAIL;
-
+            let token = randomKey();
             if (outBox.templateKey === OTP_FORGOT_PASSWORD_TEMPLATE_KEY) {
+                token = generateOTP();
                 path = VerifyCodePath.RESET_PASSWORD;
             } else if (outBox.templateKey !== OTP_REGISTER_TEMPLATE_KEY) {
                 throw new Error('Unsupported email template key');
             }
 
-            const { link, token } = generateLinkWithType({ path });
+            const { link } = generateLinkWithType({ path, token });
             const codeHash = hashToken(token);
             await this.verificationCodeService.updateCodeHash(verificationCodeId, codeHash)
 
-
             await this.emailOutbox.markSending(outBox.id, EmailStatus.SENDING);
+
             if (outBox.templateKey === OTP_REGISTER_TEMPLATE_KEY) {
                 const html = this.applyTemplate(EMAIL_TEMPLATE, {
                     content: "Chào bạn, vui lòng xác thực tài khoản.",

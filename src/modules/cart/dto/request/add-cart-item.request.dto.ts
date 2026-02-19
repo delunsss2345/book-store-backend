@@ -8,4 +8,11 @@ export class AddCartItemRequestDto {
     @IsInt()
     @Min(1)
     bookVariantId: number;
+
+
+    @ApiProperty({ minimum: 1 })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    quantity?: number;
 }

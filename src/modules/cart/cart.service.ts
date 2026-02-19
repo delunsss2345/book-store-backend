@@ -30,6 +30,7 @@ export class CartService {
     }
     async addCartItem(request: Request, body: AddCartItemRequestDto) {
         const bookVariantId = BigInt(body.bookVariantId);
+        const quantity = (body.quantity);
         const actor = this.resolveActor(request);
 
         if (actor.authError || !actor.userId) {
@@ -43,7 +44,7 @@ export class CartService {
                 const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
                     createdCart.id,
                     bookVariantId,
-                    1,
+                    quantity ?? 1,
                 );
 
                 return {
@@ -59,7 +60,7 @@ export class CartService {
             const existed = guestCart.items.find((item) => item.bookVariantId === bookVariantId);
 
             if (existed) {
-                const updatedItem = await this.cartItemService.updateQuantityById(existed.id, existed.quantity + 1);
+                const updatedItem = await this.cartItemService.updateQuantityById(existed.id, existed.quantity + (quantity ?? 1));
                 return {
                     authError: true,
                     item: {
@@ -69,7 +70,7 @@ export class CartService {
                     },
                 };
             }
-            const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(guestCart.id, bookVariantId, 1);
+            const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(guestCart.id, bookVariantId, ((quantity ?? 1)));
             return {
                 authError: true,
                 item: {
@@ -92,7 +93,7 @@ export class CartService {
 
         const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(cart.id, bookVariantId);
         if (existedItem) {
-            const updatedItem = await this.cartItemService.updateQuantityById(existedItem.id, existedItem.quantity + 1);
+            const updatedItem = await this.cartItemService.updateQuantityById(existedItem.id, existedItem.quantity + ((quantity ?? 1)));
             return {
                 authError: false,
                 cartItem: {
@@ -103,7 +104,7 @@ export class CartService {
             };
         }
 
-        const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(cart.id, bookVariantId, 1);
+        const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(cart.id, bookVariantId, ((quantity ?? 1)));
         return {
             authError: false,
             cartItem: {

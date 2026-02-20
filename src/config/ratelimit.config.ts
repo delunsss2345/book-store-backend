@@ -1,5 +1,5 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { IsNotEmpty, IsNumber, IsString, validateSync } from 'class-validator';
 
 export class RateLimitConfiguration {
@@ -49,3 +49,6 @@ export const RateLimitProvider = ThrottlerModule.forRootAsync({
         ];
     },
 });
+
+
+export const RateLimitGuard = ThrottlerGuard;

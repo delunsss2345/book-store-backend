@@ -25,6 +25,9 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { OrderModule } from './modules/order/order.module';
+import { HooksModule } from './modules/hooks/hooks.module';
 
 @Module({
   imports: [
@@ -53,9 +56,11 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     AuthorModule,
     UserEventModule,
     SearchModule,
-    WishlistModule
+    WishlistModule,
+    OrderModule,
+    PaymentModule,
+    HooksModule
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {
   static CONFIGURATION: TConfiguration = CONFIGURATION;

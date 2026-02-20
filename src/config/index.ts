@@ -7,6 +7,7 @@ import { RedisConfiguration } from '@/config/redis.config';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { config } from 'dotenv';
+import { SepayConfiguration } from './sepay.config';
 config()
 class Configuration extends BaseConfiguration {
     @ValidateNested()
@@ -24,6 +25,10 @@ class Configuration extends BaseConfiguration {
     @ValidateNested()
     @Type(() => NodemailerConfiguration)
     NODEMAILER_CONFIG = new NodemailerConfiguration();
+
+    @ValidateNested()
+    @Type(() => SepayConfiguration)
+    SEPAY_CONFIG = new SepayConfiguration();
 }
 export const CONFIGURATION = new Configuration();
 export type TConfiguration = typeof CONFIGURATION;

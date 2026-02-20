@@ -79,5 +79,17 @@ export class OrderItemRepository {
         return rows.map(r => r.bookVariantSnapshotId);
     }
 
+     createOrderItem(orderId: bigint, bookVariantSnapshotId: bigint, quantity: number, price: number) {
+        return this.prisma.orderItem.create({
+            data: {
+                orderId,
+                bookVariantSnapshotId,
+                quantity ,
+                lineTotal : quantity * price,
+                unitPrice : price,
+            }
+        })
+    }
+
 }
 

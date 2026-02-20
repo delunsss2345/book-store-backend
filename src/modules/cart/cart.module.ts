@@ -12,6 +12,6 @@ import { CartService } from './cart.service';
     imports: [JwtProvider, CartItemModule, GuestSessionModule],
     controllers: [CartController],
     providers: [CartService, CartRepository, ShopperSessionGuard, AuthRepository],
-    exports: [CartService],
+    exports: [CartService, CartRepository],
 })
 export class CartModule { }

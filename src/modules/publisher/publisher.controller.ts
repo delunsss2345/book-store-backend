@@ -1,9 +1,14 @@
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Public } from '@/common/security/decorators/public.decorator';
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
 import { GetPublisherBooksQueryDto } from './dto/request/get-publisher-books.query.dto';
 import { GetPublishersQueryDto } from './dto/request/get-publishers.query.dto';
 import { PublisherBookListResponseDto } from './dto/response/publisher-book-list.response.dto';
+import { PublisherItemResponseDto } from './dto/response/publisher-item.response.dto';
 import { PublisherListResponseDto } from './dto/response/publisher-list.response.dto';
 import { PublisherService } from './publisher.service';
 
@@ -11,6 +16,14 @@ import { PublisherService } from './publisher.service';
 @Controller('publishers')
 export class PublisherController {
     constructor(private readonly publisherService: PublisherService) { }
+
+    @Post()
+    @RequirePermissions(PermissionCode.PUBLISHER_CREATE)
+    @ApiBearerAuth('access-token')
+    @ApiOkResponse({ type: PublisherItemResponseDto })
+    createPublisher(@Body() body: CreatePublisherRequestDto) {
+        return this.publisherService.createPublisher(body);
+    }
 
     @Public()
     @Get()
@@ -27,20 +40,8 @@ export class PublisherController {
         @Query() query: GetPublisherBooksQueryDto,
     ) {
         return this.publisherService.getPublisherBooks(
-            this.parseBigInt(publisherId, 'publisherId'),
+            parseBigIntRequired(publisherId, 'publisherId'),
             query,
         );
-    }
-
-    private parseBigInt(value: string | undefined, fieldName: string): bigint {
-        if (!value) {
-            throw new BadRequestException(`${fieldName} is required`);
-        }
-
-        try {
-            return BigInt(value);
-        } catch {
-            throw new BadRequestException(`${fieldName} must be a bigint`);
-        }
     }
 }

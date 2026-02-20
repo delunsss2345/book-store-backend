@@ -8,6 +8,7 @@ import {
     CatalogCategoryDto,
     CatalogCategoryTreeDto,
 } from '@/modules/catalog/dto/response';
+import { parseBigIntOptional } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
     BadRequestException,
@@ -91,7 +92,7 @@ export class CatalogService {
         lang?: string,
     ): Promise<Map<string, CatalogBookCardDto>> {
         const parsedIds = variantIds
-            .map((id) => this.parseBigInt(id))
+            .map((id) => parseBigIntOptional(id))
             .filter((id): id is bigint => id != undefined);
 
         if (!parsedIds.length) {
@@ -440,15 +441,6 @@ export class CatalogService {
     // Build unique mục đính trùng lọc trùng id tối ưu query nhanh
     private uniqueBigIntIds(ids: bigint[]): bigint[] {
         return [...new Map(ids.map((id) => [id.toString(), id])).values()];
-    }
-
-    private parseBigInt(value?: string): bigint | undefined {
-        if (!value) return undefined;
-        try {
-            return BigInt(value);
-        } catch {
-            return undefined;
-        }
     }
 
     private async resolveCategoryLanguage(

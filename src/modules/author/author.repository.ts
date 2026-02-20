@@ -5,6 +5,16 @@ import { Injectable } from '@nestjs/common';
 export class AuthorRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    createAuthor(defaultName: string) {
+        return this.prisma.author.create({
+            data: { defaultName },
+            select: {
+                id: true,
+                defaultName: true,
+            },
+        });
+    }
+
     findLanguageByCode(code: string) {
         return this.prisma.language.findFirst({
             where: { code, isActive: true },

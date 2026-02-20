@@ -253,6 +253,24 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/search/reindex',
       description: 'Reindex search vectors in Pinecone',
     },
+    {
+      code: PermissionCode.AUTHOR_CREATE,
+      method: 'POST',
+      pathPattern: '/api/v1/authors',
+      description: 'Create author',
+    },
+    {
+      code: PermissionCode.PUBLISHER_CREATE,
+      method: 'POST',
+      pathPattern: '/api/v1/publishers',
+      description: 'Create publisher',
+    },
+    {
+      code: PermissionCode.CATEGORY_CREATE,
+      method: 'POST',
+      pathPattern: '/api/v1/categories',
+      description: 'Create category',
+    },
 
     {
       code: PermissionCode.AUTH_REGISTER,

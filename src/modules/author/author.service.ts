@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BookAuthorService } from '../book-author/book-author.service';
+import { CreateAuthorRequestDto } from './dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from './dto/request/get-author-books.query.dto';
 import { GetAuthorsQueryDto } from './dto/request/get-authors.query.dto';
 import { AuthorBookItemResponseDto } from './dto/response/author-book-item.response.dto';
@@ -14,6 +15,14 @@ export class AuthorService {
         private readonly authorRepository: AuthorRepository,
         private readonly bookAuthorService: BookAuthorService,
     ) { }
+
+    async createAuthor(body: CreateAuthorRequestDto): Promise<AuthorItemResponseDto> {
+        const created = await this.authorRepository.createAuthor(body.defaultName);
+        return {
+            id: created.id.toString(),
+            name: created.defaultName,
+        };
+    }
 
     async getAuthors(query: GetAuthorsQueryDto): Promise<AuthorListResponseDto> {
         const page = query.page ?? 1;

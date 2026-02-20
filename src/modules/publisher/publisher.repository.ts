@@ -5,6 +5,16 @@ import { Injectable } from '@nestjs/common';
 export class PublisherRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    createPublisher(defaultName: string) {
+        return this.prisma.publisher.create({
+            data: { defaultName },
+            select: {
+                id: true,
+                defaultName: true,
+            },
+        });
+    }
+
     findLanguageByCode(code: string) {
         return this.prisma.language.findFirst({
             where: { code, isActive: true },

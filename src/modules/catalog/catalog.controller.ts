@@ -1,5 +1,6 @@
 import { Public } from '@/common/security/decorators/public.decorator';
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import {
@@ -40,7 +41,7 @@ export class CatalogController {
         @Param('bookId') bookId: string,
         @Query('lang') lang?: string,
     ) {
-        return this.catalogService.getBookDetail(this.parseBigInt(bookId, 'bookId'), lang);
+        return this.catalogService.getBookDetail(parseBigIntRequired(bookId, 'bookId'), lang);
     }
 
     @Public()
@@ -58,18 +59,5 @@ export class CatalogController {
     @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
     getCategories(@Query() query: CatalogCategoriesQueryDto) {
         return this.catalogService.getCategories(query.lang);
-    }
-
-
-    private parseBigInt(value: string | undefined, fieldName: string): bigint {
-        if (!value) {
-            throw new BadRequestException(`${fieldName} is required`);
-        }
-
-        try {
-            return BigInt(value);
-        } catch {
-            throw new BadRequestException(`${fieldName} must be a bigint`);
-        }
     }
 }

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
 import { GetPublisherBooksQueryDto } from './dto/request/get-publisher-books.query.dto';
 import { GetPublishersQueryDto } from './dto/request/get-publishers.query.dto';
 import { PublisherBookItemResponseDto } from './dto/response/publisher-book-item.response.dto';
@@ -10,6 +11,14 @@ import { PublisherRepository } from './publisher.repository';
 @Injectable()
 export class PublisherService {
     constructor(private readonly publisherRepository: PublisherRepository) { }
+
+    async createPublisher(body: CreatePublisherRequestDto): Promise<PublisherItemResponseDto> {
+        const created = await this.publisherRepository.createPublisher(body.defaultName);
+        return {
+            id: created.id.toString(),
+            name: created.defaultName,
+        };
+    }
 
     async getPublishers(query: GetPublishersQueryDto): Promise<PublisherListResponseDto> {
         const page = query.page ?? 1;

@@ -18,6 +18,9 @@ export enum PermissionCode {
     LOGIN_ATTEMPT_READ_BY_USER = "login_attempt:read_by_user",
     EMAIL_OUTBOX_GET = "email_outbox:get",
     SEARCH_REINDEX_BOOKS = "search:reindex_books",
+    AUTHOR_CREATE = "author:create",
+    PUBLISHER_CREATE = "publisher:create",
+    CATEGORY_CREATE = "category:create",
 
     AUTH_REGISTER = "auth:register",
     AUTH_LOGIN = "auth:login",

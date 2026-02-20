@@ -1,8 +1,8 @@
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
-    BadRequestException,
     Body,
     Controller,
     Delete,
@@ -38,7 +38,7 @@ export class WishlistController {
     @Delete('items/:itemKey')
     @ApiOkResponse()
     deleteWishItem(@Req() request: Request, @Param('itemKey') itemKey: string) {
-        const parsedItemId = this.parseBigInt(itemKey, 'itemKey');
+        const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
         return this.wishlistService.deleteWishItem(request, parsedItemId);
     }
 
@@ -46,17 +46,5 @@ export class WishlistController {
     @ApiOkResponse()
     deleteWish(@Req() request: Request) {
         return this.wishlistService.deleteWishlist(request);
-    }
-
-    private parseBigInt(value: string | undefined, fieldName: string): bigint {
-        if (!value) {
-            throw new BadRequestException(`${fieldName} is required`);
-        }
-
-        try {
-            return BigInt(value);
-        } catch {
-            throw new BadRequestException(`${fieldName} must be a bigint`);
-        }
     }
 }

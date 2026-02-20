@@ -4,6 +4,7 @@ import { RateLimitProvider } from '@/config/ratelimit.config';
 import { AuthorModule } from '@/modules/author/author.module';
 import { CartModule } from '@/modules/cart/cart.module';
 import { CatalogModule } from '@/modules/catalog';
+import { CategoryModule } from '@/modules/category/category.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
@@ -44,6 +45,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     HealthModule,
     UserAddressModule,
     CatalogModule,
+    CategoryModule,
     CartModule,
     GuestSessionModule,
     ReviewModule,

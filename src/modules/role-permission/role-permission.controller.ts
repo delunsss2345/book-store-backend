@@ -1,6 +1,7 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { CreateRolePermissionRequestDto } from './dto/request';
 import { RolePermissionService } from './role-permission.service';
 
@@ -11,8 +12,8 @@ export class RolePermissionController {
     @Post()
     @RequirePermissions(PermissionCode.ROLE_PERMISSION_GRANT)
     createRolePermission(@Body() body: CreateRolePermissionRequestDto) {
-        const roleId = this.parseBigInt(body.roleId, 'roleId');
-        const permissionId = this.parseBigInt(body.permissionId, 'permissionId');
+        const roleId = parseBigIntRequired(body.roleId, 'roleId');
+        const permissionId = parseBigIntRequired(body.permissionId, 'permissionId');
 
         return this.rolePermissionService.createRolePermission({
             roleId,
@@ -22,25 +23,13 @@ export class RolePermissionController {
 
     @Get('role/:roleId')
     getByRoleId(@Param('roleId') roleId: string) {
-        const parsedRoleId = this.parseBigInt(roleId, 'roleId');
+        const parsedRoleId = parseBigIntRequired(roleId, 'roleId');
         return this.rolePermissionService.getByRoleId(parsedRoleId);
     }
 
     @Get('permission/:permissionId')
     getByPermissionId(@Param('permissionId') permissionId: string) {
-        const parsedPermissionId = this.parseBigInt(permissionId, 'permissionId');
+        const parsedPermissionId = parseBigIntRequired(permissionId, 'permissionId');
         return this.rolePermissionService.getByPermissionId(parsedPermissionId);
-    }
-
-    private parseBigInt(value: string | undefined, fieldName: string): bigint {
-        if (!value) {
-            throw new BadRequestException(`${fieldName} is required`);
-        }
-
-        try {
-            return BigInt(value);
-        } catch {
-            throw new BadRequestException(`${fieldName} must be a bigint`);
-        }
     }
 }

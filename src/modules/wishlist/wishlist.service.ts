@@ -1,7 +1,7 @@
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
-import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
 import { WishlistItemService } from '@/modules/wishlist-item/wishlist-item.service';
+import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Request } from 'express';
 import { WishlistRepository } from './wishlist.repository';
@@ -20,6 +20,7 @@ export class WishlistService {
     ) { }
 
     async getWishlist(request: Request) {
+        // Chuyển sang luồng user bên dưới.
         const wishlist = await this.resolveWishlistByActor(request, true);
         if (!wishlist) {
             throw new ForbiddenException();
@@ -84,9 +85,9 @@ export class WishlistService {
         return { success: true };
     }
 
+    
     private async resolveWishlistByActor(request: Request, createIfMissing: boolean) {
         const actor = this.resolveActor(request);
-
         if (actor.guestSessionId) {
             // Ưu tiên guest session; nếu cookie cũ/hết hiệu lực thì chuyển sang luồng user bên dưới.
             const guestSession = await this.guestSessionService.updateLastSeenGuestSessionById(
@@ -124,7 +125,6 @@ export class WishlistService {
         const guestSessionId = (request.cookies?.guestSessionId as string | undefined)
             ?? (request['guestSessionId'] as string | undefined)
             ?? null;
-
         const requestUser = request['user'] as RequestUser | undefined;
         return {
             guestSessionId,

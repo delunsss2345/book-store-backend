@@ -9,7 +9,10 @@ export class GuestSessionService {
         return this.guestSessionRepository.convertGuestSessionToUser(guestSessionId, userId);
     }
 
-    createGuestSession(ipFirst: string | null, userAgentHash: string | null) {
+    createGuestSession(guestSessionId: string | null, ipFirst: string | null, userAgentHash: string | null) {
+        if (guestSessionId) {
+            return this.guestSessionRepository.createGuestAttachGuestSessionId(guestSessionId, ipFirst, userAgentHash);
+        }
         return this.guestSessionRepository.createGuestSession(ipFirst, userAgentHash);
     }
 

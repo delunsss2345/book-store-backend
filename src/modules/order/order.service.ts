@@ -1,10 +1,11 @@
-import { CreateOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
+import { CreateGuestOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { BookSnapshotRepository } from "../book-snapshot/book-snapshot.repository";
 import { CartRepository } from "../cart/cart.repository";
 import { CatalogRepository } from "../catalog/catalog.repository";
+import { OrderAddressRepository } from "../order-address/order-address.repository";
 import { OrderItemRepository } from "../order-item/order-item.repository";
 import { PaymentRepository } from "../payment/payment.repository";
 import { PaymentService } from "../payment/payment.service";
@@ -15,19 +16,22 @@ export class OrderService {
     constructor(private readonly orderRepository: OrderRepository,
         private readonly paymentRepository: PaymentRepository,
         private readonly paymentService: PaymentService,
+        private readonly orderAddressRepository: OrderAddressRepository,
         private readonly orderItemRepository: OrderItemRepository,
         private readonly catalogRepository: CatalogRepository,
         private readonly cartRepository: CartRepository,
         private readonly bookSnapshotRepository: BookSnapshotRepository,
     ) { }
 
-    async createOrdersGuest(guestSessionId: string, body: CreateOrdersAndPaymentDTO) {
-        const order = await this.orderRepository.createOrdersByGuestId(guestSessionId, body);
+    async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO) {
+        const order = await this.orderRepository.createOrdersByGuestId(guestSessionId);
         const cart = await this.cartRepository.findByGuestSessionId(guestSessionId);
 
         if (!cart) {
             throw new ForbiddenException('Cart not found');
         }
+
+        await this.orderAddressRepository.createGuestAddress(order.id, body.orderAddress, body.note);
 
         await Promise.all(
             cart.items.map(async (item) => {
@@ -76,26 +80,26 @@ export class OrderService {
 
         await this.paymentRepository.createPaymentTransactionGuestId({
             orderId: order.id,
-            gateway: body.paymentGateWay,
+            gateway: body.paymentGateway,
             amount: order.totalAmount,
         });
 
         return this.paymentService.createTransaction({
             orderId: order.id,
-            gateway: body.paymentGateWay,
+            gateway: body.paymentGateway,
             amount: order.totalAmount,
         });
     }
 
-    async createOrdersUser(userId: bigint, body: CreateOrdersAndPaymentDTO) {
-        const order = await this.orderRepository.createOrdersByUserId(userId, body);
+    // async createOrdersUser(userId: bigint, body: CreateOrdersAndPaymentDTO) {
+    //     const order = await this.orderRepository.createOrdersByUserId(userId);
 
-        if (!order.totalAmount) return;
+    //     if (!order.totalAmount) return;
 
-        return this.paymentRepository.createPaymentTransaction(userId, {
-            orderId: order.id,
-            gateway: body.paymentGateWay,
-            amount: order.totalAmount
-        })
-    }
+    //     return this.paymentRepository.createPaymentTransaction(userId, {
+    //         orderId: order.id,
+    //         gateway: body.paymentGateWay,
+    //         amount: order.totalAmount
+    //     })
+    // }
 }

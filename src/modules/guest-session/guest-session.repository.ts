@@ -50,6 +50,16 @@ export class GuestSessionRepository {
             },
         });
     }
+    createGuestAttachGuestSessionId(guestSessionId: string, ipFirst: string | null, userAgentHash: string | null): Promise<GuestSession> {
+        return this.prisma.guestSession.create({
+            data: {
+                id: guestSessionId,
+                ipFirst,
+                userAgentHash,
+                lastSeenAt: new Date(),
+            },
+        });
+    }
 
     getAllGuestSessions() {
         return this.prisma.guestSession.findMany({

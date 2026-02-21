@@ -110,22 +110,14 @@ type SeededPurchase = {
 };
 
 const CURRENCY_CODE_VND = 'VND';
-const CUSTOMER_COUNT = 20;
-const BOOK_COUNT = 20;
-const VARIANTS_PER_BOOK = 2;
-const SNAPSHOTS_PER_VARIANT = 2;
-const ORDER_COUNT = 20;
+const CUSTOMER_COUNT = 46;
+const BOOK_COUNT = 40;
+const SNAPSHOTS_PER_VARIANT = 1;
+const ORDER_COUNT = 0;
 const MIN_REVIEW_PER_BOOK = 20;
 const MAX_REVIEW_PER_BOOK = 40;
 const ORDER_CODE_PREFIX = 'SEED-ORD-';
 const REVIEW_CONTENT_PREFIX = '[seed-review]';
-
-const BOOK_FORMATS: BookFormat[] = [
-  BookFormat.HARDCOVER,
-  BookFormat.PAPERBACK,
-  BookFormat.EBOOK,
-  BookFormat.AUDIOBOOK,
-];
 
 async function upsertRoles() {
   const roles = [
@@ -170,6 +162,12 @@ async function upsertPermissions() {
       method: 'GET',
       pathPattern: '/api/v1/health',
       description: 'Read service health',
+    },
+    {
+      code: PermissionCode.GUEST_SESSION_GET_ALL,
+      method: 'GET',
+      pathPattern: '/api/v1/guest-session',
+      description: 'List guest sessions',
     },
 
     {
@@ -514,34 +512,271 @@ async function upsertPublisherByName(defaultName: string) {
   return created.id;
 }
 
+type DetailedCategorySeed = SeedCategory & {
+  viDescription: string;
+  enDescription: string;
+};
+
 async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
-  const categories: SeedCategory[] = [
+  const categories: DetailedCategorySeed[] = [
+    {
+      slug: 'technology',
+      sortOrder: 1,
+      viName: 'Cong nghe',
+      enName: 'Technology',
+      viDescription:
+        'Nhom sach ve cong nghe hien dai, gom lap trinh, van hanh he thong, bao mat va du lieu.',
+      enDescription:
+        'Technology books covering programming, infrastructure, security, and modern data systems.',
+    },
     {
       slug: 'programming',
-      sortOrder: 1,
-      viName: 'Lập trình',
-      enName: 'Programming',
-    },
-    {
-      slug: 'architecture',
       sortOrder: 2,
-      viName: 'Kiến trúc phần mềm',
-      enName: 'Architecture',
+      parentSlug: 'technology',
+      viName: 'Lap trinh',
+      enName: 'Programming',
+      viDescription:
+        'Sach tap trung ky thuat coding thuc chien, clean code, testing va toi uu chat luong phan mem.',
+      enDescription:
+        'Hands-on coding books focused on clean code, testing, and practical engineering quality.',
     },
-    { slug: 'devops', sortOrder: 3, viName: 'DevOps', enName: 'DevOps' },
     {
-      slug: 'backend',
+      slug: 'software-architecture',
+      sortOrder: 3,
+      parentSlug: 'technology',
+      viName: 'Kien truc phan mem',
+      enName: 'Software Architecture',
+      viDescription:
+        'Noi dung ve kien truc he thong, phan ra domain, mo rong va van hanh on dinh tren quy mo lon.',
+      enDescription:
+        'Software architecture, domain boundaries, scalability, and resilient system design at scale.',
+    },
+    {
+      slug: 'devops-cloud',
       sortOrder: 4,
-      viName: 'Backend',
-      enName: 'Backend',
-      parentSlug: 'programming',
+      parentSlug: 'technology',
+      viName: 'DevOps va Cloud',
+      enName: 'DevOps & Cloud',
+      viDescription:
+        'Sach ve CI/CD, container, cloud native va quan tri ha tang theo huong tu dong hoa.',
+      enDescription:
+        'DevOps and cloud-native books on CI/CD, containers, automation, and infrastructure operations.',
     },
     {
-      slug: 'frontend',
+      slug: 'cybersecurity',
       sortOrder: 5,
-      viName: 'Frontend',
-      enName: 'Frontend',
-      parentSlug: 'programming',
+      parentSlug: 'technology',
+      viName: 'An toan thong tin',
+      enName: 'Cybersecurity',
+      viDescription:
+        'Kien thuc ve phong thu ung dung, quan ly rui ro va trien khai bao mat trong vong doi san pham.',
+      enDescription:
+        'Cybersecurity practices for secure-by-design software, threat modeling, and risk management.',
+    },
+    {
+      slug: 'data-ai',
+      sortOrder: 6,
+      parentSlug: 'technology',
+      viName: 'Du lieu va AI',
+      enName: 'Data & AI',
+      viDescription:
+        'Sach ve data engineering, phan tich du lieu va ung dung machine learning cho bai toan thuc te.',
+      enDescription:
+        'Data engineering, analytics, and applied AI books for production-ready decision systems.',
+    },
+    {
+      slug: 'business-economics',
+      sortOrder: 7,
+      viName: 'Kinh doanh va kinh te',
+      enName: 'Business & Economics',
+      viDescription:
+        'Nhom sach ve tang truong doanh nghiep, van hanh, chien luoc san pham va mo hinh tai chinh.',
+      enDescription:
+        'Business and economics titles about growth, operations, product strategy, and financial models.',
+    },
+    {
+      slug: 'entrepreneurship',
+      sortOrder: 8,
+      parentSlug: 'business-economics',
+      viName: 'Khoi nghiep',
+      enName: 'Entrepreneurship',
+      viDescription:
+        'Sach cho nha sang lap: xac thuc y tuong, tim product-market fit va xay dung doi ngu ban dau.',
+      enDescription:
+        'Entrepreneurship books on validation, product-market fit, and early team execution.',
+    },
+    {
+      slug: 'management-leadership',
+      sortOrder: 9,
+      parentSlug: 'business-economics',
+      viName: 'Quan tri va lanh dao',
+      enName: 'Management & Leadership',
+      viDescription:
+        'Noi dung ve van hanh doi ngu, danh gia hieu suat, lap ke hoach va ra quyet dinh lanh dao.',
+      enDescription:
+        'Management and leadership books on team operations, planning, feedback, and decision quality.',
+    },
+    {
+      slug: 'marketing-sales',
+      sortOrder: 10,
+      parentSlug: 'business-economics',
+      viName: 'Marketing va ban hang',
+      enName: 'Marketing & Sales',
+      viDescription:
+        'Sach huong dan xay dung thong diep, kenh tiep can va he thong chuyen doi doanh thu on dinh.',
+      enDescription:
+        'Books on positioning, channel strategy, and conversion-focused marketing and sales execution.',
+    },
+    {
+      slug: 'finance-investing',
+      sortOrder: 11,
+      parentSlug: 'business-economics',
+      viName: 'Tai chinh va dau tu',
+      enName: 'Finance & Investing',
+      viDescription:
+        'Sach tai chinh ca nhan, phan tich bao cao tai chinh va cac nguyen tac dau tu ben vung.',
+      enDescription:
+        'Finance books covering personal money systems, statement analysis, and long-term investing.',
+    },
+    {
+      slug: 'mind-society',
+      sortOrder: 12,
+      viName: 'Tam tri va xa hoi',
+      enName: 'Mind & Society',
+      viDescription:
+        'Nhom sach khai pha hanh vi con nguoi, boi canh xa hoi va tu duy de hieu sau cac quyet dinh.',
+      enDescription:
+        'Mind and society books exploring behavior, culture, institutions, and decision dynamics.',
+    },
+    {
+      slug: 'psychology',
+      sortOrder: 13,
+      parentSlug: 'mind-society',
+      viName: 'Tam ly hoc',
+      enName: 'Psychology',
+      viDescription:
+        'Sach tam ly ung dung cho hoc tap, cong viec va quan ly ban than theo huong thuc hanh.',
+      enDescription:
+        'Practical psychology books for habits, motivation, communication, and personal effectiveness.',
+    },
+    {
+      slug: 'history',
+      sortOrder: 14,
+      parentSlug: 'mind-society',
+      viName: 'Lich su',
+      enName: 'History',
+      viDescription:
+        'Sach lich su theo huong tong hop boi canh, nhan qua va bai hoc cho hien tai.',
+      enDescription:
+        'History titles connecting context, causality, and practical lessons for current society.',
+    },
+    {
+      slug: 'philosophy',
+      sortOrder: 15,
+      parentSlug: 'mind-society',
+      viName: 'Triet hoc',
+      enName: 'Philosophy',
+      viDescription:
+        'Sach triet hoc ung dung giup lam ro he gia tri, nang cao nang luc lap luan va phan bien.',
+      enDescription:
+        'Applied philosophy books for reasoning, ethics, values, and structured critical thinking.',
+    },
+    {
+      slug: 'social-issues',
+      sortOrder: 16,
+      parentSlug: 'mind-society',
+      viName: 'Van de xa hoi',
+      enName: 'Social Issues',
+      viDescription:
+        'Sach phan tich nhung thach thuc xa hoi duong dai nhu cong dan so, dao duc du lieu va AI.',
+      enDescription:
+        'Books on modern social issues such as digital citizenship, data ethics, and AI governance.',
+    },
+    {
+      slug: 'literature-arts',
+      sortOrder: 17,
+      viName: 'Van hoc va nghe thuat',
+      enName: 'Literature & Arts',
+      viDescription:
+        'Nhom sach van hoc voi gia tri cam xuc, ngon ngu va nghe thuat ke chuyen.',
+      enDescription:
+        'Literature and arts books centered on narrative craft, language, and emotional depth.',
+    },
+    {
+      slug: 'fiction',
+      sortOrder: 18,
+      parentSlug: 'literature-arts',
+      viName: 'Tieu thuyet',
+      enName: 'Fiction',
+      viDescription:
+        'Tieu thuyet dang dai va duong dai, khac hoa nhan vat ro net va xung dot day suc nang.',
+      enDescription:
+        'Fiction titles with strong character arcs, layered conflicts, and memorable narrative voice.',
+    },
+    {
+      slug: 'short-stories',
+      sortOrder: 19,
+      parentSlug: 'literature-arts',
+      viName: 'Truyen ngan',
+      enName: 'Short Stories',
+      viDescription:
+        'Tuyen tap truyen ngan tinh gon, giau hinh anh va mot ket thuc co du am.',
+      enDescription:
+        'Short story collections with concise structure, vivid imagery, and resonant endings.',
+    },
+    {
+      slug: 'children-ya',
+      sortOrder: 20,
+      parentSlug: 'literature-arts',
+      viName: 'Thieu nhi va tuoi moi lon',
+      enName: 'Children & YA',
+      viDescription:
+        'Sach cho thieu nhi va tuoi moi lon voi tinh giao duc, tri tuong tuong va long nhan ai.',
+      enDescription:
+        'Children and YA books blending imagination, empathy, and age-appropriate life lessons.',
+    },
+    {
+      slug: 'education-skills',
+      sortOrder: 21,
+      viName: 'Hoc tap va ky nang',
+      enName: 'Education & Skills',
+      viDescription:
+        'Nhom sach huong dan ky nang hoc tap, giao tiep, ngoai ngu va nang cao nang luc ca nhan.',
+      enDescription:
+        'Education and skills books on learning methods, communication, language, and self-improvement.',
+    },
+    {
+      slug: 'language-learning',
+      sortOrder: 22,
+      parentSlug: 'education-skills',
+      viName: 'Hoc ngoai ngu',
+      enName: 'Language Learning',
+      viDescription:
+        'Sach hoc ngoai ngu theo ngu canh thuc te, nhanh nho va de ap dung trong giao tiep.',
+      enDescription:
+        'Language learning books with context-driven methods for practical communication fluency.',
+    },
+    {
+      slug: 'productivity-learning',
+      sortOrder: 23,
+      parentSlug: 'education-skills',
+      viName: 'Nang suat va phuong phap hoc',
+      enName: 'Productivity & Learning',
+      viDescription:
+        'Sach ve quan ly thoi gian, tap trung sau va xay dung he thong hoc tap ben vung.',
+      enDescription:
+        'Books on deep focus, time management, and building sustainable long-term learning systems.',
+    },
+    {
+      slug: 'communication',
+      sortOrder: 24,
+      parentSlug: 'education-skills',
+      viName: 'Giao tiep',
+      enName: 'Communication',
+      viDescription:
+        'Sach ren luyen ky nang trinh bay, dam phan, phan hoi va giao tiep da ngu canh.',
+      enDescription:
+        'Communication books for presentations, negotiation, feedback culture, and collaboration.',
     },
   ];
 
@@ -604,12 +839,14 @@ async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
       update: {
         name: category.viName,
         slug: category.slug,
+        description: category.viDescription,
       },
       create: {
         categoryId,
         languageId: viLanguageId,
         name: category.viName,
         slug: category.slug,
+        description: category.viDescription,
       },
     });
 
@@ -623,12 +860,14 @@ async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
       update: {
         name: category.enName,
         slug: category.slug,
+        description: category.enDescription,
       },
       create: {
         categoryId,
         languageId: enLanguageId,
         name: category.enName,
         slug: category.slug,
+        description: category.enDescription,
       },
     });
 
@@ -638,25 +877,15 @@ async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
   return categoryIdBySlug;
 }
 
-const BOOK_SUBJECTS = [
-  'Lap trinh backend',
-  'Kien truc phan mem',
-  'He thong phan tan',
-  'TypeScript thuc chien',
-  'Toi uu hieu nang',
-  'Microservices thuc te',
-  'DevOps can ban',
-  'Quan ly du an cong nghe',
-  'Bao mat ung dung',
-  'Thiet ke API',
-];
-
 const PUBLISHER_NAMES = [
-  'Nha Xuat Ban Tre',
-  'Nha Xuat Ban Tong Hop',
-  'Nha Xuat Ban Lao Dong',
-  'Nha Xuat Ban Tri Thuc',
-  'Nha Xuat Ban Van Hoa',
+  'NXB Tre',
+  'NXB Tong Hop TP.HCM',
+  'Lighthouse Press',
+  'Global Knowledge House',
+  'Blue River Books',
+  'Alpha Insight Publishing',
+  'Open Mind Media',
+  'North Star Books',
 ];
 
 const FIRST_NAMES = [
@@ -690,32 +919,169 @@ const LAST_NAMES = [
   'Vy',
 ];
 
+type BookBlueprint = {
+  viTitle: string;
+  enTitle: string;
+  focusVi: string;
+  focusEn: string;
+  categorySlugs: [string, string];
+  basePrice: number;
+  variantCount: 1 | 2 | 3;
+  useAudioTier?: boolean;
+};
+
+const BOOK_BLUEPRINTS: BookBlueprint[] = [
+  { viTitle: 'Lam chu TypeScript thuc chien', enTitle: 'Mastering TypeScript in Production', focusVi: 'xay dung ung dung lon voi typing chat che va kha nang refactor an toan', focusEn: 'building large applications with strict typing and safe refactoring workflows', categorySlugs: ['programming', 'software-architecture'], basePrice: 162000, variantCount: 3 },
+  { viTitle: 'Clean Architecture cho Node.js', enTitle: 'Clean Architecture for Node.js', focusVi: 'tach domain ro rang va giam do phuc tap khi mo rong he thong backend', focusEn: 'separating domain boundaries and reducing complexity in scalable Node.js backends', categorySlugs: ['software-architecture', 'programming'], basePrice: 178000, variantCount: 3 },
+  { viTitle: 'Thiet ke API hieu nang cao', enTitle: 'High-Performance API Design', focusVi: 'toi uu API cho latency, thong luong va do tin cay trong moi truong production', focusEn: 'optimizing APIs for latency, throughput, and reliability in production systems', categorySlugs: ['programming', 'software-architecture'], basePrice: 186000, variantCount: 2 },
+  { viTitle: 'DevOps tu Docker den Kubernetes', enTitle: 'DevOps from Docker to Kubernetes', focusVi: 'xay dung quy trinh CI/CD on dinh va van hanh cloud native', focusEn: 'building stable CI/CD workflows and operating cloud-native workloads', categorySlugs: ['devops-cloud', 'technology'], basePrice: 194000, variantCount: 3 },
+  { viTitle: 'Zero downtime deployment playbook', enTitle: 'Zero-Downtime Deployment Playbook', focusVi: 'trien khai he thong khong gian doan voi rollback ro rang va quan sat du lieu day du', focusEn: 'deploying systems without downtime using safe rollbacks and full observability', categorySlugs: ['devops-cloud', 'software-architecture'], basePrice: 191000, variantCount: 2 },
+  { viTitle: 'Bao mat ung dung web hien dai', enTitle: 'Modern Web Security Blueprint', focusVi: 'phong thu theo chieu sau cho ung dung web va API trong doanh nghiep', focusEn: 'applying defense-in-depth to web applications and enterprise APIs', categorySlugs: ['cybersecurity', 'technology'], basePrice: 199000, variantCount: 3 },
+  { viTitle: 'Data engineering voi Python', enTitle: 'Practical Data Engineering with Python', focusVi: 'thiet ke pipeline du lieu ben vung va de bao tri theo thoi gian', focusEn: 'designing durable and maintainable data pipelines over time', categorySlugs: ['data-ai', 'technology'], basePrice: 172000, variantCount: 2 },
+  { viTitle: 'Machine learning cho san pham', enTitle: 'Applied Machine Learning for Products', focusVi: 'dua mo hinh ML vao san pham that voi vong doi cap nhat lien tuc', focusEn: 'shipping machine-learning features to real products with iterative model updates', categorySlugs: ['data-ai', 'business-economics'], basePrice: 182000, variantCount: 3 },
+  { viTitle: 'Kien truc he thong phan tan', enTitle: 'Distributed Systems Design Handbook', focusVi: 'can bang consistency, availability va failover cho he thong quy mo lon', focusEn: 'balancing consistency, availability, and failover in distributed systems', categorySlugs: ['software-architecture', 'devops-cloud'], basePrice: 205000, variantCount: 2 },
+  { viTitle: 'Testing strategy cho codebase lon', enTitle: 'Testing Strategy for Large Codebases', focusVi: 'xay bo test nhieu lop de giam regression va tang toc do release', focusEn: 'building multi-layer test strategy to reduce regressions and speed up releases', categorySlugs: ['programming', 'software-architecture'], basePrice: 168000, variantCount: 2 },
+  { viTitle: 'Tang truong startup ben vung', enTitle: 'Sustainable Startup Growth', focusVi: 'tim product-market fit va xay dung bo may tang truong khong dot chay nguon luc', focusEn: 'finding product-market fit and building sustainable growth engines', categorySlugs: ['entrepreneurship', 'business-economics'], basePrice: 176000, variantCount: 2 },
+  { viTitle: 'Quan tri san pham so', enTitle: 'Digital Product Management', focusVi: 'dinh huong roadmap theo du lieu va nhu cau khach hang thuc te', focusEn: 'driving product roadmaps with customer insight and evidence-based priorities', categorySlugs: ['management-leadership', 'business-economics'], basePrice: 183000, variantCount: 2 },
+  { viTitle: 'Lanh dao doi ngu ky thuat', enTitle: 'Leading Engineering Teams', focusVi: 'phat trien van hoa ownership va su truong thanh cua doi ngu ky su', focusEn: 'building ownership culture and capability growth in engineering teams', categorySlugs: ['management-leadership', 'technology'], basePrice: 189000, variantCount: 2 },
+  { viTitle: 'Tai chinh ca nhan cho nguoi tre', enTitle: 'Personal Finance for Young Professionals', focusVi: 'xay he thong quan ly tien bac, du phong va dau tu dai han', focusEn: 'building personal money systems for safety, planning, and long-term investing', categorySlugs: ['finance-investing', 'business-economics'], basePrice: 154000, variantCount: 3 },
+  { viTitle: 'Doc hieu bao cao tai chinh', enTitle: 'Reading Financial Statements', focusVi: 'hieu nhanh bang can doi, dong tien va chi so cot loi cua doanh nghiep', focusEn: 'reading balance sheets, cash flows, and key business health indicators', categorySlugs: ['finance-investing', 'business-economics'], basePrice: 171000, variantCount: 2 },
+  { viTitle: 'Content marketing co chuyen doi', enTitle: 'Content Marketing that Converts', focusVi: 'xay dung thong diep dung doi tuong va toi uu hanh trinh chuyen doi', focusEn: 'crafting audience-fit messaging and improving end-to-end conversion journeys', categorySlugs: ['marketing-sales', 'business-economics'], basePrice: 162000, variantCount: 2 },
+  { viTitle: 'Dam phan trong cong viec', enTitle: 'Negotiation at Work', focusVi: 'dam phan muc tieu va loi ich ma van giu quan he hop tac dai han', focusEn: 'negotiating outcomes while preserving long-term collaborative relationships', categorySlugs: ['communication', 'management-leadership'], basePrice: 158000, variantCount: 2 },
+  { viTitle: 'Xay dung thuong hieu ca nhan', enTitle: 'Building a Credible Personal Brand', focusVi: 'xac lap ban sac chuyen mon va su tin nhiem trong nganh', focusEn: 'establishing professional identity and trust in a competitive market', categorySlugs: ['marketing-sales', 'communication'], basePrice: 149000, variantCount: 2 },
+  { viTitle: 'Van hanh doanh nghiep tinh gon', enTitle: 'Lean Operations for SMEs', focusVi: 'chuan hoa quy trinh de giam lang phi va tang toc do thuc thi', focusEn: 'standardizing operations to reduce waste and increase execution velocity', categorySlugs: ['management-leadership', 'entrepreneurship'], basePrice: 166000, variantCount: 2 },
+  { viTitle: 'Business analytics bang SQL', enTitle: 'Business Analytics with SQL', focusVi: 'chuyen du lieu giao dich thanh thong tin ho tro quyet dinh dieu hanh', focusEn: 'turning transactional data into insights for operational and strategic decisions', categorySlugs: ['data-ai', 'business-economics'], basePrice: 173000, variantCount: 3 },
+  { viTitle: 'Tam ly hoc hanh vi va quyet dinh', enTitle: 'Behavioral Psychology and Decisions', focusVi: 'nhan dien dinh kien nhan thuc de cai thien chat luong quyet dinh', focusEn: 'identifying cognitive bias to improve everyday and strategic decisions', categorySlugs: ['psychology', 'mind-society'], basePrice: 151000, variantCount: 2 },
+  { viTitle: 'Ky luat mem cho thoi quen ben vung', enTitle: 'Gentle Discipline Habit System', focusVi: 'xay dung thoi quen nho nhung ben, tranh kien tri kieu dot pha ngan han', focusEn: 'building small but sustainable habits instead of short-lived bursts', categorySlugs: ['productivity-learning', 'psychology'], basePrice: 139000, variantCount: 1 },
+  { viTitle: 'Tap trung sau trong thoi dai so', enTitle: 'Deep Focus in a Distracted World', focusVi: 'tao moi truong lam viec giup nao bo giam xao nhang va tang output chat luong', focusEn: 'creating focus-friendly systems to reduce distractions and improve output quality', categorySlugs: ['productivity-learning', 'psychology'], basePrice: 148000, variantCount: 2 },
+  { viTitle: 'Giao tiep khong bao luc noi lam viec', enTitle: 'Nonviolent Communication at Work', focusVi: 'phan hoi kho van xay dung duoc su ton trong va hop tac', focusEn: 'handling difficult feedback while preserving respect and collaboration', categorySlugs: ['communication', 'psychology'], basePrice: 146000, variantCount: 1 },
+  { viTitle: 'Quan ly stress va nang luong', enTitle: 'Stress and Energy Management', focusVi: 'can bang tai tao nang luong de duy tri hieu suat duong dai', focusEn: 'managing stress and restoring energy for long-term performance', categorySlugs: ['psychology', 'productivity-learning'], basePrice: 144000, variantCount: 1 },
+  { viTitle: 'Lich su Viet Nam can dai qua goc kinh te', enTitle: 'Modern Vietnam through Economic Lenses', focusVi: 'giai ma bien dong lich su thong qua dong luc kinh te va cai cach the che', focusEn: 'reading historical transitions through economic dynamics and institutional reform', categorySlugs: ['history', 'mind-society'], basePrice: 163000, variantCount: 2 },
+  { viTitle: 'Lich su the gioi cho nguoi ban ron', enTitle: 'World History for Busy Minds', focusVi: 'nam bat cac moc lon de hieu boi canh hien tai va tuong lai', focusEn: 'capturing major turning points to better understand today and tomorrow', categorySlugs: ['history', 'mind-society'], basePrice: 159000, variantCount: 2 },
+  { viTitle: 'Triet hoc ung dung moi ngay', enTitle: 'Practical Philosophy for Everyday Life', focusVi: 'ung dung triet hoc de song ro rang gia tri va co lap luan mach lac', focusEn: 'using philosophy to clarify values and reason with consistency', categorySlugs: ['philosophy', 'mind-society'], basePrice: 152000, variantCount: 1 },
+  { viTitle: 'Tu duy phan bien va nguy bien', enTitle: 'Critical Thinking and Fallacies', focusVi: 'nhan dien lap luan sai de tranh quyet dinh voi du lieu thieu chat luong', focusEn: 'spotting flawed reasoning before it affects decisions and strategy', categorySlugs: ['philosophy', 'education-skills'], basePrice: 157000, variantCount: 2 },
+  { viTitle: 'Cong dan so va dao duc AI', enTitle: 'Digital Citizenship and AI Ethics', focusVi: 'hieu trach nhiem su dung du lieu va cong nghe trong xa hoi so', focusEn: 'understanding responsibility, data rights, and ethics in digital society', categorySlugs: ['social-issues', 'technology'], basePrice: 169000, variantCount: 2 },
+  { viTitle: 'Mua mua tren pho co', enTitle: 'Monsoon on the Old Quarter', focusVi: 'tieu thuyet khac hoa nhan vat thanh thi qua nhung lua chon day rung dong', focusEn: 'a city novel about identity, memory, and consequential life choices', categorySlugs: ['fiction', 'literature-arts'], basePrice: 138000, variantCount: 3, useAudioTier: true },
+  { viTitle: 'Dem thang sau: tuyen tap truyen ngan', enTitle: 'June Night Short Stories', focusVi: 'truyen ngan tinh gon nhung de lai nhieu du am tam ly va nhan van', focusEn: 'compact short stories with emotional aftertaste and human complexity', categorySlugs: ['short-stories', 'literature-arts'], basePrice: 132000, variantCount: 2, useAudioTier: true },
+  { viTitle: 'Hanh trinh qua mien ky uc', enTitle: 'Journey Through Memory', focusVi: 'nhat ky van hoc ve gia dinh, mat mat va hanh trinh hoa giai', focusEn: 'a literary journey through family, loss, and reconciliation', categorySlugs: ['fiction', 'short-stories'], basePrice: 135000, variantCount: 1 },
+  { viTitle: 'Thanh pho cua may', enTitle: 'City of Clouds', focusVi: 'truyen thieu nhi ve tinh ban, su dung cam va tri tuong tuong phong phu', focusEn: 'a children story about friendship, courage, and creative imagination', categorySlugs: ['children-ya', 'literature-arts'], basePrice: 128000, variantCount: 3, useAudioTier: true },
+  { viTitle: 'Cua so thu bay', enTitle: 'The Seventh Window', focusVi: 'truyen tuoi moi lon ve danh tinh, gia dinh va hanh trinh truong thanh', focusEn: 'a YA coming-of-age story about identity, family, and growth', categorySlugs: ['children-ya', 'fiction'], basePrice: 133000, variantCount: 2, useAudioTier: true },
+  { viTitle: 'Viet sang tao tu so 0', enTitle: 'Creative Writing from Zero', focusVi: 'huong dan viet chuyen nghiep tu y tuong den ban thao hoan chinh', focusEn: 'a practical guide from raw ideas to polished and publishable drafts', categorySlugs: ['education-skills', 'literature-arts'], basePrice: 154000, variantCount: 2 },
+  { viTitle: '3000 tu vung tieng Anh theo ngu canh', enTitle: '3000 English Words in Context', focusVi: 'mo rong von tu voi ngu canh doi thoai va bai tap nho lau', focusEn: 'expanding vocabulary through context-rich dialogue and retention drills', categorySlugs: ['language-learning', 'education-skills'], basePrice: 147000, variantCount: 3, useAudioTier: true },
+  { viTitle: 'Ngu phap tieng Anh ung dung giao tiep', enTitle: 'Practical English Grammar for Conversation', focusVi: 'chu tich ngu phap de noi va viet chinh xac trong moi truong lam viec', focusEn: 'using grammar patterns to speak and write clearly in real situations', categorySlugs: ['language-learning', 'education-skills'], basePrice: 143000, variantCount: 2, useAudioTier: true },
+  { viTitle: 'Doc nhanh va ghi nho sau', enTitle: 'Speed Reading and Retention System', focusVi: 'ket hop ky thuat doc nhanh voi ghi chu de nho kien thuc lau hon', focusEn: 'combining speed reading with memory techniques for durable learning', categorySlugs: ['productivity-learning', 'education-skills'], basePrice: 141000, variantCount: 1 },
+  { viTitle: 'Tu hoc suot doi theo he thong', enTitle: 'Lifelong Self-Learning Systems', focusVi: 'xay bo quy trinh hoc tap tu chu de nang cap nang luc lien tuc', focusEn: 'building self-directed learning systems for continuous capability growth', categorySlugs: ['productivity-learning', 'education-skills'], basePrice: 156000, variantCount: 2 },
+];
+
+const CATEGORY_PLAYBOOK: Record<
+  string,
+  { vi: string[]; en: string[] }
+> = {
+  programming: {
+    vi: [
+      'xac dinh nguyen tac thiet ke va coding standard',
+      'trien khai tung ky thuat tren codebase thuc te',
+      'xay bo test va pipeline kiem tra chat luong',
+      'do luong hieu nang va giam regression',
+      'hoan thien checklist de ap dung vao du an that',
+    ],
+    en: [
+      'set clear engineering principles and coding standards',
+      'apply each technique on realistic codebase scenarios',
+      'build quality gates with layered automated testing',
+      'measure performance and reduce regressions over time',
+      'finish with an actionable production checklist',
+    ],
+  },
+  'software-architecture': {
+    vi: [
+      'phan ra domain boundary va trach nhiem module',
+      'thiet ke luong du lieu va contract giua cac thanh phan',
+      'xu ly loi, retry va fallback theo cap do',
+      'quy hoach mo rong va kha nang bao tri dai han',
+      'dao tao doi ngu de van hanh kien truc thong nhat',
+    ],
+    en: [
+      'define domain boundaries and module responsibilities',
+      'design data flow contracts across system components',
+      'implement layered retry, fallback, and failure handling',
+      'plan scalability and long-term maintainability tradeoffs',
+      'align team execution around a coherent architecture model',
+    ],
+  },
+  'devops-cloud': {
+    vi: [
+      'chuan hoa quy trinh build test deploy',
+      'container hoa ung dung va toi uu image',
+      'thiet lap quan sat he thong theo metric log trace',
+      'bao ve moi truong production voi canary va rollback',
+      'xay van hoa van hanh lien tuc giua dev va ops',
+    ],
+    en: [
+      'standardize build-test-deploy flow end to end',
+      'containerize workloads with optimized image strategy',
+      'set up observability through metrics, logs, and traces',
+      'protect production with canary rollout and rollback',
+      'build a shared DevOps operating culture across teams',
+    ],
+  },
+  psychology: {
+    vi: [
+      'nhan dien co che tam ly tac dong den hanh vi',
+      'trien khai bai tap tu quan sat de thay doi thoi quen',
+      'ung dung giao tiep phu hop boi canh cong viec',
+      'do luong tien bo bang chi so hanh vi cu the',
+      'duy tri ket qua bang he thong ho tro ben vung',
+    ],
+    en: [
+      'identify psychological drivers behind recurring behavior',
+      'apply self-observation exercises to change habits',
+      'use context-aware communication in real work settings',
+      'track progress through concrete behavior indicators',
+      'sustain outcomes with practical support systems',
+    ],
+  },
+  history: {
+    vi: [
+      'tong hop boi canh kinh te chinh tri xa hoi',
+      'phan tich nhan qua cua cac bien co lon',
+      'doi chieu nhieu goc nhin va nguon tai lieu',
+      'rut ra bai hoc cho quan tri hien tai',
+      'xay khung tham chieu de tiep tuc tu hoc',
+    ],
+    en: [
+      'map economic, political, and social context clearly',
+      'analyze causality behind major turning points',
+      'compare perspectives across multiple source types',
+      'extract operational lessons for present decisions',
+      'build a framework for further historical learning',
+    ],
+  },
+};
+
+const DEFAULT_PLAYBOOK = {
+  vi: [
+    'xac dinh muc tieu hoc tap ro rang ngay tu dau',
+    'chia nho van de de de thuc hanh va do luong',
+    'ap dung tinh huong thuc te de tang tinh kha dung',
+    'tong hop bai hoc thanh quy trinh co the lap lai',
+    'xay lo trinh nang cap nang luc dai han',
+  ],
+  en: [
+    'define clear learning outcomes from the start',
+    'break complexity into measurable practical steps',
+    'apply concepts in realistic scenarios and constraints',
+    'synthesize lessons into repeatable operating workflows',
+    'build a long-term capability growth roadmap',
+  ],
+};
+
 const REVIEW_CONTENT_BY_RATING: Record<number, string[]> = {
-  1: [
-    'Noi dung khong dung nhu ky vong.',
-    'Sach kho theo doi va bi lan man.',
-    'Vi du khong thuc te, kho ap dung.',
-  ],
-  2: [
-    'Y tuong duoc nhung trinh bay con roi.',
-    'Tam on nhung chua xung dang gia tien.',
-    'Co mot so chuong hay nhung tong the trung binh.',
-  ],
-  3: [
-    'Sach o muc on, co the tham khao.',
-    'Noi dung kha day du, can them vi du moi.',
-    'Doc duoc, phu hop nguoi moi bat dau.',
-  ],
-  4: [
-    'Noi dung ro rang, de ung dung trong cong viec.',
-    'Kien thuc thuc te, bo cuc hop ly.',
-    'Cuon sach tot, dang de tham khao lau dai.',
-  ],
-  5: [
-    'Rat chat luong, doc xong ap dung duoc ngay.',
-    'Mot trong nhung cuon hay nhat ve chu de nay.',
-    'Noi dung sau va co gia tri su dung cao.',
-  ],
+  1: ['Noi dung khong dung nhu ky vong.'],
+  2: ['Tam on nhung chua xung dang gia tien.'],
+  3: ['Sach o muc on, co the tham khao.'],
+  4: ['Noi dung ro rang, de ung dung trong cong viec.'],
+  5: ['Rat chat luong, doc xong ap dung duoc ngay.'],
 };
 
 const ADDRESS_POOL = [
@@ -842,59 +1208,113 @@ function buildCustomerSeedUsers() {
   return users;
 }
 
+function buildSeedIsbn(bookNumber: number, variantNumber: number) {
+  const prefix = `978604${bookNumber.toString().padStart(3, '0')}${variantNumber}`;
+  const body = `${prefix}${((bookNumber * 7 + variantNumber * 3) % 97).toString().padStart(2, '0')}`;
+  const twelveDigits = body.slice(0, 12);
+  const checksum = twelveDigits
+    .split('')
+    .map((digit) => Number(digit))
+    .reduce((sum, digit, idx) => sum + digit * (idx % 2 === 0 ? 1 : 3), 0);
+  const checkDigit = (10 - (checksum % 10)) % 10;
+  return `${twelveDigits}${checkDigit}`;
+}
+
+function resolveVariantFormats(blueprint: BookBlueprint): BookFormat[] {
+  if (blueprint.variantCount === 1) {
+    return [BookFormat.PAPERBACK];
+  }
+  if (blueprint.variantCount === 2) {
+    return [BookFormat.PAPERBACK, BookFormat.HARDCOVER];
+  }
+  if (blueprint.useAudioTier) {
+    return [BookFormat.EBOOK, BookFormat.PAPERBACK, BookFormat.AUDIOBOOK];
+  }
+  return [BookFormat.EBOOK, BookFormat.PAPERBACK, BookFormat.HARDCOVER];
+}
+
+function buildViDescription(blueprint: BookBlueprint, code: string) {
+  const playbook =
+    CATEGORY_PLAYBOOK[blueprint.categorySlugs[0]] ?? DEFAULT_PLAYBOOK;
+  const modules = playbook.vi.map((line, idx) => `- Chuong ${idx + 1}: ${line}.`).join('\n');
+
+  return [
+    `${blueprint.viTitle} (${code}) la cuon sach duoc bien soan de giai quyet bai toan: ${blueprint.focusVi}.`,
+    'Noi dung khong chi dung o muc khai niem. Moi chuong deu co case study, checklist van hanh va bai tap de doc gia co the trien khai ngay vao cong viec.',
+    'Cau truc sach duoc thiet ke theo lo trinh nang cao dan, giup nguoi moi van theo kip, dong thoi van du do sau cho doc gia da co kinh nghiem.',
+    'Khung noi dung chinh:',
+    modules,
+    'Ban dich tieng Viet duoc bien tap theo van phong de hieu, uu tien tinh ung dung va kha nang tai su dung kien thuc trong boi canh doi ngu san pham.',
+  ].join('\n\n');
+}
+
+function buildEnDescription(blueprint: BookBlueprint, code: string) {
+  const playbook =
+    CATEGORY_PLAYBOOK[blueprint.categorySlugs[0]] ?? DEFAULT_PLAYBOOK;
+  const modules = playbook.en.map((line, idx) => `- Part ${idx + 1}: ${line}.`).join('\n');
+
+  return [
+    `${blueprint.enTitle} (${code}) is built around one practical objective: ${blueprint.focusEn}.`,
+    'Instead of abstract theory, each chapter includes realistic case studies, implementation checklists, and execution exercises you can apply immediately.',
+    'The progression is intentionally structured from fundamentals to advanced patterns, so both early-career and experienced readers gain clear value.',
+    'Core learning path:',
+    modules,
+    'The English edition keeps concise technical language, explicit trade-off analysis, and a strong focus on production-grade decision making.',
+  ].join('\n\n');
+}
+
 function buildSeedBooks(categorySlugs: string[]): SeedBook[] {
-  const books: SeedBook[] = [];
-
-  const basePriceByFormat: Record<BookFormat, number> = {
-    [BookFormat.HARDCOVER]: 260_000,
-    [BookFormat.PAPERBACK]: 180_000,
-    [BookFormat.EBOOK]: 120_000,
-    [BookFormat.AUDIOBOOK]: 140_000,
-  };
-
-  for (let i = 1; i <= BOOK_COUNT; i += 1) {
-    const code = i.toString().padStart(3, '0');
-    const subject = BOOK_SUBJECTS[(i - 1) % BOOK_SUBJECTS.length];
-    const categoryCount = randomInt(1, 2);
-    const categories = takeRandomUnique(categorySlugs, categoryCount);
-
-    const variants = BOOK_FORMATS.slice(0, VARIANTS_PER_BOOK).map(
-      (format, formatIndex) => {
-        const base = basePriceByFormat[format];
-        const price = toRoundedVnd(
-          base * (0.9 + Math.random() * 0.45) + i * 170,
-        );
-        const costPrice = toRoundedVnd(price * (0.55 + Math.random() * 0.18));
-        const stock =
-          format === BookFormat.EBOOK || format === BookFormat.AUDIOBOOK
-            ? randomInt(200, 1200)
-            : randomInt(25, 240);
-        const isbn = `978604${code}${(formatIndex + 1).toString()}${((i + formatIndex) % 10).toString()}${((i * 3 + formatIndex) % 10).toString()}`;
-
-        return {
-          format,
-          edition: 1,
-          isbn,
-          costPrice,
-          price,
-          currencyCode: CURRENCY_CODE_VND,
-          stock,
-        };
-      },
+  if (BOOK_BLUEPRINTS.length !== BOOK_COUNT) {
+    throw new Error(
+      `BOOK_BLUEPRINTS length must be ${BOOK_COUNT}, got ${BOOK_BLUEPRINTS.length}`,
     );
+  }
 
+  const books: SeedBook[] = [];
+  for (let i = 1; i <= BOOK_COUNT; i += 1) {
+    const blueprint = BOOK_BLUEPRINTS[i - 1];
+    const code = i.toString().padStart(3, '0');
+    const selectedCategories = blueprint.categorySlugs.filter((slug) =>
+      categorySlugs.includes(slug),
+    ) as string[];
+
+    if (!selectedCategories.length) {
+      selectedCategories.push(...takeRandomUnique(categorySlugs, 2));
+    }
+
+    const formats = resolveVariantFormats(blueprint);
+    const variants = formats.map((format, index) => {
+      const price = toRoundedVnd(blueprint.basePrice * Math.pow(1.1, index));
+      const costPrice = toRoundedVnd(price * (0.62 + 0.03 * index));
+      const stock =
+        format === BookFormat.EBOOK || format === BookFormat.AUDIOBOOK
+          ? randomInt(1200, 9000)
+          : randomInt(40, 260);
+
+      return {
+        format,
+        edition: 1,
+        isbn: buildSeedIsbn(i, index + 1),
+        costPrice,
+        price,
+        currencyCode: CURRENCY_CODE_VND,
+        stock,
+      };
+    });
+
+    const pageCount = 220 + ((i * 37) % 360);
     books.push({
       slug: `seed-book-${code}`,
-      viTitle: `${subject} ${code}`,
-      enTitle: `${subject} ${code}`,
-      viDescription: `Sach chu de ${subject.toLowerCase()} voi vi du thuc te va bai hoc ap dung.`,
-      enDescription: `Practical handbook about ${subject.toLowerCase()} with real-world examples.`,
-      coverImageUrl: `https://picsum.photos/seed/book-${code}/640/960`,
-      publicationYear: randomInt(2008, 2025),
-      pageCount: randomInt(180, 760),
-      weightGrams: randomInt(260, 1200),
-      publisherName: randomOne(PUBLISHER_NAMES),
-      categories,
+      viTitle: blueprint.viTitle,
+      enTitle: blueprint.enTitle,
+      viDescription: buildViDescription(blueprint, code),
+      enDescription: buildEnDescription(blueprint, code),
+      coverImageUrl: `https://picsum.photos/seed/seed-book-${code}/720/1080`,
+      publicationYear: 2010 + (i % 16),
+      pageCount,
+      weightGrams: 260 + Math.round(pageCount * 1.65),
+      publisherName: PUBLISHER_NAMES[(i - 1) % PUBLISHER_NAMES.length],
+      categories: selectedCategories.slice(0, 2),
       variants,
     });
   }
@@ -1467,8 +1887,20 @@ async function main() {
   }
 
   console.log(`Seeded customers: ${seededCustomers.length}`);
+  console.log(`Seeded total users: ${fixedUsers.length + seededCustomers.length}`);
 
   try {
+    // Dọn dữ liệu seed cũ phần order/review để không bị lẫn dữ liệu cũ.
+    await prisma.order.deleteMany({
+      where: { orderCode: { startsWith: ORDER_CODE_PREFIX } },
+    });
+    await prisma.review.deleteMany({
+      where: { content: { startsWith: REVIEW_CONTENT_PREFIX } },
+    });
+    await prisma.bookVariantSnapshot.deleteMany({
+      where: { skuSnapshot: { startsWith: 'SEED-SKU-' } },
+    });
+
     const categoryIdBySlug = await upsertCatalogCategories(languageIdByCode);
     const { books, variants } = await upsertCatalogBooks(
       languageIdByCode,
@@ -1476,13 +1908,10 @@ async function main() {
     );
     const snapshots = await upsertVariantSnapshots(variants);
 
-    const purchases = await upsertDemoOrders(seededCustomers, snapshots);
-    await upsertDemoReviews(books, variants, seededCustomers, purchases);
-
     console.log(`Seeded books: ${books.length}`);
     console.log(`Seeded variants: ${variants.length}`);
     console.log(`Seeded snapshots: ${snapshots.length}`);
-    console.log(`Seeded orders: ${ORDER_COUNT}`);
+    console.log('Seeded orders: 0 (disabled in this seed version)');
   } catch (error: any) {
     if (error?.code === 'P2021') {
       console.warn(

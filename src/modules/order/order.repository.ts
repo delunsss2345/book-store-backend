@@ -1,5 +1,4 @@
 import { PrismaService } from '@/database';
-import { CreateOrdersDTO } from '@/modules/order/dto/request/create-orders.dto';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
 import { PaymentStatus } from '@prisma/client';
@@ -58,11 +57,10 @@ export class OrderRepository {
         })
     }
 
-    createOrdersByGuestId(guestId: string, orders: CreateOrdersDTO) {
+    createOrdersByGuestId(guestId: string) {
         const orderCode = generateOrderCode();
         return this.prisma.order.create({
             data: {
-                ...orders,
                 guestSessionId: guestId,
                 orderCode: orderCode,
                 paymentStatus: PaymentStatus.PENDING

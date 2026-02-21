@@ -96,8 +96,10 @@ export class ShopperSessionGuard implements CanActivate {
                 return;
             }
         }
-
+        // Truyền thêm sessionId vì có thể trong trường hợp cookie có sessionId nhưng mình lại không tìm thấy guest đó trong db 
+        // Nên phải tạo để tránh bị bug tìm không thấy guestSessionId tạo mới liên tục (Trường hợp tình cờ xảy ra khi đã xoá database tạo lại).
         const guestSession = await this.guestSessionService.createGuestSession(
+            sessionId,
             this.resolveIp(request),
             this.hashUserAgent(request),
         );

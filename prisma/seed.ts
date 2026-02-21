@@ -1,5 +1,6 @@
 // prisma/seed.ts
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import {
   BookFormat,
@@ -1753,6 +1754,7 @@ async function upsertDemoOrders(
     const totalAmount = discountedSubtotal + shippingFee;
     const orderCode = `${ORDER_CODE_PREFIX}${index.toString().padStart(4, '0')}`;
     const placedAt = randomDateWithinDays(120);
+    const expiredAt = new Date(placedAt.getTime() + ORDER_EXPIRED_SECONDS * 1000);
 
     const order = await prisma.order.create({
       data: {
@@ -1767,6 +1769,7 @@ async function upsertDemoOrders(
         currencyCode: CURRENCY_CODE_VND,
         idempotencyKey: `seed-order-${index}`,
         placedAt,
+        expiredAt,
       },
       select: { id: true },
     });

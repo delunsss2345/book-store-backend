@@ -1,14 +1,15 @@
 import { SHIPPING_FEE } from "@/common";
+import { ORDER_EXPIRED_SECONDS } from "@/common/constants/expired-constant";
 import { PrismaService } from "@/database";
 import { CreateGuestOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { OrderStatus, PaymentStatus } from "@prisma/client";
+import { CartItem, OrderStatus, PaymentStatus } from "@prisma/client";
+import crypto from 'crypto';
 import { CatalogRepository } from "../catalog/catalog.repository";
 import { PaymentService } from "../payment/payment.service";
-
 @Injectable()
 export class OrderService {
     constructor(
@@ -16,44 +17,67 @@ export class OrderService {
         private readonly catalogRepository: CatalogRepository,
         private readonly prisma: PrismaService
     ) { }
+    getCartHash(items: CartItem[]) {
+        const sortedItems = items.sort((a, b) => (a.id.toString()).localeCompare((b.id.toString())));
+        const content = sortedItems.map(item => `${item.bookVariantId}:${item.quantity}`).join("|");
+
+        return crypto.createHash("md5").update(content).digest("hex");
+    };
 
     async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO) {
         return this.prisma.$transaction(async (tx) => {
-            if (!body.idempotencyKey) throw new ForbiddenException("Missing idempotencyKey");
-
-            const existing = await tx.order.findUnique({
-                where: { idempotencyKey: body.idempotencyKey },
+            // tìm cart đầu tiên để thứ nhất vừa tính lại tiền 
+            // vừa hash cart để chặn không cho order tạo lại nhiều lần nếu cart ko thay đổi 
+            const cart = await tx.cart.findFirst({
+                where: { guestSessionId },
                 include: {
-                    payments: {
-                        where: { status: PaymentStatus.PENDING },
-                        orderBy: { createdAt: "desc" },
-                        take: 1,
-                    },
-                }
-            });
-            if (existing && existing.status !== OrderStatus.PENDING_PAYMENT) {
-                throw new ForbiddenException("Order is not pending payment");
-            }
-            if (existing) {
-                const lastPayment = existing.payments?.[0];
-
-                const paymentUrl = lastPayment?.paymentUrl ?? "";
-                return { orderCode: existing.orderCode, totalAmount: existing.totalAmount, paymentUrl };
-            }
-
-            const [lang, cart] = await Promise.all([
-                this.catalogRepository.findLanguageByCode(body.languageCode ?? "vi"),
-                tx.cart.findFirst({
-                    where: { guestSessionId },
-                    include: {
-                        items: {
-                            include: { variant: { include: { book: { include: { translations: true } } } } },
+                    items: {
+                        select: {
+                            id: true,
+                            cartId: true,
+                            bookVariantId: true,
+                            quantity: true,
+                            addedAt: true,
+                            variant: {
+                                include: {
+                                    book: {
+                                        include: {
+                                            translations: { select: { title: true, slug: true } },
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
-                }),
-            ]);
+                },
+            });
 
+
+            const cartHash = this.getCartHash(cart?.items as CartItem[]);
             if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
+
+            const [language, existing] = await Promise.all([
+                this.catalogRepository.findLanguageByCode(body.languageCode ?? "vi"),
+                tx.order.findFirst({
+                    where: { cartHash },
+                    include: {
+                        payments: {
+                            where: { status: PaymentStatus.PENDING },
+                            orderBy: { createdAt: "desc" },
+                            take: 1,
+                        }
+                    }
+                })
+            ])
+            if (cartHash === existing?.cartHash) {
+                return {
+                    id: existing.id,
+                    subtotal: existing.subtotal,
+                    orderCode: existing.orderCode,
+                    payment: existing.payments[0].paymentUrl,
+                    totalAmount: existing.payments[0].amount,
+                }
+            }
 
             // 2) Tính total dựa trên dữ liệu mới nhất (bookVariant)
             let subtotal = 0;
@@ -64,9 +88,11 @@ export class OrderService {
                     guestSessionId,
                     status: OrderStatus.PENDING_PAYMENT,
                     paymentStatus: PaymentStatus.PENDING,
-                    idempotencyKey: body.idempotencyKey,
                     currencyCode: "VND",
-                    orderCode: generateOrderCode(), // MVP
+                    orderCode: generateOrderCode(),
+                    cartHash,
+                    shippingFee: SHIPPING_FEE,
+                    expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
                 },
             });
 
@@ -88,10 +114,11 @@ export class OrderService {
             for (const item of cart.items) {
                 const bookVariant = await this.catalogRepository.findBookVariantById(
                     item.bookVariantId,
-                    (lang?.id ?? 3) as any,
+                    (language?.id ?? 3) as any,
                 );
 
                 if (!bookVariant) throw new ForbiddenException("Book variant not found");
+
                 if (!bookVariant.stock || bookVariant.stock < item.quantity) {
                     throw new ForbiddenException("Book variant out of stock");
                 }
@@ -143,7 +170,7 @@ export class OrderService {
                     status: PaymentStatus.PENDING,
                     amount: totalAmount,
                     currencyCode: "VND",
-                    idempotencyKey: body.idempotencyKey, // hoặc key khác cho payment attempt
+                    idempotencyKey: order.orderCode, // hoặc key khác cho payment attempt
                 },
             });
 
@@ -164,7 +191,7 @@ export class OrderService {
                 },
             });
 
-            return { orderId: order.id, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };
+            return { orderId: order.id, subtotal: updatedOrder.subtotal, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };
         });
     }
 

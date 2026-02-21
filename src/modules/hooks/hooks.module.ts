@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { HooksController } from './hooks.controller';
+import { HooksRepository } from './hooks.repository';
+import { HooksService } from './hooks.service';
 @Module({
     controllers: [HooksController],
+    providers: [HooksRepository, HooksService],
+    exports: [HooksRepository, HooksService],
 })
-export class HooksModule {};
+export class HooksModule { };

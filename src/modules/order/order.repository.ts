@@ -1,4 +1,5 @@
 import { SHIPPING_FEE } from '@/common';
+import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
@@ -53,7 +54,9 @@ export class OrderRepository {
             data: {
                 userId: userId,
                 orderCode: orderCode,
-                paymentStatus: PaymentStatus.PENDING
+                paymentStatus: PaymentStatus.PENDING,
+                shippingFee: SHIPPING_FEE,
+                expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000)
             }
         })
     }
@@ -68,7 +71,8 @@ export class OrderRepository {
                 guestSessionId: guestId,
                 orderCode: orderCode,
                 paymentStatus: PaymentStatus.PENDING,
-                shippingFee: SHIPPING_FEE
+                shippingFee: SHIPPING_FEE,
+                expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000)
             },
             update: {}
         })

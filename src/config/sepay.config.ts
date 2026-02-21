@@ -5,10 +5,10 @@ export class SepayConfiguration {
     MERCHANT_ID: string;
 
     @IsString()
-    MERCHANT_SECRET: string;
+    MERCHANT_SECRET_KEY: string;
     constructor() {
         this.MERCHANT_ID = process.env['MERCHANT_ID'] ?? '';
-        this.MERCHANT_SECRET = process.env['MERCHANT_SECRET'] ?? '';
+        this.MERCHANT_SECRET_KEY = process.env['MERCHANT_SECRET_KEY'] ?? '';
     }
     validate() {
         const errors = validateSync(this);

@@ -42,10 +42,6 @@ export class CreateGuestOrdersAndPaymentDTO {
     @IsNotEmpty()
     languageCode: string;
 
-    @ApiProperty({ example: 'abc-123-def' })
-    @IsString()
-    @IsNotEmpty()
-    idempotencyKey: string
 
     @ApiProperty({ type: CreateOrderAddressDTO })
     @ValidateNested()

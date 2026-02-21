@@ -13,8 +13,8 @@ export class OrderAddressRepository {
         const data: Prisma.OrderAddressUncheckedCreateInput = {
             orderId,
             recipientName,
-            phoneNumber: body.phoneNumber ?? body.phone,
-            addressLine: body.addressLine ?? body.addressLine1,
+            phoneNumber: body.phoneNumber,
+            addressLine: body.addressLine,
             city: body.city,
         };
 

@@ -31,20 +31,21 @@ export class CreateGuestOrdersAndPaymentDTO {
     @IsNotEmpty()
     paymentGateway: PaymentGateway;
 
-    @ApiProperty({
-        example: 1,
-        description: "Language id (ví dụ: 1=vi, 2=en) tuỳ hệ thống của bạn",
-    })
 
     @ApiPropertyOptional({ example: "Giao giờ hành chính" })
     @IsString()
     @IsOptional()
     note?: string;
 
-    @ApiProperty({ example: 1 })
-    @IsNumber()
+    @ApiProperty({ example: 'vi' })
+    @IsString()
     @IsNotEmpty()
-    languageId: number;
+    languageCode: string;
+
+    @ApiProperty({ example: 'abc-123-def' })
+    @IsString()
+    @IsNotEmpty()
+    idempotencyKey: string
 
     @ApiProperty({ type: CreateOrderAddressDTO })
     @ValidateNested()

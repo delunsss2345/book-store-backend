@@ -1,7 +1,6 @@
 import { CreatePaymentTransactionDto } from '@/modules/payment/dto/request/create-payment.dto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PaymentGateway } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/index-browser';
 
 @Injectable()
 export class PaymentService {
@@ -15,7 +14,7 @@ export class PaymentService {
      * Khởi tạo giao dịch thanh toán
      */
 
-     createTransaction(dto: CreatePaymentTransactionDto) {
+    createTransaction(dto: CreatePaymentTransactionDto) {
         const { orderId, gateway, amount } = dto;
 
         try {
@@ -54,14 +53,14 @@ export class PaymentService {
         }
     }
 
-    generateVnPayUrl(orderId: bigint, amount: Decimal) {
+    generateVnPayUrl(orderId: bigint, amount: number) {
 
     }
 
-    generateMoMoUrl(orderId: bigint, amount: Decimal) {
+    generateMoMoUrl(orderId: bigint, amount: number) {
     }
 
-    generateQrUrl(orderId: bigint, amount: Decimal): string {
+    generateQrUrl(orderId: bigint, amount: number): string {
         const bankId = 'MBBank';
         const accountNo = '17979220797979';
         const template = 'compact';

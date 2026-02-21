@@ -10,4 +10,6 @@ export enum VerifyCodePath {
     FORGOT_PASSWORD = 'forgot-password',
     RESET_PASSWORD = 'reset-password',
     CHANGE_EMAIL = 'change-password'
-} 
+}
+
+export const SHIPPING_FEE = 20000

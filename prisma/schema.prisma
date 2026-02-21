@@ -914,7 +914,7 @@ model PaymentTransaction {
   referenceNumber String? @map("reference_number") @db.VarChar(200)
   requestId       String? @map("request_id") @db.VarChar(100)
   idempotencyKey  String? @map("idempotency_key") @db.VarChar(100)
-
+  paymentUrl      String? @map("payment_url") @db.VarChar(100)
   requestPayload  Json? @map("request_payload")
   responsePayload Json? @map("response_payload")
 

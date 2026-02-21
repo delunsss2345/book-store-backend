@@ -23,15 +23,11 @@ export class CreateOrderAddressDTO {
     @IsNotEmpty()
     lastName: string;
 
-    @ApiProperty({ example: "Số 123 Đường ABC, Phường 4, Quận Tân Bình" })
-    @IsString()
-    @IsNotEmpty()
-    addressLine1: string;
 
     @ApiPropertyOptional({ example: "Số 123 Đường ABC, Phường 4, Quận Tân Bình" })
     @IsString()
     @IsOptional()
-    addressLine?: string;
+    addressLine: string;
 
     @ApiProperty({ example: "TP. Hồ Chí Minh" })
     @IsString()
@@ -53,15 +49,11 @@ export class CreateOrderAddressDTO {
     @IsOptional()
     postalCode?: string;
 
-    @ApiProperty({ example: "0901234567" })
-    @IsString()
-    @IsNotEmpty()
-    phone: string;
 
     @ApiPropertyOptional({ example: "0901234567" })
     @IsString()
     @IsOptional()
-    phoneNumber?: string;
+    phoneNumber: string;
 
     @ApiPropertyOptional({ example: "VN", description: "Mã quốc gia ISO-2" })
     @IsString()

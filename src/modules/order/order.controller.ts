@@ -9,7 +9,7 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 export class OrderController {
     constructor(private readonly orderService: OrderService) { }
 
-    @Post('/guest')
+    @Post('/guest/checkout')
     @Public()
     createOrders(@Body() body: CreateGuestOrdersAndPaymentDTO, @Req() req: Request) {
         const guestSessionId = req['guestSessionId'] as string;

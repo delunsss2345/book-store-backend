@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PaymentGateway } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/index-browser';
 import { IsEnum, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class CreatePaymentTransactionDto {
@@ -18,5 +17,5 @@ export class CreatePaymentTransactionDto {
 
     @ApiProperty({ type: Number, example: 50000 })
     @IsNumber()
-    amount: Decimal;
+    amount: number;
 }

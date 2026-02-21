@@ -1,3 +1,4 @@
+import { SHIPPING_FEE } from '@/common';
 import { PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
@@ -57,14 +58,19 @@ export class OrderRepository {
         })
     }
 
-    createOrdersByGuestId(guestId: string) {
+    upsertOrdersByGuestId(guestId: string, idempotencyKey: string, totalAmount: number) {
         const orderCode = generateOrderCode();
-        return this.prisma.order.create({
-            data: {
+        return this.prisma.order.upsert({
+            where: { idempotencyKey },
+            create: {
+                idempotencyKey,
+                totalAmount,
                 guestSessionId: guestId,
                 orderCode: orderCode,
-                paymentStatus: PaymentStatus.PENDING
-            }
+                paymentStatus: PaymentStatus.PENDING,
+                shippingFee: SHIPPING_FEE
+            },
+            update: {}
         })
     }
 

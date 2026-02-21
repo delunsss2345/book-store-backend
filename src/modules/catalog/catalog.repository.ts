@@ -121,7 +121,7 @@ export class CatalogRepository {
             },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         });
-    }   
+    }
 
     findBookVariantById(bookVariantId: bigint, languageId: number) {
         return this.prisma.bookVariant.findFirst({

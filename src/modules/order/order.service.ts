@@ -1,93 +1,170 @@
+import { SHIPPING_FEE } from "@/common";
+import { PrismaService } from "@/database";
 import { CreateGuestOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { generateContentHash } from "@/utils/generateContentHash.util";
+import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { BookSnapshotRepository } from "../book-snapshot/book-snapshot.repository";
-import { CartRepository } from "../cart/cart.repository";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { CatalogRepository } from "../catalog/catalog.repository";
-import { OrderAddressRepository } from "../order-address/order-address.repository";
-import { OrderItemRepository } from "../order-item/order-item.repository";
-import { PaymentRepository } from "../payment/payment.repository";
 import { PaymentService } from "../payment/payment.service";
-import { OrderRepository } from './order.repository';
 
 @Injectable()
 export class OrderService {
-    constructor(private readonly orderRepository: OrderRepository,
-        private readonly paymentRepository: PaymentRepository,
+    constructor(
         private readonly paymentService: PaymentService,
-        private readonly orderAddressRepository: OrderAddressRepository,
-        private readonly orderItemRepository: OrderItemRepository,
         private readonly catalogRepository: CatalogRepository,
-        private readonly cartRepository: CartRepository,
-        private readonly bookSnapshotRepository: BookSnapshotRepository,
+        private readonly prisma: PrismaService
     ) { }
 
     async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO) {
-        const order = await this.orderRepository.createOrdersByGuestId(guestSessionId);
-        const cart = await this.cartRepository.findByGuestSessionId(guestSessionId);
+        return this.prisma.$transaction(async (tx) => {
+            if (!body.idempotencyKey) throw new ForbiddenException("Missing idempotencyKey");
 
-        if (!cart) {
-            throw new ForbiddenException('Cart not found');
-        }
+            const existing = await tx.order.findUnique({
+                where: { idempotencyKey: body.idempotencyKey },
+                include: {
+                    payments: {
+                        where: { status: PaymentStatus.PENDING },
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                    },
+                }
+            });
+            if (existing && existing.status !== OrderStatus.PENDING_PAYMENT) {
+                throw new ForbiddenException("Order is not pending payment");
+            }
+            if (existing) {
+                const lastPayment = existing.payments?.[0];
 
-        await this.orderAddressRepository.createGuestAddress(order.id, body.orderAddress, body.note);
+                const paymentUrl = lastPayment?.paymentUrl ?? "";
+                return { orderCode: existing.orderCode, totalAmount: existing.totalAmount, paymentUrl };
+            }
 
-        await Promise.all(
-            cart.items.map(async (item) => {
+            const [lang, cart] = await Promise.all([
+                this.catalogRepository.findLanguageByCode(body.languageCode ?? "vi"),
+                tx.cart.findFirst({
+                    where: { guestSessionId },
+                    include: {
+                        items: {
+                            include: { variant: { include: { book: { include: { translations: true } } } } },
+                        },
+                    },
+                }),
+            ]);
+
+            if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
+
+            // 2) Tính total dựa trên dữ liệu mới nhất (bookVariant)
+            let subtotal = 0;
+
+            // 3) Tạo order trước (chưa có subtotal chính xác cũng được, lát update)
+            const order = await tx.order.create({
+                data: {
+                    guestSessionId,
+                    status: OrderStatus.PENDING_PAYMENT,
+                    paymentStatus: PaymentStatus.PENDING,
+                    idempotencyKey: body.idempotencyKey,
+                    currencyCode: "VND",
+                    orderCode: generateOrderCode(), // MVP
+                },
+            });
+
+            // 4) address
+            await tx.orderAddress.create({
+                data: {
+                    orderId: order.id,
+                    recipientName: body.orderAddress.firstName + ' ' + body.orderAddress.lastName,
+                    phoneNumber: body.orderAddress.phoneNumber,
+                    addressLine: body.orderAddress.addressLine,
+                    ward: body.orderAddress.ward,
+                    district: body.orderAddress.district,
+                    city: body.orderAddress.city,
+                    note: body.note,
+                },
+            });
+
+            // 5) tạo items + snapshot + subtotal
+            for (const item of cart.items) {
                 const bookVariant = await this.catalogRepository.findBookVariantById(
                     item.bookVariantId,
-                    body.languageId,
+                    (lang?.id ?? 3) as any,
                 );
 
-                if (!bookVariant) {
-                    throw new ForbiddenException('Book variant not found');
-                }
-
+                if (!bookVariant) throw new ForbiddenException("Book variant not found");
                 if (!bookVariant.stock || bookVariant.stock < item.quantity) {
-                    throw new ForbiddenException('Book variant out of stock');
+                    throw new ForbiddenException("Book variant out of stock");
                 }
 
-                // Tạo mã hash để sử dụng cho snapshot, check đã có thì không cần tạo lại
+                const unitPrice = Number(bookVariant.price);
+                const lineTotal = unitPrice * item.quantity;
+                subtotal += lineTotal;
+
                 const contentHash = generateContentHash(bookVariant);
 
-                // Upsert snapshot
-                const bookSnapshot = await this.bookSnapshotRepository.upsertBookSnapshot(
-                    contentHash,
-                    {
-                        bookVariantId: item.bookVariantId.toString(),
+                const bookSnapshot = await tx.bookVariantSnapshot.upsert({
+                    where: { contentHash },
+                    update: {},
+                    create: {
+                        bookVariantId: BigInt(item.bookVariantId),
                         contentHash,
-                        priceSnapshot: Number(bookVariant.price),
+                        priceSnapshot: unitPrice,
                         formatSnapshot: bookVariant.format,
                         skuSnapshot: generateSKU(bookVariant),
-                        titleSnapshot: item.variant.book.translations[0].title,
-                        coverImageUrlSnapshot: item.variant.book.coverImageUrl ?? '',
-                        currencyCodeSnapshot: item.variant.currencyCode ?? 'VN',
+                        titleSnapshot: bookVariant.book.translations?.[0]?.title ?? item.variant.book.translations[0].title,
+                        coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? "",
+                        currencyCodeSnapshot: "VND"
                     },
-                );
+                });
 
-                // Tạo order item
-                await this.orderItemRepository.createOrderItem(
-                    order.id,
-                    bookSnapshot.id,
-                    item.quantity,
-                    Number(bookSnapshot.priceSnapshot),
-                );
-            }),
-        );
+                await tx.orderItem.create({
+                    data: {
+                        orderId: order.id,
+                        bookVariantSnapshotId: bookSnapshot.id,
+                        quantity: item.quantity,
+                        unitPrice: unitPrice,
+                        lineTotal: lineTotal,
+                    },
+                });
+            }
 
-        if (!order.totalAmount) return;
+            // 6) update totals
+            const totalAmount = subtotal + SHIPPING_FEE;
+            const updatedOrder = await tx.order.update({
+                where: { id: order.id },
+                data: { subtotal, totalAmount, discountAmount: 0, shippingFee: SHIPPING_FEE },
+            });
 
-        await this.paymentRepository.createPaymentTransactionGuestId({
-            orderId: order.id,
-            gateway: body.paymentGateway,
-            amount: order.totalAmount,
-        });
+            // 7) tạo paymentTransaction PENDING
+            const paymentTxn = await tx.paymentTransaction.create({
+                data: {
+                    orderId: order.id,
+                    gateway: body.paymentGateway,
+                    status: PaymentStatus.PENDING,
+                    amount: totalAmount,
+                    currencyCode: "VND",
+                    idempotencyKey: body.idempotencyKey, // hoặc key khác cho payment attempt
+                },
+            });
 
-        return this.paymentService.createTransaction({
-            orderId: order.id,
-            gateway: body.paymentGateway,
-            amount: order.totalAmount,
+            // 8) gọi gateway tạo transaction
+            const gatewayResp = this.paymentService.createTransaction({
+                orderId: order.id,
+                gateway: body.paymentGateway,
+                amount: totalAmount,
+            });
+
+            // 9) lưu response payload để retry trả lại paymentUrl
+            await tx.paymentTransaction.update({
+                where: { id: paymentTxn.id },
+                data: {
+                    responsePayload: gatewayResp as any,
+                    paymentUrl: gatewayResp.paymentUrl,
+                    providerTxnId: (gatewayResp as any)?.providerTxnId ?? null,
+                },
+            });
+
+            return { orderId: order.id, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };
         });
     }
 
@@ -102,4 +179,5 @@ export class OrderService {
     //         amount: order.totalAmount
     //     })
     // }
+
 }

@@ -1,3 +1,4 @@
+import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { JobStatus } from '@prisma/client';
 import { HooksRepository } from './hooks.repository';
@@ -6,7 +7,7 @@ import { HooksRepository } from './hooks.repository';
 export class HooksService {
     constructor(private readonly hooksRepository: HooksRepository) { }
 
-    async handleSepayWebhook(body: Record<string, unknown>) {
+    async handleSepayWebhook(body: SePayHooksDto) {
         // Chống trùng lặp 
         const providerEventId = this.extractProviderEventId(body);
         if (!providerEventId) {
@@ -75,7 +76,7 @@ export class HooksService {
                 message: 'Order not found',
             };
         }
-        
+
         const paidOrder = await this.hooksRepository.markOrderAndPaymentSuccess(
             order.id,
             providerEventId,
@@ -128,15 +129,14 @@ export class HooksService {
         };
     }
 
-    private extractProviderEventId(body: Record<string, unknown>): string | null {
+    private extractProviderEventId(body: SePayHooksDto): string | null {
         const raw = body.id ?? body.referenceCode ?? body.code;
         if (raw === undefined || raw === null) return null;
         return raw.toString().trim();
     }
 
-    private extractNormalizedOrderCode(body: Record<string, unknown>): string | null {
+    private extractNormalizedOrderCode(body: SePayHooksDto): string | null {
         const candidates = [
-            body.orderCode,
             body.content,
             body.description,
             body.code,

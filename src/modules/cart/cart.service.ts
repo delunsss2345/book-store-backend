@@ -1,6 +1,7 @@
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { CartItemService } from '@/modules/cart-item/cart-item.service';
 import { AddCartItemRequestDto, UpdateCartItemDeltaRequestDto } from '@/modules/cart/dto/request';
+import { LanguageService } from '@/modules/language/language.service';
 import { ForbiddenException, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { Request } from 'express';
 import { CartRepository } from './cart.repository';
@@ -15,18 +16,21 @@ export class CartService {
         private readonly cartRepository: CartRepository,
         private readonly cartItemService: CartItemService,
         private readonly authRepository: AuthRepository,
+        private readonly languageService: LanguageService,
     ) { }
 
-    async getCartUser(userId: bigint) {
-        const result = await this.cartRepository.findByUserId(userId);
+    async getCartUser(userId: bigint, lang?: string) {
+        const language = await this.languageService.resolveLanguage(lang);
+        const result = await this.cartRepository.findByUserId(userId, language.id);
         if (result) return result;
-        return this.cartRepository.createCartByUserId(userId);
+        return this.cartRepository.createCartByUserId(userId, language.id);
     }
 
-    async getCartGuest(guestSessionId: string) {
-        const result = await this.cartRepository.findByGuestSessionId(guestSessionId);
+    async getCartGuest(guestSessionId: string, lang?: string) {
+        const language = await this.languageService.resolveLanguage(lang);
+        const result = await this.cartRepository.findByGuestSessionId(guestSessionId, language.id);
         if (result) return result;
-        return this.cartRepository.createCartByGuestSessionId(guestSessionId);
+        return this.cartRepository.createCartByGuestSessionId(guestSessionId, language.id);
     }
     async addCartItem(request: Request, body: AddCartItemRequestDto) {
         const bookVariantId = BigInt(body.bookVariantId);

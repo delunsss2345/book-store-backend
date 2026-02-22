@@ -376,7 +376,7 @@ export class AuthService {
     }
 
     async resetPassword(body: ResetPasswordRequestDto) {
-        if (body.password !== body.password_confirmation) {
+        if (body.password !== body.passwordConfirmation) {
             throw new BadRequestException(ForgotPasswordMessage.RESET_PASSWORD_CONFIRM_MISMATCH);
         }
 

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { LanguageService } from '../language/language.service';
 import { CategoryRepository } from './category.repository';
 import { CreateCategoryRequestDto } from './dto/request/create-category.request.dto';
 import { GetCategoriesQueryDto } from './dto/request/get-categories.query.dto';
@@ -12,13 +13,17 @@ type CategoryRow = Awaited<
 
 @Injectable()
 export class CategoryService {
-    constructor(private readonly categoryRepository: CategoryRepository) { }
+    constructor(
+        private readonly categoryRepository: CategoryRepository,
+        private readonly languageService: LanguageService,
+    ) { }
 
     async createCategory(
         body: CreateCategoryRequestDto,
         actorUserId: bigint,
+        lang?: string,
     ): Promise<CategoryItemResponseDto> {
-        const language = await this.resolveLanguage(body.lang);
+        const language = await this.languageService.resolveLanguage(lang);
         const parentId =
             body.parentId !== undefined
                 ? parseBigIntRequired(body.parentId, 'parentId')
@@ -55,7 +60,7 @@ export class CategoryService {
     async getCategories(query: GetCategoriesQueryDto): Promise<CategoryListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const [total, rows] = await Promise.all([
             this.categoryRepository.countActiveCategoriesByLanguage(language.id),
@@ -83,15 +88,5 @@ export class CategoryService {
             isActive: row.isActive,
             sortOrder: row.sortOrder,
         };
-    }
-
-    private async resolveLanguage(lang?: string): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'en').trim().toLowerCase();
-        const found = await this.categoryRepository.findLanguageByCode(normalized);
-        if (!found) {
-            throw new NotFoundException(`Language "${normalized}" is not active`);
-        }
-
-        return found;
     }
 }

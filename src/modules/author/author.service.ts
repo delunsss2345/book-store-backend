@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { LanguageService } from '../language/language.service';
 import { BookAuthorService } from '../book-author/book-author.service';
 import { CreateAuthorRequestDto } from './dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from './dto/request/get-author-books.query.dto';
@@ -14,6 +15,7 @@ export class AuthorService {
     constructor(
         private readonly authorRepository: AuthorRepository,
         private readonly bookAuthorService: BookAuthorService,
+        private readonly languageService: LanguageService,
     ) { }
 
     async createAuthor(body: CreateAuthorRequestDto): Promise<AuthorItemResponseDto> {
@@ -27,7 +29,7 @@ export class AuthorService {
     async getAuthors(query: GetAuthorsQueryDto): Promise<AuthorListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const [total, rows] = await Promise.all([
             this.authorRepository.countAuthors(),
@@ -59,7 +61,7 @@ export class AuthorService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const [total, rows] = await Promise.all([
             this.bookAuthorService.countBooksByAuthor(authorId, language.id),
@@ -88,15 +90,5 @@ export class AuthorService {
             totalPages: total ? Math.ceil(total / limit) : 0,
             items,
         };
-    }
-
-    private async resolveLanguage(lang?: string): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'en').trim().toLowerCase();
-        const found = await this.authorRepository.findLanguageByCode(normalized);
-        if (!found) {
-            throw new NotFoundException(`Language "${normalized}" is not active`);
-        }
-
-        return found;
     }
 }

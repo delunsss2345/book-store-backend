@@ -8,7 +8,7 @@ import { MailService } from '@/modules/mail/mail.service';
 import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
 import { EMAIL_TEMPLATE, EMAIL_TEMPLATE_RESET_PASSWORD } from '@/template/email.template';
-import { generateLinkWithType, generateOTP } from '@/utils/generateLink.util';
+import { generateLinkWithType } from '@/utils/generateLink.util';
 import { hashToken } from '@/utils/hashToken.util';
 import { randomKey } from '@/utils/randomKey.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
@@ -31,9 +31,8 @@ export class EmailProcessor extends WorkerHost {
 
             if (!outBox) return;
             let path = VerifyCodePath.VERIFY_EMAIL;
-            let token = randomKey();
+            const token = randomKey();
             if (outBox.templateKey === OTP_FORGOT_PASSWORD_TEMPLATE_KEY) {
-                token = generateOTP();
                 path = VerifyCodePath.RESET_PASSWORD;
             } else if (outBox.templateKey !== OTP_REGISTER_TEMPLATE_KEY) {
                 throw new Error('Unsupported email template key');
@@ -41,10 +40,12 @@ export class EmailProcessor extends WorkerHost {
 
             const { link } = generateLinkWithType({ path, token });
             const codeHash = hashToken(token);
+            // lưu hash code 
             await this.verificationCodeService.updateCodeHash(verificationCodeId, codeHash)
 
+            // đánh dấu đang gửi
             await this.emailOutbox.markSending(outBox.id, EmailStatus.SENDING);
-
+            // check template
             if (outBox.templateKey === OTP_REGISTER_TEMPLATE_KEY) {
                 const html = this.applyTemplate(EMAIL_TEMPLATE, {
                     content: "Chào bạn, vui lòng xác thực tài khoản.",
@@ -55,11 +56,12 @@ export class EmailProcessor extends WorkerHost {
             } else if (outBox.templateKey === OTP_FORGOT_PASSWORD_TEMPLATE_KEY) {
                 const html = this.applyTemplate(EMAIL_TEMPLATE_RESET_PASSWORD, {
                     content: 'Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.',
-                    resetCode: token,
+                    resetLink: link, // Truyền link đầy đủ vào đây
                     expireMinutes: OTP_EXPIRES_MINUTES,
                 });
                 await this.mailService.sendForgotPasswordEmail(outBox.toEmail, html);
             }
+            // đánh dấu đã gửi 
             await this.emailOutbox.markSending(outBox.id, EmailStatus.SENT);
         }
         catch (er) {

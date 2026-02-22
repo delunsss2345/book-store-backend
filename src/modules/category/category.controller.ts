@@ -1,4 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -21,15 +22,20 @@ export class CategoryController {
     @RequirePermissions(PermissionCode.CATEGORY_CREATE)
     @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: CategoryItemResponseDto })
-    createCategory(@Body() body: CreateCategoryRequestDto, @GetUser() user: JwtPayload) {
+    createCategory(
+        @Body() body: CreateCategoryRequestDto,
+        @GetUser() user: JwtPayload,
+        @GetLanguage() lang: string,
+    ) {
         const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
-        return this.categoryService.createCategory(body, actorUserId);
+        return this.categoryService.createCategory(body, actorUserId, lang);
     }
 
     @Public()
     @Get()
     @ApiOkResponse({ type: CategoryListResponseDto })
-    getCategories(@Query() query: GetCategoriesQueryDto) {
-        return this.categoryService.getCategories(query);
+    getCategories(@Query() query: GetCategoriesQueryDto, @GetLanguage() lang: string) {
+        const effectiveLang = query.lang ?? lang;
+        return this.categoryService.getCategories({ ...query, lang: effectiveLang });
     }
 }

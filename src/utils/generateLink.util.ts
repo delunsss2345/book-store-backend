@@ -1,9 +1,36 @@
 import { VerifyCodePath } from "@/common";
 import { randomInt } from "node:crypto";
+type GenerateLinkArgs = {
+    url?: string;
+    path: VerifyCodePath;
+    token: string;
+};
 
-export const generateLinkWithType = ({ url = 'http://localhost:3000', path, token }: { url?: string, path: VerifyCodePath, token: string }) => {
-    return {
-        link: `${url}/${path}?token=${token}`,
+const getTokenParamKey = (path: VerifyCodePath) => {
+    switch (path) {
+        case VerifyCodePath.VERIFY_EMAIL:
+            return "verify-email";
+        case VerifyCodePath.FORGOT_PASSWORD:
+            return "forgot-password";
+        case VerifyCodePath.RESET_PASSWORD:
+            return "verify-token";
+        case VerifyCodePath.CHANGE_EMAIL:
+            return "change-email";
+        default:
+            return "token";
     }
-}
+};
+export const generateLinkWithType = ({
+    url = "http://localhost:3000",
+    path,
+    token,
+}: GenerateLinkArgs) => {
+    const key = getTokenParamKey(path);
+
+    const base = url.endsWith("/") ? url.slice(0, -1) : url;
+    return {
+        link: `${base}/${path}?${key}=${encodeURIComponent(token)}`,
+    };
+};
+
 export const generateOTP = () => String(randomInt(0, 100000)).padStart(5, "0");

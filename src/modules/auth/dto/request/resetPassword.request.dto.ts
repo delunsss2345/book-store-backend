@@ -25,5 +25,5 @@ export class ResetPasswordRequestDto {
     @IsNotEmpty()
     @MinLength(8)
     @MaxLength(72)
-    password_confirmation: string;
+    passwordConfirmation: string;
 }

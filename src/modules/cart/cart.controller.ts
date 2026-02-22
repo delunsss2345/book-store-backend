@@ -1,4 +1,5 @@
 import { JwtPayload } from '@/common';
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddCartItemRequestDto, UpdateCartItemDeltaRequestDto } from '@/modules/cart/dto/request';
@@ -13,13 +14,13 @@ export class CartController {
     constructor(private readonly cartService: CartService) { }
 
     @Get()
-    getCart(@Req() req: Request) {
+    getCart(@Req() req: Request, @GetLanguage() lang: string) {
         const guestSessionId = req['guestSessionId'] as string;
         const user = req['user'] as JwtPayload;
         if (guestSessionId) {
-            return this.cartService.getCartGuest(guestSessionId);
+            return this.cartService.getCartGuest(guestSessionId, lang);
         }
-        return this.cartService.getCartUser(BigInt(user.sub));
+        return this.cartService.getCartUser(BigInt(user.sub), lang);
     }
 
     @Post('items')

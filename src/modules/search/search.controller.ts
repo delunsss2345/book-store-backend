@@ -1,3 +1,4 @@
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
 import { SearchBookItemDto } from '@/modules/search/dto/response';
@@ -14,8 +15,9 @@ export class SearchController {
     @Public()
     @Get('')
     @ApiOkResponse({ type: SearchBookItemDto, isArray: true })
-    searchSemantic(@Query() query: SearchBooksQueryDto) {
-        return this.searchService.searchBooks(query);
+    searchSemantic(@Query() query: SearchBooksQueryDto, @GetLanguage() lang: string) {
+        const effectiveLang = query.lang ?? lang;
+        return this.searchService.searchBooks({ ...query, lang: effectiveLang }, effectiveLang);
     }
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')

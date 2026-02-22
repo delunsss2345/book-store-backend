@@ -1,4 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -38,10 +39,12 @@ export class PublisherController {
     getPublisherBooks(
         @Param('publisherId') publisherId: string,
         @Query() query: GetPublisherBooksQueryDto,
+        @GetLanguage() lang: string,
     ) {
+        const effectiveLang = query.lang ?? lang;
         return this.publisherService.getPublisherBooks(
             parseBigIntRequired(publisherId, 'publisherId'),
-            query,
+            { ...query, lang: effectiveLang },
         );
     }
 }

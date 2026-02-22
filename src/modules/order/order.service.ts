@@ -1,6 +1,7 @@
 import { SHIPPING_FEE } from "@/common";
 import { ORDER_EXPIRED_SECONDS } from "@/common/constants/expired-constant";
 import { PrismaService } from "@/database";
+import { LanguageService } from "@/modules/language/language.service";
 import { CreateGuestOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
@@ -15,6 +16,7 @@ export class OrderService {
     constructor(
         private readonly paymentService: PaymentService,
         private readonly catalogRepository: CatalogRepository,
+        private readonly languageService: LanguageService,
         private readonly prisma: PrismaService
     ) { }
     getCartHash(items: CartItem[]) {
@@ -24,7 +26,7 @@ export class OrderService {
         return crypto.createHash("md5").update(content).digest("hex");
     };
 
-    async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO) {
+    async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, lang?: string) {
         return this.prisma.$transaction(async (tx) => {
             // tìm cart đầu tiên để thứ nhất vừa tính lại tiền 
             // vừa hash cart để chặn không cho order tạo lại nhiều lần nếu cart ko thay đổi 
@@ -57,7 +59,7 @@ export class OrderService {
             if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
 
             const [language, existing] = await Promise.all([
-                this.catalogRepository.findLanguageByCode(body.languageCode ?? "vi"),
+                this.languageService.resolveLanguage(lang),
                 tx.order.findFirst({
                     where: { cartHash },
                     include: {
@@ -114,7 +116,7 @@ export class OrderService {
             for (const item of cart.items) {
                 const bookVariant = await this.catalogRepository.findBookVariantById(
                     item.bookVariantId,
-                    (language?.id ?? 3) as any,
+                    language.id,
                 );
 
                 if (!bookVariant) throw new ForbiddenException("Book variant not found");

@@ -2,8 +2,7 @@ import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-// Khai báo include một lần để tái sử dụng và giữ type payload đồng nhất.
-const wishlistWithItemsInclude = Prisma.validator<Prisma.WishlistInclude>()({
+const buildWishlistWithItemsInclude = (languageId?: number): Prisma.WishlistInclude => ({
     items: {
         orderBy: { addedAt: 'desc' },
         select: {
@@ -22,6 +21,7 @@ const wishlistWithItemsInclude = Prisma.validator<Prisma.WishlistInclude>()({
                             coverImageUrl: true,
                             id: true,
                             translations: {
+                                ...(languageId ? { where: { languageId } } : {}),
                                 orderBy: { languageId: 'asc' },
                                 take: 1,
                                 select: {
@@ -38,49 +38,47 @@ const wishlistWithItemsInclude = Prisma.validator<Prisma.WishlistInclude>()({
     },
 });
 
-type WishlistWithItems = Prisma.WishlistGetPayload<{ include: typeof wishlistWithItemsInclude }>;
-
 @Injectable()
 export class WishlistRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findByUserId(userId: bigint): Promise<WishlistWithItems | null> {
+    async findByUserId(userId: bigint, languageId?: number) {
         const rows = await this.prisma.wishlist.findMany({
             where: {
                 userId,
                 deleteAt: null,
             },
-            include: wishlistWithItemsInclude,
+            include: buildWishlistWithItemsInclude(languageId),
             orderBy: { updatedAt: 'desc' },
             take: 1,
         });
         return rows[0] ?? null;
     }
 
-    async findByGuestSessionId(guestSessionId: string): Promise<WishlistWithItems | null> {
+    async findByGuestSessionId(guestSessionId: string, languageId?: number) {
         const rows = await this.prisma.wishlist.findMany({
             where: {
                 guestSessionId,
                 deleteAt: null,
             },
-            include: wishlistWithItemsInclude,
+            include: buildWishlistWithItemsInclude(languageId),
             orderBy: { updatedAt: 'desc' },
             take: 1,
         });
         return rows[0] ?? null;
     }
 
-    createByUserId(userId: bigint): Promise<WishlistWithItems> {
+    createByUserId(userId: bigint, languageId?: number) {
         return this.prisma.wishlist.create({
             data: { userId },
-            include: wishlistWithItemsInclude,
+            include: buildWishlistWithItemsInclude(languageId),
         });
     }
 
-    createByGuestSessionId(guestSessionId: string): Promise<WishlistWithItems> {
+    createByGuestSessionId(guestSessionId: string, languageId?: number) {
         return this.prisma.wishlist.create({
             data: { guestSessionId },
-            include: wishlistWithItemsInclude,
+            include: buildWishlistWithItemsInclude(languageId),
         });
     }
 

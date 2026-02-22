@@ -5,9 +5,10 @@ import {
     CatalogBookCardDto,
     CatalogRecommendRequestDto
 } from '@/modules/catalog/dto/response';
+import { LanguageService } from '@/modules/language/language.service';
 import { OrderItemRepository } from '@/modules/order-item/order-item.repository';
 import { OrderRepository } from '@/modules/order/order.repository';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventType as PrismaEventType } from '@prisma/client';
 import { CatalogRepository } from '../catalog/catalog.repository';
 import { CatalogService } from '../catalog/catalog.service';
@@ -45,6 +46,7 @@ export class UserEventService {
         private readonly bookSnapshotRepository: BookSnapshotRepository,
         private readonly catalogRepository: CatalogRepository,
         private readonly catalogService: CatalogService,
+        private readonly languageService: LanguageService,
     ) { }
 
     findEventTypeByUser(userId: bigint) {
@@ -165,7 +167,7 @@ export class UserEventService {
         ].map((id) => BigInt(id));
         if (!mapToRecommend.length) return [];
 
-        const language = await this.resolveLanguage(lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         // Variant đề xuất (tìm ra books gốc)
         const variantRecommend = await this.catalogRepository.findBooksVariantByIds(
@@ -340,18 +342,6 @@ export class UserEventService {
             soldCount: 0,
             createdAt: book.createdAt,
         };
-    }
-
-    private async resolveLanguage(
-        lang?: string,
-    ): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'vi').trim().toLowerCase();
-        const found = await this.catalogRepository.findLanguageByCode(normalized);
-        if (found) return found;
-
-        const fallback = await this.catalogRepository.findDefaultLanguage();
-        if (!fallback) throw new NotFoundException('No active language found');
-        return fallback;
     }
 
     private upsertScore(

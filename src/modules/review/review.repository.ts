@@ -35,7 +35,6 @@ export class ReviewRepository {
     }
 
     hasPurchasedBookVariant(userId: bigint, bookVariantId: bigint) {
-        console.log(bookVariantId)
         return this.prisma.orderItem.findFirst({
             where: {
                 order: {

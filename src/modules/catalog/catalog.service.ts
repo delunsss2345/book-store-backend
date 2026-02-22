@@ -1,3 +1,4 @@
+import { CATEGORY_CACHE_TTL, DETAIL_CACHE_TTL, HOME_CACHE_TTL, LIST_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
 import { CatalogBookListQueryDto, CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
 import {
     CatalogBookCardDto,
@@ -8,6 +9,7 @@ import {
     CatalogCategoryDto,
     CatalogCategoryTreeDto,
 } from '@/modules/catalog/dto/response';
+import { LanguageService } from '@/modules/language/language.service';
 import { parseBigIntOptional } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
@@ -19,11 +21,6 @@ import {
 import { Badge } from '@prisma/client';
 import type { Cache } from 'cache-manager';
 import { CatalogRepository } from './catalog.repository';
-
-const HOME_CACHE_TTL = 60_000;
-const LIST_CACHE_TTL = 45_000;
-const DETAIL_CACHE_TTL = 120_000;
-const CATEGORY_CACHE_TTL = 60_000;
 
 
 type CategoryRow = Awaited<
@@ -41,13 +38,14 @@ type BookDetailRow = BookDetailByIdRow | BookDetailBySlugRow;
 export class CatalogService {
     constructor(
         private readonly repo: CatalogRepository,
+        private readonly languageService: LanguageService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
 
     // Lấy giớ hạn không lấy phân trang
     async getCatalogHome(query: CatalogHomeQueryDto): Promise<any> {
         const limit = query.limit ?? 12;
-        const lang = await this.resolveLanguage(query.lang);
+        const lang = await this.languageService.resolveLanguage(query.lang);
         const cacheKey = `catalog:home:${lang.code}:${limit}`;
 
         return this.withCache(cacheKey, HOME_CACHE_TTL, async () => {
@@ -78,7 +76,7 @@ export class CatalogService {
     }
 
     async getCategories(lang?: string): Promise<CatalogCategoryTreeDto[]> {
-        const language = await this.resolveCategoryLanguage(lang);
+        const language = await this.languageService.resolveLanguage(lang);
         const cacheKey = `catalog:categories:${language.code}`;
 
         return this.withCache(cacheKey, CATEGORY_CACHE_TTL, async () => {
@@ -99,7 +97,7 @@ export class CatalogService {
             return new Map<string, CatalogBookCardDto>();
         }
 
-        const language = await this.resolveLanguage(lang);
+        const language = await this.languageService.resolveLanguage(lang);
         return this.buildCardVariantMap(parsedIds, language.id);
     }
 
@@ -177,7 +175,7 @@ export class CatalogService {
     async listBooks(query: CatalogBookListQueryDto): Promise<CatalogBookListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveCategoryLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const cacheKey = `catalog:books:lang=${language.code}:p${page}:l${limit}`;
 
@@ -219,7 +217,7 @@ export class CatalogService {
     async queryListBook(query: CatalogBookListQueryDto, ids: bigint[]): Promise<CatalogBookListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveCategoryLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const [total, rows] = await Promise.all([
             this.repo.countBooksForList(language.id),
@@ -255,7 +253,7 @@ export class CatalogService {
 
 
     async getBookDetail(bookId: bigint, lang?: string): Promise<CatalogBookDetailDto> {
-        const language = await this.resolveLanguage(lang);
+        const language = await this.languageService.resolveLanguage(lang);
         const cacheKey = `catalog:detail:${bookId.toString()}:${language.code}`;
 
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
@@ -266,7 +264,7 @@ export class CatalogService {
     }
 
     async getBookDetailBySlug(slug: string, lang?: string): Promise<CatalogBookDetailDto> {
-        const language = await this.resolveLanguage(lang);
+        const language = await this.languageService.resolveLanguage(lang);
         const normalizedSlug = slug?.trim();
         if (!normalizedSlug) {
             throw new BadRequestException('slug is required');
@@ -443,49 +441,4 @@ export class CatalogService {
         return [...new Map(ids.map((id) => [id.toString(), id])).values()];
     }
 
-    private async resolveCategoryLanguage(
-        lang?: string,
-    ): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'en').trim().toLowerCase();
-        if (normalized !== 'vi' && normalized !== 'en') {
-            throw new BadRequestException('lang must be one of: vi, en');
-        }
-
-        const cacheKey = `catalog:lang:${normalized}`;
-        const cached = await this.cache.get<{ id: number; code: string }>(cacheKey);
-        if (cached) return cached;
-
-        const found = await this.repo.findLanguageByCode(normalized);
-        if (!found) {
-            throw new NotFoundException(`Language "${normalized}" is not active`);
-        }
-
-        await this.cache.set(cacheKey, found, CATEGORY_CACHE_TTL);
-        return found;
-    }
-
-    private async resolveLanguage(
-        lang?: string,
-    ): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'vi').trim().toLowerCase();
-        const cacheKey = `catalog:lang:${normalized}`;
-
-        // GET cached xem ngôn ngữ đó đã cached chưa, tránh gọi db
-        const cached = await this.cache.get<{ id: number; code: string }>(cacheKey);
-        if (cached) return cached;
-
-        // Tìm trong bảng có ngôn ngữ này chưa
-        const found = await this.repo.findLanguageByCode(normalized);
-        if (found) {
-            await this.cache.set(cacheKey, found, CATEGORY_CACHE_TTL);
-            return found;
-        }
-
-        // Trả về ngôn ngữ đầu tiên active
-        const fallback = await this.repo.findDefaultLanguage();
-        if (!fallback) throw new NotFoundException('No active language found');
-
-        await this.cache.set(cacheKey, fallback, CATEGORY_CACHE_TTL);
-        return fallback;
-    }
 }

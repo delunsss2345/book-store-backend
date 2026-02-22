@@ -7,27 +7,27 @@ import { CatalogModule } from '@/modules/catalog';
 import { CategoryModule } from '@/modules/category/category.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
 import { HealthModule } from '@/modules/health/health.module';
+import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { ReviewModule } from '@/modules/review/review.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { WishlistModule } from '@/modules/wishlist/wishlist.module';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { LanguageMiddleware } from './common/middleware/language.middleware';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
+import { HooksModule } from './modules/hooks/hooks.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './modules/mail/mail.module';
+import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-import { PaymentModule } from './modules/payment/payment.module';
-import { OrderModule } from './modules/order/order.module';
-import { HooksModule } from './modules/hooks/hooks.module';
 
 @Module({
   imports: [
@@ -59,9 +59,14 @@ import { HooksModule } from './modules/hooks/hooks.module';
     WishlistModule,
     OrderModule,
     PaymentModule,
-    HooksModule
+    HooksModule,
+    LanguageModule,
   ],
 })
-export class AppModule {
+export class AppModule implements NestModule {
   static CONFIGURATION: TConfiguration = CONFIGURATION;
+
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LanguageMiddleware).forRoutes('*');
+  }
 }

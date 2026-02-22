@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { LanguageService } from '../language/language.service';
 import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
 import { GetPublisherBooksQueryDto } from './dto/request/get-publisher-books.query.dto';
 import { GetPublishersQueryDto } from './dto/request/get-publishers.query.dto';
@@ -10,7 +11,10 @@ import { PublisherRepository } from './publisher.repository';
 
 @Injectable()
 export class PublisherService {
-    constructor(private readonly publisherRepository: PublisherRepository) { }
+    constructor(
+        private readonly publisherRepository: PublisherRepository,
+        private readonly languageService: LanguageService,
+    ) { }
 
     async createPublisher(body: CreatePublisherRequestDto): Promise<PublisherItemResponseDto> {
         const created = await this.publisherRepository.createPublisher(body.defaultName);
@@ -54,7 +58,7 @@ export class PublisherService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const [total, rows] = await Promise.all([
             this.publisherRepository.countBooksByPublisher(publisherId, language.id),
@@ -81,15 +85,5 @@ export class PublisherService {
             totalPages: total ? Math.ceil(total / limit) : 0,
             items,
         };
-    }
-
-    private async resolveLanguage(lang?: string): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'en').trim().toLowerCase();
-        const found = await this.publisherRepository.findLanguageByCode(normalized);
-        if (!found) {
-            throw new NotFoundException(`Language "${normalized}" is not active`);
-        }
-
-        return found;
     }
 }

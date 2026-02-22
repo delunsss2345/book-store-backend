@@ -1,3 +1,4 @@
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
@@ -25,26 +26,26 @@ export class WishlistController {
 
     @Get()
     @ApiOkResponse()
-    getWish(@Req() request: Request) {
-        return this.wishlistService.getWishlist(request);
+    getWish(@Req() request: Request, @GetLanguage() lang: string) {
+        return this.wishlistService.getWishlist(request, lang);
     }
 
     @Post('items')
     @ApiOkResponse()
-    addWish(@Req() request: Request, @Body() body: AddWishItemRequestDto) {
-        return this.wishlistService.addWishItem(request, body);
+    addWish(@Req() request: Request, @Body() body: AddWishItemRequestDto, @GetLanguage() lang: string) {
+        return this.wishlistService.addWishItem(request, body, lang);
     }
 
     @Delete('items/:itemKey')
     @ApiOkResponse()
-    deleteWishItem(@Req() request: Request, @Param('itemKey') itemKey: string) {
+    deleteWishItem(@Req() request: Request, @Param('itemKey') itemKey: string, @GetLanguage() lang: string) {
         const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
-        return this.wishlistService.deleteWishItem(request, parsedItemId);
+        return this.wishlistService.deleteWishItem(request, parsedItemId, lang);
     }
 
     @Delete()
     @ApiOkResponse()
-    deleteWish(@Req() request: Request) {
-        return this.wishlistService.deleteWishlist(request);
+    deleteWish(@Req() request: Request, @GetLanguage() lang: string) {
+        return this.wishlistService.deleteWishlist(request, lang);
     }
 }

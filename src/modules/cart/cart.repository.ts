@@ -2,7 +2,7 @@ import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Cart, Prisma } from '@prisma/client';
 
-const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
+const buildCartWithItemsInclude = (languageId?: number): Prisma.CartInclude => ({
     items: {
         orderBy: { addedAt: 'desc' },
         select: {
@@ -22,6 +22,7 @@ const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
                             coverImageUrl: true,
                             id: true,
                             translations: {
+                                ...(languageId ? { where: { languageId } } : {}),
                                 orderBy: { languageId: 'asc' },
                                 take: 1,
                                 select: {
@@ -38,35 +39,33 @@ const cartWithItemsInclude = Prisma.validator<Prisma.CartInclude>()({
     },
 });
 
-type CartWithItems = Prisma.CartGetPayload<{ include: typeof cartWithItemsInclude }>;
-
 @Injectable()
 export class CartRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findByUserId(userId: bigint): Promise<CartWithItems | null> {
+    findByUserId(userId: bigint, languageId?: number) {
         return this.prisma.cart.findFirst({
             where: { userId },
             orderBy: { updatedAt: 'desc' },
-            include: cartWithItemsInclude,
+            include: buildCartWithItemsInclude(languageId),
         });
     }
 
-    createCartByGuestSessionId(guestSessionId: string): Promise<CartWithItems> {
+    createCartByGuestSessionId(guestSessionId: string, languageId?: number) {
         return this.prisma.cart.create({
             data: {
                 guestSessionId,
             },
-            include: cartWithItemsInclude,
+            include: buildCartWithItemsInclude(languageId),
         });
     }
 
-    createCartByUserId(userId: bigint): Promise<CartWithItems> {
+    createCartByUserId(userId: bigint, languageId?: number) {
         return this.prisma.cart.create({
             data: {
                 userId,
             },
-            include: cartWithItemsInclude,
+            include: buildCartWithItemsInclude(languageId),
         });
     }
 
@@ -83,10 +82,10 @@ export class CartRepository {
         });
     }
 
-    findByGuestSessionId(guestSessionId: string): Promise<CartWithItems | null> {
+    findByGuestSessionId(guestSessionId: string, languageId?: number) {
         return this.prisma.cart.findFirst({
             where: { guestSessionId },
-            include: cartWithItemsInclude,
+            include: buildCartWithItemsInclude(languageId),
             orderBy: { updatedAt: 'desc' },
         });
     }

@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { LanguageService } from '../language/language.service';
 import { CreateReviewRequestDto } from './dto/request/create-review.request.dto';
 import { GetBookReviewsQueryDto } from './dto/request/get-book-reviews.query.dto';
 import {
@@ -10,7 +11,9 @@ import { ReviewRepository } from './review.repository';
 
 @Injectable()
 export class ReviewService {
-    constructor(private readonly reviewRepository: ReviewRepository
+    constructor(
+        private readonly reviewRepository: ReviewRepository,
+        private readonly languageService: LanguageService,
     ) { }
 
 
@@ -65,7 +68,7 @@ export class ReviewService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(query.lang);
 
         const book = await this.reviewRepository.findBookBySlug(normalizedSlug, language.id);
         if (!book) {
@@ -100,15 +103,5 @@ export class ReviewService {
             totalPages: total ? Math.ceil(total / limit) : 0,
             items,
         };
-    }
-
-    private async resolveLanguage(lang?: string): Promise<{ id: number; code: string }> {
-        const normalized = (lang ?? 'en').trim().toLowerCase();
-        const found = await this.reviewRepository.findLanguageByCode(normalized);
-        if (!found) {
-            throw new NotFoundException(`Language "${normalized}" is not active`);
-        }
-
-        return found;
     }
 }

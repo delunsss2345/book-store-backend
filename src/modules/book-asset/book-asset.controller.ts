@@ -1,21 +1,38 @@
-import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { BookAssetService } from './book-asset.service';
+import {
+  Body,
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { imageFileFilter } from '@/utils/upload.util';
 import { UploadBookAssetRequestDto } from './dto/request/upload-book-asset.request.dto';
-import { UploadBookAssetResponseDto } from './dto/response/upload-book-asset.response.dto';
+import { BookAssetService } from './book-asset.service';
+import { Public } from '@/common/security/decorators/public.decorator';
 
 @ApiTags('admin')
 @Controller('admin/book-assets')
 export class BookAssetController {
-    constructor(private readonly bookAssetService: BookAssetService) { }
+  constructor(private readonly bookAssetService: BookAssetService) {}
 
-    @Post('upload')
-    @RequirePermissions(PermissionCode.ADMIN_UPDATE_BOOK)
-    @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: UploadBookAssetResponseDto })
-    uploadBookAsset(@Body() body: UploadBookAssetRequestDto) {
-        return this.bookAssetService.uploadBookAsset(body);
-    }
+  @Public()
+  @Post('upload')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadBookAssetRequestDto })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      fileFilter: imageFileFilter,
+      limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    }),
+  )
+  uploadBookAsset(
+    @Body() body: UploadBookAssetRequestDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.bookAssetService.uploadBookAsset({ ...body, file });
+  }
 }

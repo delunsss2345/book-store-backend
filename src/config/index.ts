@@ -1,4 +1,3 @@
-
 import { AppConfiguration } from '@/config/app.config';
 import { BaseConfiguration } from '@/config/base.config';
 import { JwtConfiguration } from '@/config/jwt.config';
@@ -8,27 +7,32 @@ import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { config } from 'dotenv';
 import { SepayConfiguration } from './sepay.config';
-config()
+import { R2Configuration } from './r2.config';
+config();
 class Configuration extends BaseConfiguration {
-    @ValidateNested()
-    @Type(() => AppConfiguration)
-    APP_CONFIG = new AppConfiguration();
+  @ValidateNested()
+  @Type(() => AppConfiguration)
+  APP_CONFIG = new AppConfiguration();
 
-    @ValidateNested()
-    @Type(() => JwtConfiguration)
-    JWT_CONFIG = new JwtConfiguration();
+  @ValidateNested()
+  @Type(() => JwtConfiguration)
+  JWT_CONFIG = new JwtConfiguration();
 
-    @ValidateNested()
-    @Type(() => RedisConfiguration)
-    REDIS_CONFIG = new RedisConfiguration();
+  @ValidateNested()
+  @Type(() => RedisConfiguration)
+  REDIS_CONFIG = new RedisConfiguration();
 
-    @ValidateNested()
-    @Type(() => NodemailerConfiguration)
-    NODEMAILER_CONFIG = new NodemailerConfiguration();
+  @ValidateNested()
+  @Type(() => NodemailerConfiguration)
+  NODEMAILER_CONFIG = new NodemailerConfiguration();
 
-    @ValidateNested()
-    @Type(() => SepayConfiguration)
-    SEPAY_CONFIG = new SepayConfiguration();
+  @ValidateNested()
+  @Type(() => SepayConfiguration)
+  SEPAY_CONFIG = new SepayConfiguration();
+
+  @ValidateNested()
+  @Type(() => R2Configuration)
+  R2_CONFIG = new R2Configuration();
 }
 export const CONFIGURATION = new Configuration();
 export type TConfiguration = typeof CONFIGURATION;

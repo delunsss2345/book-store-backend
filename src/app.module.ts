@@ -31,6 +31,8 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
+import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 
 @Module({
   imports: [
@@ -67,6 +69,8 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     PaymentModule,
     HooksModule,
     LanguageModule,
+    UploadsModule,
+    R2ServiceModule,
   ],
 })
 export class AppModule implements NestModule {

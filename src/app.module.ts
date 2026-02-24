@@ -1,7 +1,10 @@
 import { SecurityModule } from '@/common/security/security.module';
 import { CONFIGURATION, TConfiguration } from '@/config';
 import { RateLimitProvider } from '@/config/ratelimit.config';
+import { AdminModule } from '@/modules/admin/admin.module';
+import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
+import { BookAssetModule } from '@/modules/book-asset/book-asset.module';
 import { CartModule } from '@/modules/cart/cart.module';
 import { CatalogModule } from '@/modules/catalog';
 import { CategoryModule } from '@/modules/category/category.module';
@@ -45,6 +48,9 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     JobsModule,
     PermissionModule,
     RoleModule,
+    AuditLogModule,
+    AdminModule,
+    BookAssetModule,
     HealthModule,
     UserAddressModule,
     CatalogModule,

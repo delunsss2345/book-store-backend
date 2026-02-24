@@ -140,7 +140,7 @@ export class UserAddressRepository {
         });
     }
 
-    softDeleteByIdAndUserId(id: bigint, userId: bigint): Promise<{ success: boolean }> {
+    softDeleteByIdAndUserId(id: bigint, userId: bigint): Promise<{ success: boolean, deleteId: bigint }> {
         return this.prisma.$transaction(async (tx) => {
             const target = await tx.userAddress.findFirst({
                 where: {
@@ -201,7 +201,7 @@ export class UserAddressRepository {
                 }
             }
 
-            return { success: true };
+            return { deleteId: target.id, success: true };
         });
     }
 }

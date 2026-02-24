@@ -16,11 +16,11 @@ export class CartController {
     @Get()
     getCart(@Req() req: Request, @GetLanguage() lang: string) {
         const guestSessionId = req['guestSessionId'] as string;
-        const user = req['user'] as JwtPayload;
+        const user = req['user'] ;
         if (guestSessionId) {
             return this.cartService.getCartGuest(guestSessionId, lang);
         }
-        return this.cartService.getCartUser(BigInt(user.sub), lang);
+        return this.cartService.getCartUser(BigInt(user.id), lang);
     }
 
     @Post('items')

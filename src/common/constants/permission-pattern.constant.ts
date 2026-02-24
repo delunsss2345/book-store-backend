@@ -21,6 +21,10 @@ export enum PermissionCode {
     AUTHOR_CREATE = "author:create",
     PUBLISHER_CREATE = "publisher:create",
     CATEGORY_CREATE = "category:create",
+    ADMIN_CREATE_BOOK = "admin:create-book",
+    ADMIN_UPDATE_BOOK = "admin:update-book",
+    ADMIN_DELETE_BOOK = "admin:delete-book",
+    ADMIN_READ = "admin:read",
 
     AUTH_REGISTER = "auth:register",
     AUTH_LOGIN = "auth:login",

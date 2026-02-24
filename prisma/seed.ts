@@ -270,6 +270,30 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/categories',
       description: 'Create category',
     },
+    {
+      code: PermissionCode.ADMIN_CREATE_BOOK,
+      method: 'POST',
+      pathPattern: '/api/v1/admin/books',
+      description: 'Create admin book',
+    },
+    {
+      code: PermissionCode.ADMIN_UPDATE_BOOK,
+      method: 'PATCH',
+      pathPattern: '/api/v1/admin/books/:bookId',
+      description: 'Update admin book',
+    },
+    {
+      code: PermissionCode.ADMIN_DELETE_BOOK,
+      method: 'DELETE',
+      pathPattern: '/api/v1/admin/books/:bookId',
+      description: 'Soft delete admin book',
+    },
+    {
+      code: PermissionCode.ADMIN_READ,
+      method: 'GET',
+      pathPattern: '/api/v1/admin/*',
+      description: 'Read admin resources',
+    },
 
     {
       code: PermissionCode.AUTH_REGISTER,

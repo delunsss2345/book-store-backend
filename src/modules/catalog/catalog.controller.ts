@@ -2,7 +2,7 @@ import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import {
     CatalogBookListQueryDto,
@@ -40,6 +40,7 @@ export class CatalogController {
     @Public()
     @Get('books/:bookId')
     @ApiOkResponse({ type: CatalogBookDetailDto })
+    @ApiQuery({ name: 'lang', required: false })
     getBookDetail(
         @Param('bookId') bookId: string,
         @Query('lang') lang?: string,
@@ -52,6 +53,7 @@ export class CatalogController {
     @Public()
     @Get('books/slug/:slug')
     @ApiOkResponse({ type: CatalogBookDetailDto })
+    @ApiQuery({ name: 'lang', required: false })
     getBookDetailBySlug(
         @Param('slug') slug: string,
         @Query('lang') lang?: string,
@@ -63,6 +65,7 @@ export class CatalogController {
 
     @Public()
     @Get('categories')
+    @ApiQuery({ name: 'lang', required: false })
     @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
     getCategories(@Query() query: CatalogCategoriesQueryDto, @GetLanguage() lang: string) {
         const effectiveLang = query.lang ?? lang;

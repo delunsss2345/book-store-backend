@@ -24,6 +24,7 @@ export enum PermissionCode {
     ADMIN_CREATE_BOOK = "admin:create-book",
     ADMIN_UPDATE_BOOK = "admin:update-book",
     ADMIN_DELETE_BOOK = "admin:delete-book",
+    ADMIN_CREATE_BOOK_ALL = "admin:create-book-all",
     ADMIN_READ = "admin:read",
 
     AUTH_REGISTER = "auth:register",

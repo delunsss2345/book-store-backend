@@ -3,16 +3,17 @@ import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Delete, Get, Ip, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { AdminService } from '../admin.service';
 import {
     AdminBookListQueryDto,
     CreateAdminBookRequestDto,
     UpdateAdminBookRequestDto,
 } from '../dto/request';
 import { AdminBookItemResponseDto, AdminBookListResponseDto } from '../dto/response';
-import { AdminService } from '../admin.service';
 
 @ApiTags('admin')
 @Controller('admin/books')
@@ -30,6 +31,19 @@ export class AdminBookController {
     ) {
         const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
         return this.adminService.createBook(body, actorUserId, ip);
+    }
+
+    @Post("/all")
+    // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK_ALL)
+    @ApiBearerAuth('access-token')
+    @ApiOkResponse({ type: CreateAdminBookAllRequestDto })
+    createBookAll(
+        @Body() body: CreateAdminBookAllRequestDto,
+        @GetUser() user: JwtPayload,
+        @Ip() ip: string,
+    ) {
+        const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+        return this.adminService.createBookAll(body, actorUserId, ip);
     }
 
     @Patch(':bookId')
@@ -69,4 +83,9 @@ export class AdminBookController {
         const effectiveLang = query.lang ?? lang;
         return this.adminService.getBooks({ ...query, lang: effectiveLang });
     }
+
+
+
+
+
 }

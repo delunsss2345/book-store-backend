@@ -1,5 +1,9 @@
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { PrismaService } from '@/database';
+import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AuditLogService } from '@/modules/audit-log/audit-log.service';
+import { LanguageService } from '@/modules/language/language.service';
 import { generateSlug } from '@/utils/generateSlug.util';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
     BadRequestException,
     ConflictException,
@@ -7,9 +11,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '@/database';
-import { AuditLogService } from '@/modules/audit-log/audit-log.service';
-import { LanguageService } from '@/modules/language/language.service';
+import { AdminRepository } from './admin.repository';
 import {
     AdminBookListQueryDto,
     AdminBookSnapshotListQueryDto,
@@ -32,7 +34,6 @@ import {
     AdminUserListResponseDto,
     AdminUserRoleItemResponseDto,
 } from './dto/response';
-import { AdminRepository } from './admin.repository';
 
 type BookRow = Awaited<ReturnType<AdminRepository['findBookById']>>;
 type BookListRow = Awaited<ReturnType<AdminRepository['findBooks']>>[number];
@@ -96,6 +97,58 @@ export class AdminService {
         });
     }
 
+    async createBookAll(body: CreateAdminBookAllRequestDto, actorUserId: bigint, ip?: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const createBook = await this.adminRepository.createBook({
+                publisherId: this.parsePublisherId(body.publisherId),
+                publicationYear: body.publicationYear,
+                pageCount: body.pageCount,
+                weightGrams: body.weightGrams,
+                coverImageUrl: body.coverImageUrl,
+                actorUserId,
+            }, tx);
+
+
+            await Promise.all([
+                this.adminRepository.createBookTranslations(
+                    createBook.id,
+                    body.translations.map((t) => ({
+                        languageId: t.languageId,
+                        title: t.title,
+                        description: t.description,
+                        slug: generateSlug(t.title),
+                    })),
+                    tx
+                ),
+
+                this.adminRepository.createVariantsByBookId(
+                    createBook.id,
+                    body.variants.map((v) => ({
+                        format: v.format,
+                        edition: v.edition,
+                        isbn: v.isbn,
+                        costPrice: v.costPrice,
+                        price: v.price,
+                        currencyCode: v.currencyCode,
+                        stock: v.stock,
+                        isActive: false,
+                    })),
+                    tx
+                ),
+
+                this.adminRepository.createBookAuthors(
+                    createBook.id,
+                    body.authors ?? [],
+                    tx
+                ),
+            ]);
+            if (body.spec) {
+                await this.adminRepository.createBookSpecById(createBook.id, body.spec, tx);
+            }
+            const newBook = await this.adminRepository.findBookById(createBook.id, tx);
+            return this.toAdminBookItem(newBook!);
+        });
+    }
     async createBookTranslation(
         bookId: bigint,
         body: CreateAdminBookTranslationRequestDto,

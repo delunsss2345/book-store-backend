@@ -1,4 +1,5 @@
 import { PrismaService } from '@/database';
+import { CreateBookAuthorDto, CreateBookSpecDto, CreateBookTranslationDto, CreateBookVariantDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, RoleCode } from '@prisma/client';
 
@@ -78,6 +79,8 @@ export class AdminRepository {
         });
     }
 
+
+
     createBook(params: CreateAdminBookParams, tx?: Prisma.TransactionClient) {
         const db: DbClient = tx ?? this.prisma;
 
@@ -96,6 +99,107 @@ export class AdminRepository {
         });
     }
 
+    createBookAuthor(bookId: bigint, body: CreateBookAuthorDto, tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        return db.bookAuthor.create({
+            data: {
+                bookId: bookId,
+                authorId: BigInt(body.authorId),
+                isPrimary: body.isPrimary
+            }
+        })
+    }
+    createVariantById(bookId: bigint, body: CreateBookVariantDto, tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        return db.bookVariant.create({
+            data: {
+                bookId: bookId,
+                format: body.format,
+                edition: body.edition,
+                isbn: body.isbn,
+                costPrice: body.costPrice,
+                price: body.price,
+                currencyCode: body.currencyCode,
+                stock: body.stock,
+                isActive: body.isActive
+
+            }
+        })
+    }
+
+    createBookSpecById(bookId: bigint, body: CreateBookSpecDto, tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        return db.bookSpec.create({
+            data: {
+                bookId: bookId,
+                widthCm: body.widthCm,
+                heightCm: body.heightCm,
+                packaging: body.packaging,
+                thicknessCm: body.thicknessCm
+            }
+        })
+    }
+
+    createBookAuthors(bookId: bigint, bodies: CreateBookAuthorDto[], tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        const data: Prisma.BookAuthorCreateManyInput[] = (bodies ?? []).map((body) => ({
+            bookId,
+            authorId: BigInt(body.authorId),
+            isPrimary: body.isPrimary ?? false,
+        }));
+        if (data.length === 0) return Promise.resolve({ count: 0 });
+        return db.bookAuthor.createMany({ data, skipDuplicates: true });
+    }
+
+    createVariantsByBookId(bookId: bigint, bodies: CreateBookVariantDto[], tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        const data: Prisma.BookVariantCreateManyInput[] = (bodies ?? []).map((body) => ({
+            bookId,
+            format: body.format,
+            edition: body.edition ?? null,
+            isbn: body.isbn ?? null,
+            costPrice: body.costPrice as any,
+            price: body.price as any,
+            currencyCode: body.currencyCode ?? null,
+            stock: body.stock ?? null,
+            isActive: body.isActive ?? true,
+        }));
+        if (data.length === 0) return Promise.resolve({ count: 0 });
+        return db.bookVariant.createMany({ data, skipDuplicates: true });
+    }
+
+    createBookTranslations(bookId: bigint, bodies: CreateBookTranslationDto[], tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        const data: Prisma.BookTranslationCreateManyInput[] = (bodies ?? []).map((body) => ({
+            bookId,
+            languageId: body.languageId,
+            title: body.title,
+            description: body.description ?? null,
+            slug: body.slug ?? null,
+        }));
+        if (data.length === 0) return Promise.resolve({ count: 0 });
+        return db.bookTranslation.createMany({ data, skipDuplicates: true });
+    }
+
+    createBookSpecsById(bookId: bigint, body: CreateBookSpecDto, tx?: Prisma.TransactionClient) {
+        const db: DbClient = tx ?? this.prisma;
+        return db.bookSpec.upsert({
+            where: { bookId },
+            create: {
+                bookId,
+                widthCm: body.widthCm ?? null,
+                heightCm: body.heightCm ?? null,
+                thicknessCm: body.thicknessCm ?? null,
+                packaging: body.packaging ?? null,
+            },
+            update: {
+                widthCm: body.widthCm ?? null,
+                heightCm: body.heightCm ?? null,
+                thicknessCm: body.thicknessCm ?? null,
+                packaging: body.packaging ?? null,
+            },
+        });
+    }
     findBookById(bookId: bigint, tx?: Prisma.TransactionClient) {
         const db: DbClient = tx ?? this.prisma;
 

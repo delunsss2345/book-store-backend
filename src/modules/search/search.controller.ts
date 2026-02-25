@@ -26,4 +26,11 @@ export class SearchController {
     reindexBooks() {
         return this.searchService.reindexBooks();
     }
+
+    @Public()
+    @Get('/isbn')
+    @ApiOkResponse({ type: SearchBookItemDto, isArray: true })
+    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string) {
+        return this.searchService.searchISBN(isbn);
+    }
 }

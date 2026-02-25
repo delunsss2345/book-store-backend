@@ -37,3 +37,4 @@ export class UploadsController {
     return this.uploadsService.uploadFile(file);
   }
 }
+

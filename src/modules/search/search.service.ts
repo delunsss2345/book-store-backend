@@ -1,4 +1,5 @@
 import { CatalogService } from '@/modules/catalog/catalog.service';
+import { GeminiService } from '@/modules/gemini/gemini.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PineconeService } from '@/modules/pinecone/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
@@ -12,6 +13,7 @@ export class SearchService {
         private readonly catalogService: CatalogService,
         private readonly languageService: LanguageService,
         private readonly pineconeService: PineconeService,
+        private readonly geminiService: GeminiService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
     // Search sách theo query , topK format maxPrice categoryId
@@ -71,5 +73,12 @@ export class SearchService {
 
     async reindexBooks() {
         return this.pineconeService.fullReindexBooks();
+    }
+
+    async searchISBN(isbn: string) {
+        const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+        const json = await response.json();
+
+        return this.geminiService.generateBookData(json);
     }
 }

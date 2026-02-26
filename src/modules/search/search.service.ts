@@ -1,8 +1,10 @@
+import { AppModule } from '@/app.module';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { GeminiService } from '@/modules/gemini/gemini.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PineconeService } from '@/modules/pinecone/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
+import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
 import { validateISBN } from '@/utils/parseIsbn.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
@@ -80,13 +82,13 @@ export class SearchService {
         if (validateISBN(isbn) === false) {
             throw new BadRequestException('Invalid ISBN format input failed');
         };
-        // const key = `isbn:${isbn}:lang:${langs}`;
-        // const cached = await this.cache.get<QuickBookFillResponseDto>(key);
-        // if (cached) return cached;
-        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+        const key = `isbn:${isbn}:lang:${langs}`;
+        const cached = await this.cache.get<QuickBookFillResponseDto>(key);
+        if (cached) return cached;
+        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${AppModule.CONFIGURATION.GOOGLE_CONFIG.GOOGLE_API_KEY_BOOK}`);
         const json = await response.json();
         const book = await this.geminiService.generateBookData(json, langs);
-        // await this.cache.set(key, book);
+        await this.cache.set(key, book);
         return book
     }
 }

@@ -51,10 +51,14 @@ export class CreateBookSpecDto {
 
 export class CreateBookTranslationDto {
     @ApiProperty({ example: 1, description: 'languageId (ví dụ 1=vi, 2=en)' })
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
+    @IsOptional()
     languageId!: number;
+
+    @ApiProperty({ example: 1, description: 'languageId (ví dụ vi, en)' })
+    @IsString()
+    @IsOptional()
+    languageCode?: string;
+
 
     @ApiProperty({ example: 'Dế Mèn Phiêu Lưu Ký', maxLength: 500 })
     @IsString()

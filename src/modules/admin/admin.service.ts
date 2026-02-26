@@ -169,6 +169,8 @@ export class AdminService {
             );
         }
 
+        const language = await this.languageService.resolveLanguage(body.translations[0].languageCode);
+
         return this.prisma.$transaction(async (tx) => {
             const createBook = await this.adminRepository.createBook({
                 publisherId,
@@ -180,15 +182,14 @@ export class AdminService {
             }, tx);
 
             const createTasks: Promise<unknown>[] = [
-                this.adminRepository.createBookTranslations(
-                    createBook.id,
-                    body.translations.map((t) => ({
-                        languageId: t.languageId,
-                        title: t.title,
-                        description: t.description,
-                        slug: generateSlug(t.title),
-                    })),
-                    tx
+                this.adminRepository.createBookTranslation(
+                    {
+                        bookId: createBook.id,
+                        languageId: language.id,
+                        title: body.translations[0].title,
+                        description: body.translations[0].description,
+                        slug: body.translations[0].slug ?? generateSlug(body.translations[0].title)
+                    }, tx
                 ),
                 this.adminRepository.createVariantsByBookId(
                     createBook.id,

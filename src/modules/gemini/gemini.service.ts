@@ -1,4 +1,4 @@
-import { BOOK_TRANSLATION_SCHEMA } from '@/common/constants/ai-schema.constant';
+import { QUICK_BOOK_FILL_SCHEMA } from '@/common/constants/ai-schema.constant';
 import { GoogleGenAI } from '@google/genai';
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 
@@ -68,30 +68,54 @@ export class GeminiService {
         }
     }
 
-    async generateBookData(data: any) {
+    async generateBookData(data: any, lang: string) {
         const key = Object.keys(data)[0];
         const books = data[key];
         const prompt = `
-        Dựa vào dữ liệu này: ${JSON.stringify(books)}
-        Hãy trả về JSON format cho sách:
-        - title: Dịch "${books.title}" sang tiếng Việt chuyên ngành lập trình.
-        - description: Dựa vào các đoạn trích (excerpts) và chủ đề (subjects), viết 1 đoạn mô tả hấp dẫn bằng tiếng Việt.
-        - pageCount: ${books.number_of_pages}
-        - publicationYear: Lấy 4 số từ "${books.publish_date}"
-        - coverImageUrl: "${books.cover.large}"
-    `;
+        Dữ liệu nguồn:
+        ${JSON.stringify(books)}
+
+        Hãy trả về DUY NHẤT 1 JSON object hợp lệ theo QUICK_BOOK_FILL_SCHEMA.
+        KHÔNG markdown. KHÔNG giải thích. KHÔNG thêm field ngoài schema.
+
+        Quy tắc:
+        - TUYỆT ĐỐI không trả các giá trị placeholder như: "defaultName", "string", "unknown", "N/A", "tbd", "null".
+        - TUYỆT ĐỐI không bịa chi tiết cụ thể không có trong dữ liệu (số liệu, giải thưởng, nhân vật, tình tiết, claim xác thực).
+        - Nếu không có dữ liệu chắc chắn cho field nào thì BỎ field đó (không đưa vào JSON),
+        NGOẠI TRỪ description: description BẮT BUỘC phải có.
+
+        Mapping:
+        - title: dịch "${books?.title ?? ""}" sang tiếng ${lang}, tự nhiên, max 100 ký tự.
+        - authorName: lấy từ books.authors (hoặc trường tương đương). Nếu nhiều tác giả, nối bằng ", ". Nếu không có thì bỏ field.
+        - publisherName: lấy từ books.publishers (hoặc trường tương đương). Nếu không có thì bỏ field.
+        - publicationYear: lấy 4 chữ số từ "${books?.publish_date ?? ""}". Nếu không tách được thì bỏ field.
+        - pageCount: lấy từ books.number_of_pages. Nếu không có thì bỏ field.
+        - coverImageUrl: ưu tiên books.cover.large nếu là URL http/https hợp lệ. Nếu không hợp lệ thì bỏ field.
+        - spec.widthCm/spec.heightCm/spec.thicknessCm: CHỈ điền nếu dữ liệu nguồn có giá trị rõ ràng; không có thì bỏ spec hoặc bỏ từng field.
+        - weightGrams: CHỈ điền nếu dữ liệu nguồn có giá trị rõ ràng; không có thì bỏ.
+
+        description (BẮT BUỘC):
+        - Viết 2–4 câu bằng ${lang}, giọng văn giới thiệu/marketing, dễ đọc.
+        - Ưu tiên dùng excerpts và subjects nếu có.
+        - Nếu thiếu excerpts/subjects, vẫn phải viết mô tả "an toàn" dựa trên các dữ liệu có sẵn:
+        title + authorName/publisherName/publicationYear/pageCount (nếu có).
+        - Không nêu chi tiết nội dung cụ thể (plot/tình tiết), không khẳng định thể loại quá chắc nếu không có dữ liệu.
+        - Không dùng placeholder, không để rỗng.
+
+        Chỉ trả JSON.
+        `;
         const res = await this.client.models.generateContent({
             model: this.model,
             contents: [{ role: "user", parts: [{ text: prompt + "\nCHỈ TRẢ VỀ JSON, KHÔNG THÊM BẤT KỲ TEXT NÀO." }] }],
             config: {
                 responseMimeType: "application/json",
-                responseJsonSchema: BOOK_TRANSLATION_SCHEMA,
+                responseJsonSchema: QUICK_BOOK_FILL_SCHEMA,
                 temperature: 0.2,
                 maxOutputTokens: 320,
                 thinkingConfig: { thinkingBudget: 0 },
             },
         });
-        const text = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+        const text = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}"; // dữ liệu trả về có candidate chứa content parts
         const obj = this.safeJsonParse(text);
         return obj;
     }

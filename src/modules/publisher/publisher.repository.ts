@@ -6,12 +6,10 @@ export class PublisherRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     createPublisher(defaultName: string) {
-        return this.prisma.publisher.create({
-            data: { defaultName },
-            select: {
-                id: true,
-                defaultName: true,
-            },
+        return this.prisma.publisher.upsert({
+            where: { defaultName: defaultName.toLocaleLowerCase() },
+            update: {},
+            create: { defaultName }
         });
     }
 

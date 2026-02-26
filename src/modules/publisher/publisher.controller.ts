@@ -1,8 +1,8 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
-import { Public } from '@/common/security/decorators/public.decorator';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
@@ -47,4 +47,5 @@ export class PublisherController {
             { ...query, lang: effectiveLang },
         );
     }
+
 }

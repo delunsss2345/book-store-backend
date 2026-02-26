@@ -36,7 +36,7 @@ export class AdminBookController {
     @Post("/all")
     // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK_ALL)
     @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: CreateAdminBookAllRequestDto })
+    @ApiOkResponse({ type: AdminBookItemResponseDto })
     createBookAll(
         @Body() body: CreateAdminBookAllRequestDto,
         @GetUser() user: JwtPayload,
@@ -83,9 +83,4 @@ export class AdminBookController {
         const effectiveLang = query.lang ?? lang;
         return this.adminService.getBooks({ ...query, lang: effectiveLang });
     }
-
-
-
-
-
 }

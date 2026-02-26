@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { LanguageService } from '../language/language.service';
 import { BookAuthorService } from '../book-author/book-author.service';
+import { LanguageService } from '../language/language.service';
+import { AuthorRepository } from './author.repository';
 import { CreateAuthorRequestDto } from './dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from './dto/request/get-author-books.query.dto';
 import { GetAuthorsQueryDto } from './dto/request/get-authors.query.dto';
@@ -8,7 +9,6 @@ import { AuthorBookItemResponseDto } from './dto/response/author-book-item.respo
 import { AuthorBookListResponseDto } from './dto/response/author-book-list.response.dto';
 import { AuthorItemResponseDto } from './dto/response/author-item.response.dto';
 import { AuthorListResponseDto } from './dto/response/author-list.response.dto';
-import { AuthorRepository } from './author.repository';
 
 @Injectable()
 export class AuthorService {
@@ -24,6 +24,30 @@ export class AuthorService {
             id: created.id.toString(),
             name: created.defaultName,
         };
+    }
+
+    async createAuthorMany(defaultNames: string[]): Promise<AuthorItemResponseDto[]> {
+        const normalizedNames = Array.from(
+            new Map(
+                (defaultNames ?? [])
+                    .map((name) => name.trim())
+                    .filter((name) => name.length > 0)
+                    .map((name) => [name.toLowerCase(), name]),
+            ).values(),
+        );
+
+        if (normalizedNames.length === 0) {
+            return [];
+        }
+
+        const createdAuthors = await Promise.all(
+            normalizedNames.map((name) => this.authorRepository.createAuthor(name)),
+        );
+
+        return createdAuthors.map((author) => ({
+            id: author.id.toString(),
+            name: author.defaultName,
+        }));
     }
 
     async getAuthors(query: GetAuthorsQueryDto): Promise<AuthorListResponseDto> {

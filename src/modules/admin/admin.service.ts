@@ -1,7 +1,9 @@
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AuditLogService } from '@/modules/audit-log/audit-log.service';
+import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
+import { PublisherService } from '@/modules/publisher/publisher.service';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
@@ -11,7 +13,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AdminRepository } from './admin.repository';
+import { AdminRepository, CreateBookAuthorLinkInput } from './admin.repository';
 import {
     AdminBookListQueryDto,
     AdminBookSnapshotListQueryDto,
@@ -48,6 +50,8 @@ export class AdminService {
         private readonly adminRepository: AdminRepository,
         private readonly languageService: LanguageService,
         private readonly auditLogService: AuditLogService,
+        private readonly publisherService: PublisherService,
+        private readonly authorService: AuthorService,
         private readonly prisma: PrismaService,
     ) { }
 
@@ -97,10 +101,77 @@ export class AdminService {
         });
     }
 
+    // Tạo sách cùng 1 lúc nhiều phần variant, translation, author
     async createBookAll(body: CreateAdminBookAllRequestDto, actorUserId: bigint, ip?: string) {
+        const normalizedPublisherName = body.publisherName?.trim();
+        if (!normalizedPublisherName) {
+            throw new BadRequestException('publisherName is required');
+        }
+
+        const publisher = await this.publisherService.createPublisher({
+            defaultName: normalizedPublisherName,
+        });
+
+        const publisherId = this.parsePublisherId(publisher.id);
+        if (!publisherId) {
+            throw new BadRequestException('Invalid publisher id');
+        }
+
+        const normalizedAuthorMap = new Map<string, { name: string; isPrimary: boolean }>();
+        for (const author of body.authors ?? []) {
+            const normalizedAuthorName = author.authorName?.trim();
+            if (!normalizedAuthorName) {
+                continue;
+            }
+
+            const key = normalizedAuthorName.toLowerCase();
+            const existed = normalizedAuthorMap.get(key);
+            if (existed) {
+                existed.isPrimary = existed.isPrimary || Boolean(author.isPrimary);
+                continue;
+            }
+
+            normalizedAuthorMap.set(key, {
+                name: normalizedAuthorName,
+                isPrimary: Boolean(author.isPrimary),
+            });
+        }
+
+        const normalizedAuthors = Array.from(normalizedAuthorMap.values());
+        let bookAuthorsPayload: CreateBookAuthorLinkInput[] = [];
+
+        if (normalizedAuthors.length > 0) {
+            const createdAuthors = await this.authorService.createAuthorMany(
+                normalizedAuthors.map((author) => author.name),
+            );
+
+            const authorIdByName = new Map<string, bigint>(
+                createdAuthors.map((author) => [
+                    author.name.trim().toLowerCase(),
+                    parseBigIntRequired(author.id, 'author.id'),
+                ]),
+            );
+
+            bookAuthorsPayload = normalizedAuthors.reduce<CreateBookAuthorLinkInput[]>(
+                (acc, author) => {
+                    const authorId = authorIdByName.get(author.name.toLowerCase());
+                    if (!authorId) {
+                        return acc;
+                    }
+
+                    acc.push({
+                        authorId,
+                        isPrimary: author.isPrimary,
+                    });
+                    return acc;
+                },
+                [],
+            );
+        }
+
         return this.prisma.$transaction(async (tx) => {
             const createBook = await this.adminRepository.createBook({
-                publisherId: this.parsePublisherId(body.publisherId),
+                publisherId,
                 publicationYear: body.publicationYear,
                 pageCount: body.pageCount,
                 weightGrams: body.weightGrams,
@@ -108,8 +179,7 @@ export class AdminService {
                 actorUserId,
             }, tx);
 
-
-            await Promise.all([
+            const createTasks: Promise<unknown>[] = [
                 this.adminRepository.createBookTranslations(
                     createBook.id,
                     body.translations.map((t) => ({
@@ -120,7 +190,6 @@ export class AdminService {
                     })),
                     tx
                 ),
-
                 this.adminRepository.createVariantsByBookId(
                     createBook.id,
                     body.variants.map((v) => ({
@@ -135,13 +204,18 @@ export class AdminService {
                     })),
                     tx
                 ),
+            ];
 
-                this.adminRepository.createBookAuthors(
+            if (bookAuthorsPayload.length > 0) {
+                createTasks.push(this.adminRepository.createBookAuthors(
                     createBook.id,
-                    body.authors ?? [],
+                    bookAuthorsPayload,
                     tx
-                ),
-            ]);
+                ));
+            }
+
+            await Promise.all(createTasks);
+
             if (body.spec) {
                 await this.adminRepository.createBookSpecById(createBook.id, body.spec, tx);
             }

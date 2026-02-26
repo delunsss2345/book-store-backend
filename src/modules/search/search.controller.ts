@@ -29,8 +29,8 @@ export class SearchController {
 
     @Public()
     @Get('/isbn')
-    @ApiOkResponse({ type: SearchBookItemDto, isArray: true })
-    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string) {
-        return this.searchService.searchISBN(isbn);
+    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string, @Query('lang') language?: string) {
+        const langs = language ?? lang;
+        return this.searchService.searchISBN(isbn, langs);
     }
 }

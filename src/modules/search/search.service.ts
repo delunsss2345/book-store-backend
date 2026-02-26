@@ -3,6 +3,8 @@ import { GeminiService } from '@/modules/gemini/gemini.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PineconeService } from '@/modules/pinecone/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
+import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
+import { validateISBN } from '@/utils/parseIsbn.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
@@ -75,10 +77,17 @@ export class SearchService {
         return this.pineconeService.fullReindexBooks();
     }
 
-    async searchISBN(isbn: string) {
+    async searchISBN(isbn: string, langs: string) {
+        if (validateISBN(isbn) === false) {
+            throw new BadRequestException('Invalid ISBN format input failed');
+        };
+        const key = `isbn:${isbn}:lang:${langs}`;
+        const cached = await this.cache.get<QuickBookFillResponseDto>(key);
+        if (cached) return cached;
         const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
         const json = await response.json();
-
-        return this.geminiService.generateBookData(json);
+        const book = await this.geminiService.generateBookData(json, langs);
+        await this.cache.set(key, book);
+        return book
     }
 }

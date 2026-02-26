@@ -1,5 +1,9 @@
 import { PrismaService } from '@/database';
-import { CreateBookAuthorDto, CreateBookSpecDto, CreateBookTranslationDto, CreateBookVariantDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import {
+    CreateBookSpecDto,
+    CreateBookTranslationDto,
+    CreateBookVariantDto,
+} from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, RoleCode } from '@prisma/client';
 
@@ -29,6 +33,11 @@ export type CreateAdminBookTranslationParams = {
     title: string;
     description?: string;
     slug: string;
+};
+
+export type CreateBookAuthorLinkInput = {
+    authorId: bigint;
+    isPrimary?: boolean;
 };
 
 const adminBookSelect = {
@@ -99,12 +108,12 @@ export class AdminRepository {
         });
     }
 
-    createBookAuthor(bookId: bigint, body: CreateBookAuthorDto, tx?: Prisma.TransactionClient) {
+    createBookAuthor(bookId: bigint, body: CreateBookAuthorLinkInput, tx?: Prisma.TransactionClient) {
         const db: DbClient = tx ?? this.prisma;
         return db.bookAuthor.create({
             data: {
                 bookId: bookId,
-                authorId: BigInt(body.authorId),
+                authorId: body.authorId,
                 isPrimary: body.isPrimary
             }
         })
@@ -140,11 +149,11 @@ export class AdminRepository {
         })
     }
 
-    createBookAuthors(bookId: bigint, bodies: CreateBookAuthorDto[], tx?: Prisma.TransactionClient) {
+    createBookAuthors(bookId: bigint, bodies: CreateBookAuthorLinkInput[], tx?: Prisma.TransactionClient) {
         const db: DbClient = tx ?? this.prisma;
         const data: Prisma.BookAuthorCreateManyInput[] = (bodies ?? []).map((body) => ({
             bookId,
-            authorId: BigInt(body.authorId),
+            authorId: body.authorId,
             isPrimary: body.isPrimary ?? false,
         }));
         if (data.length === 0) return Promise.resolve({ count: 0 });

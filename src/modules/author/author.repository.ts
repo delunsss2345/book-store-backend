@@ -6,12 +6,10 @@ export class AuthorRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     createAuthor(defaultName: string) {
-        return this.prisma.author.create({
-            data: { defaultName },
-            select: {
-                id: true,
-                defaultName: true,
-            },
+        return this.prisma.author.upsert({
+            where: { defaultName },
+            update: {},
+            create: { defaultName }
         });
     }
 

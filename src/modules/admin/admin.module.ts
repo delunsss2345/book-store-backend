@@ -1,5 +1,7 @@
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
+import { AuthorModule } from '@/modules/author/author.module';
 import { LanguageModule } from '@/modules/language/language.module';
+import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { Module } from '@nestjs/common';
 import { AdminRepository } from './admin.repository';
 import { AdminService } from './admin.service';
@@ -11,7 +13,7 @@ import { AdminOrderDetailController } from './controllers/admin-order-detail.con
 import { AdminUserController } from './controllers/admin-user.controller';
 
 @Module({
-    imports: [LanguageModule, AuditLogModule],
+    imports: [LanguageModule, AuditLogModule, PublisherModule, AuthorModule],
     controllers: [
         AdminBookController,
         AdminBookTranslationController,

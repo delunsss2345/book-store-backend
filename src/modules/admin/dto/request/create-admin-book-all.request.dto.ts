@@ -75,10 +75,11 @@ export class CreateBookTranslationDto {
 }
 
 export class CreateBookAuthorDto {
-    @ApiProperty({ example: '12', description: 'authorId (BigInt -> string)' })
+    @ApiProperty({ example: 'Tô Hoài', description: 'Tên tác giả' })
     @IsString()
     @IsNotEmpty()
-    authorId!: string;
+    @MaxLength(200)
+    authorName!: string;
 
     @ApiPropertyOptional({ example: true, default: false })
     @IsOptional()
@@ -139,10 +140,11 @@ export class CreateBookVariantDto {
 
 export class CreateAdminBookAllRequestDto {
     // Publisher
-    @ApiPropertyOptional({ example: '1', description: 'publisherId (BigInt -> string)' })
-    @IsOptional()
+    @ApiProperty({ example: 'NXB Kim Đồng', description: 'Tên nhà xuất bản' })
     @IsString()
-    publisherId?: string;
+    @IsNotEmpty()
+    @MaxLength(200)
+    publisherName!: string;
 
     // Các thông tin “spec-like” bạn đang để ở Book level
     @ApiPropertyOptional({ example: 2026 })

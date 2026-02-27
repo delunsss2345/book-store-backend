@@ -1,8 +1,7 @@
 import { PrismaService } from '@/database';
 import {
     CreateBookSpecDto,
-    CreateBookTranslationDto,
-    CreateBookVariantDto,
+    CreateBookVariantDto
 } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, RoleCode } from '@prisma/client';
@@ -177,18 +176,18 @@ export class AdminRepository {
         return db.bookVariant.createMany({ data, skipDuplicates: true });
     }
 
-    createBookTranslations(bookId: bigint, bodies: CreateBookTranslationDto[], tx?: Prisma.TransactionClient) {
-        const db: DbClient = tx ?? this.prisma;
-        const data: Prisma.BookTranslationCreateManyInput[] = (bodies ?? []).map((body) => ({
-            bookId,
-            languageId: body.languageId,
-            title: body.title,
-            description: body.description ?? null,
-            slug: body.slug ?? null,
-        }));
-        if (data.length === 0) return Promise.resolve({ count: 0 });
-        return db.bookTranslation.createMany({ data, skipDuplicates: true });
-    }
+    // createBookTranslations(bookId: bigint, bodies: CreateBookTranslationDto[], tx?: Prisma.TransactionClient) {
+    //     const db: DbClient = tx ?? this.prisma;
+    //     const data: Prisma.BookTranslationCreateManyInput[] = (bodies ?? []).map((body) => ({
+    //         bookId,
+    //         languageId: body.languageId,
+    //         title: body.title,
+    //         description: body.description ?? null,
+    //         slug: body.slug ?? null,
+    //     }));
+    //     if (data.length === 0) return Promise.resolve({ count: 0 });
+    //     return db.bookTranslation.createMany({ data, skipDuplicates: true });
+    // }
 
     createBookSpecsById(bookId: bigint, body: CreateBookSpecDto, tx?: Prisma.TransactionClient) {
         const db: DbClient = tx ?? this.prisma;

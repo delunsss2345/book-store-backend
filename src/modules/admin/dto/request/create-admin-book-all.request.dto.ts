@@ -50,10 +50,6 @@ export class CreateBookSpecDto {
 }
 
 export class CreateBookTranslationDto {
-    @ApiProperty({ example: 1, description: 'languageId (ví dụ 1=vi, 2=en)' })
-    @IsOptional()
-    languageId!: number;
-
     @ApiProperty({ example: 1, description: 'languageId (ví dụ vi, en)' })
     @IsString()
     @IsOptional()

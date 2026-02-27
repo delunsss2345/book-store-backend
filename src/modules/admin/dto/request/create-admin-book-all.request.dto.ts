@@ -88,6 +88,10 @@ export class CreateBookAuthorDto {
     isPrimary?: boolean;
 }
 
+export class CreateCategoriesDto {
+    categoryId: bigint
+}
+
 export class CreateBookVariantDto {
     @ApiProperty({ enum: BookFormat, example: BookFormat.PAPERBACK })
     @IsEnum(BookFormat)
@@ -224,6 +228,13 @@ export class CreateAdminBookAllRequestDto {
     @ValidateNested({ each: true })
     @Type(() => CreateBookVariantDto)
     variants!: CreateBookVariantDto[];
+
+
+    @IsArray()
+    @ArrayMinSize(1)
+    @ValidateNested({ each: true })
+    @Type(() => CreateCategoriesDto)
+    categories!: CreateCategoriesDto[]
 }
 
 

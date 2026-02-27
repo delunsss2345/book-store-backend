@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Badge } from '@prisma/client';
-import { CatalogBookVariantDto, CatalogCategoryDto } from './catalog-book-card.dto';
+import { CatalogBookCardDto, CatalogBookVariantDto, CatalogCategoryDto } from './catalog-book-card.dto';
 
 export class CatalogBookSpecDto {
     @ApiPropertyOptional({ example: '14.50' })
@@ -67,4 +67,7 @@ export class CatalogBookDetailDto {
 
     @ApiProperty({ type: Date })
     createdAt: Date;
+
+    @ApiProperty({ type: CatalogBookCardDto })
+    recommend?: CatalogBookCardDto[];
 }

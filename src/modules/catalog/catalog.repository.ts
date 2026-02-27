@@ -593,7 +593,59 @@ export class CatalogRepository {
             ratingCount: ratingAgg._count.rating ?? 0,
         };
     }
-
+    async findBookAlikeCategory(bookId: bigint, categoriesIds: bigint[]) {
+        return this.prisma.book.findMany({
+            where: {
+                id: { not: bookId },
+                categories: {
+                    some: {
+                        categoryId: {
+                            in: categoriesIds
+                        }
+                    }
+                }
+            },
+            select: {
+                id: true,
+                coverImageUrl: true,
+                translations: {
+                    select: {
+                        title: true,
+                        slug: true,
+                    },
+                    take: 1
+                },
+                categories: {
+                    select: {
+                        category: {
+                            select: {
+                                id: true,
+                                parentId: true,
+                                sortOrder: true,
+                                categoryTranslation: {
+                                    select: { name: true, slug: true },
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+                variants: {
+                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
+                    select: {
+                        id: true,
+                        format: true,
+                        edition: true,
+                        isbn: true,
+                        price: true,
+                        currencyCode: true,
+                        stock: true,
+                    },
+                    take: 1
+                }
+            }
+        })
+    }
 
     // Gom review lại sau đó tính trung bình rate của review là bao nhiêu sao 
     // Điểm số lượng sách được review 

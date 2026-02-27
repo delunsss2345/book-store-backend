@@ -275,9 +275,39 @@ export class CatalogService {
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
             const book = await this.repo.findBookDetailBySlug(normalizedSlug, language.id);
             if (!book) throw new NotFoundException('Book not found');
+            const bookIds = new Set(book.categories.map((c) => c.category.id));
+
+            const bookSame = await this.repo.findBookAlikeCategory(book.id, Array.from(bookIds));
+
+            const scored = bookSame
+                .map((b) => {
+                    const otherIds = b.categories.map((c) => c.category.id);
+                    const score = this.calculateJaccard(Array.from(bookIds), otherIds);
+                    return { id: b.id, score, book: b };
+                })
+                .sort((a, b) => Number(b.score) - Number(a.score));
+
+            const top = scored.slice(0, 10); // tính
+            console.log(top);
             return this.toBookDetail(book, normalizedSlug);
         });
     }
+
+    // Thuật toán độ tương đồng Jaccard (Intersection over Union)
+    calculateJaccard(currentCategories: bigint[], targetCategories: bigint[]): number {
+        const setA = new Set(currentCategories);
+        const setB = new Set(targetCategories);
+
+        // Tìm phần giao (Intersection) (xem giống nhau bao nhiêu)
+        const intersection = new Set([...setA].filter(x => setB.has(x)));
+
+        // Tìm phần hợp (Union) (lọc ra các trùm lặp)
+        const union = new Set([...setA, ...setB]);
+
+        return intersection.size / union.size;
+    }
+
+
 
     private toBookDetail(book: BookDetailRow, slugFallback?: string): CatalogBookDetailDto {
         const t = book.translations[0];

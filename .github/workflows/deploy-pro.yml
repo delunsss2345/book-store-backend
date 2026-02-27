@@ -102,31 +102,29 @@ jobs:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ github.token }}
         run: |
-          # 1. Quét IP đưa vào known_hosts để không bị prompt (y/n)
           ssh-keyscan -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          # 2. Tạo thư mục nếu chưa có và copy compose file + env sang server
           ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "mkdir -p $EC2_APP_DIR"
           scp -P "$EC2_PORT" .env.prod docker-compose.prod.yml "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/"
 
-          # 3. Chạy script deploy qua SSH
           ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "EC2_APP_DIR='$EC2_APP_DIR' IMAGE_URI='$IMAGE_URI' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" << 'EOF'
             set -euo pipefail
             cd "$EC2_APP_DIR"
             
-            # Ghi cứng APP_IMAGE vào .env.prod để sau này gõ docker compose logs app không bị báo lỗi thiếu biến
+            # 1. Ghi vào file .env.prod để lưu lại
             sed -i '/^APP_IMAGE=/d' .env.prod
             echo "APP_IMAGE=$IMAGE_URI" >> .env.prod
             
+            # 2. BẮT BUỘC: Export thẳng vào session hiện tại cho Docker Compose đọc được ngay
+            export APP_IMAGE="$IMAGE_URI"
+            
             # Login và Pull image mới nhất
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            docker compose -f docker-compose.prod.yml pull app
             
-            # Chạy Migrate DB trước khi start app
-            docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
-            
-            # Start app và dọn dẹp image cũ
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # 3. TRẢ LẠI CỜ --env-file .env.prod như thiết kế ban đầu của bạn
+            docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
+            docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm app npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
             docker image prune -af
           EOF
 

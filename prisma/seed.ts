@@ -1,6 +1,6 @@
 // prisma/seed.ts
-import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import {
   BookFormat,
@@ -1301,7 +1301,7 @@ function buildSeedBooks(categorySlugs: string[]): SeedBook[] {
     const code = i.toString().padStart(3, '0');
     const selectedCategories = blueprint.categorySlugs.filter((slug) =>
       categorySlugs.includes(slug),
-    ) as string[];
+    );
 
     if (!selectedCategories.length) {
       selectedCategories.push(...takeRandomUnique(categorySlugs, 2));

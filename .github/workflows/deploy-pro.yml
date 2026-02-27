@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false # Tắt để tránh ngắt ngang deploy giữa chừng gây sập DB
 
 jobs:
   build:
@@ -18,26 +18,23 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_uri: ${{ steps.image.outputs.image_uri }}
+      image_uri: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set image metadata
-        id: image
-        run: |
-          set -euo pipefail
-          IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
-          IMAGE_TAG="sha-${GITHUB_SHA::12}"
-          echo "image_repo=$IMAGE_REPO" >> "$GITHUB_OUTPUT"
-          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-          echo "image_uri=$IMAGE_REPO:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=production
 
-      - name: Set up QEMU
+      - name: Set up QEMU & Buildx
         uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -46,16 +43,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and push image (arm64)
+      - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile
           platforms: linux/arm64
           push: true
-          tags: |
-            ${{ steps.image.outputs.image_uri }}
-            ${{ steps.image.outputs.image_repo }}:production
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -64,78 +59,21 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production
-    permissions:
-      contents: read
-      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate deployment secrets
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
-          EC2_SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_GITHUB || secrets.GITHUB_SSH_PRIVATE_KEY || secrets.EC2_SSH_PRIVATE_KEY }}
-          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
-        run: |
-          set -euo pipefail
-          [ -n "$EC2_HOST" ] || (echo "Missing secret: EC2_HOST" && exit 1)
-          [ -n "$EC2_USER" ] || (echo "Missing secret: EC2_USER" && exit 1)
-          [ -n "$EC2_APP_DIR" ] || (echo "EC2_APP_DIR resolved empty" && exit 1)
-          [ -n "$EC2_SSH_PRIVATE_KEY" ] || (echo "Missing secret: SSH_PRIVATE_KEY_GITHUB (or GITHUB_SSH_PRIVATE_KEY or EC2_SSH_PRIVATE_KEY)" && exit 1)
-          [ -n "$PROD_ENV_FILE" ] || (echo "Missing secret: PROD_ENV_FILE" && exit 1)
-
-      - name: Generate .env.prod from secret
+      - name: Prepare env and secrets
         env:
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
         run: |
-          set -euo pipefail
           printf '%s' "$PROD_ENV_FILE" > .env.prod
-          sed -i 's/\r$//' .env.prod
           chmod 600 .env.prod
 
-      - name: Start SSH agent
+      - name: Start SSH agent & Add Known Hosts
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_GITHUB || secrets.GITHUB_SSH_PRIVATE_KEY || secrets.EC2_SSH_PRIVATE_KEY }}
-
-      - name: Add EC2 host to known_hosts
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          timeout 15 bash -c "cat < /dev/null > /dev/tcp/$EC2_HOST/$EC2_PORT" || {
-            echo "Cannot connect to $EC2_HOST:$EC2_PORT from GitHub runner."
-            echo "Check EC2 public IP, Security Group inbound TCP $EC2_PORT, and SSH service."
-            exit 1
-          }
-          ssh-keyscan -T 10 -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
-
-      - name: Upload .env.prod to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
-        run: |
-          set -euo pipefail
-          ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "bash -s" << EOF
-          set -euo pipefail
-          if [ ! -d "$EC2_APP_DIR" ]; then
-            echo "EC2_APP_DIR does not exist: $EC2_APP_DIR"
-            exit 1
-          fi
-          if [ ! -w "$EC2_APP_DIR" ]; then
-            echo "No write permission on EC2_APP_DIR for current user."
-            ls -ld "$EC2_APP_DIR"
-            id
-            exit 1
-          fi
-          EOF
-          scp -P "$EC2_PORT" .env.prod "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/.env.prod"
 
       - name: Deploy to EC2
         env:
@@ -144,45 +82,39 @@ jobs:
           EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
           EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
           EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
-          IMAGE_URI: ${{ needs.build.outputs.image_uri }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
+          IMAGE_URI: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "EC2_APP_DIR='$EC2_APP_DIR' EC2_HEALTHCHECK_URL='$EC2_HEALTHCHECK_URL' IMAGE_URI='$IMAGE_URI' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" << 'EOF'
-          set -euo pipefail
+          # 1. Quét IP đưa vào known_hosts để không bị prompt (y/n)
+          ssh-keyscan -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          if [ ! -d "$EC2_APP_DIR" ]; then
-            echo "EC2_APP_DIR does not exist: $EC2_APP_DIR"
-            exit 1
-          fi
-          if [ ! -w "$EC2_APP_DIR" ]; then
-            echo "No write permission on EC2_APP_DIR for current user."
-            ls -ld "$EC2_APP_DIR"
-            exit 1
-          fi
+          # 2. Tạo thư mục nếu chưa có và copy compose file + env sang server
+          ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "mkdir -p $EC2_APP_DIR"
+          scp -P "$EC2_PORT" .env.prod docker-compose.prod.yml "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/"
 
-          cd "$EC2_APP_DIR"
-          git fetch --all --prune
-          git checkout production
-          git pull --ff-only origin production
-
-          if [ ! -f .env.prod ]; then
-            echo ".env.prod not found in $EC2_APP_DIR"
-            exit 1
-          fi
-
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-          export APP_IMAGE="$IMAGE_URI"
-
-          docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
-          docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
-          docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate deploy
-          docker compose -f docker-compose.prod.yml --env-file .env.prod ps
-
-          curl -fsS "$EC2_HEALTHCHECK_URL" >/dev/null
+          # 3. Chạy script deploy qua SSH
+          ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "EC2_APP_DIR='$EC2_APP_DIR' IMAGE_URI='$IMAGE_URI' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" << 'EOF'
+            set -euo pipefail
+            cd "$EC2_APP_DIR"
+            
+            # Login và Pull image mới nhất
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            export APP_IMAGE="$IMAGE_URI"
+            docker compose -f docker-compose.prod.yml pull app
+            
+            # Chạy Migrate DB trước khi start app
+            docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
+            
+            # Start app và dọn dẹp image cũ
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -af
           EOF
 
-      - name: Remove local env file
-        if: always()
-        run: rm -f .env.prod
+      - name: Check Health
+        env:
+          EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
+        run: |
+          # Thêm sleep nhỏ để app kịp start hẳn trước khi check
+          sleep 10
+          curl -fsS "$EC2_HEALTHCHECK_URL" >/dev/null && echo "✅ Deployment Healthy!"

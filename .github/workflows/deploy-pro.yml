@@ -8,7 +8,10 @@ on:
 
 concurrency:
   group: production-deploy
-  cancel-in-progress: false # Tắt để tránh ngắt ngang deploy giữa chừng gây sập DB
+  # Tắt cancel-in-progress để các luồng deploy xếp hàng tuần tự.
+  # Tại sao: Nếu có 2 người merge code liên tục, việc ngắt ngang tiến trình deploy
+  # trước đó (đặc biệt là lúc đang chạy Prisma migration) sẽ làm sập database.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -23,11 +26,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set lowercase repository name
+        id: format_repo
+        # Tại sao: Docker quy định tên repository bắt buộc phải là chữ viết thường.
+        # Dùng lệnh `tr` thay vì bashism `${VAR,,}` để đảm bảo nó chạy đúng 100% trên mọi loại server/runner.
+        run: |
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ env.REPO_LC }}
+          images: ghcr.io/${{ steps.format_repo.outputs.repo_lc }}
           tags: |
             type=sha,format=short
             type=raw,value=production
@@ -63,10 +74,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set lowercase repository name # vì Docker quy định tên repository của image bắt buộc phải là chữ viết thường hoàn toàn (lowercase).
+      - name: Set lowercase and short sha
+        id: format_vars
+        # Tại sao phải khai báo lại: Mỗi `job` chạy trên một máy ảo (runner) độc lập.
+        # Biến ở job `build` không tự động sang đây, nên ta cần cắt lại chữ thường và 7 ký tự SHA (để khớp tag Docker).
         run: |
-          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Prepare env and secrets
         env:
@@ -88,14 +104,16 @@ jobs:
           EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
           EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
 
-          IMAGE_URI: ghcr.io/${{ env.REPO_LC }}:sha-${{ env.SHORT_SHA }} # dùng image được chuẩn hoá
+          # Lắp ghép biến chuẩn xác để EC2 pull đúng cục image vừa build ở trên
+          IMAGE_URI: ghcr.io/${{ steps.format_vars.outputs.repo_lc }}:sha-${{ steps.format_vars.outputs.short_sha }}
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ github.token }}
         run: |
-          # 1. Quét IP đưa vào known_hosts để không bị prompt (y/n)
+          # 1. Quét IP đưa vào known_hosts để lệnh ssh không bị khựng lại hỏi (y/n)
           ssh-keyscan -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          # 2. Tạo thư mục nếu chưa có và copy compose file + env sang server
+          # 2. Tạo thư mục nếu chưa có và chỉ copy cấu hình (compose + env) sang server. 
+          # Tại sao: Server chạy bằng Docker Image nên không cần `git pull` toàn bộ source code về nữa.
           ssh -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" "mkdir -p $EC2_APP_DIR"
           scp -P "$EC2_PORT" .env.prod docker-compose.prod.yml "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/"
 
@@ -104,16 +122,22 @@ jobs:
             set -euo pipefail
             cd "$EC2_APP_DIR"
             
-            # Login và Pull image mới nhất
+            # Login và Pull image mới nhất về máy EC2
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             export APP_IMAGE="$IMAGE_URI"
             docker compose -f docker-compose.prod.yml pull app
             
-            # Chạy Migrate DB trước khi start app
+            # CHẠY MIGRATE DB TRƯỚC KHI START APP
+            # Tại sao: Phải chuẩn bị xong Schema (những cột/bảng mới) thì app mới chạy không bị crash. 
+            # Dùng run --rm để chạy xong tự xóa container rác đi.
             docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
             
-            # Start app và dọn dẹp image cũ
+            # Start app
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            # Dọn dẹp
+            # Tại sao: Chỉ dùng `image prune -af` để xóa image thừa. Tuyệt đối KHÔNG dùng `system prune -a` 
+            # vì nó sẽ xóa nhầm cache/network của các project khác đang chạy trên cùng server này.
             docker image prune -af
           EOF
 
@@ -121,6 +145,8 @@ jobs:
         env:
           EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
         run: |
-          # Thêm sleep nhỏ để app kịp start hẳn trước khi check
+          # Thêm sleep 10 giây
+          # Tại sao: App NestJS/NextJS cần vài giây để boot lên và kết nối DB. 
+          # Nếu gọi curl ngay lập tức sẽ bị báo lỗi connection refused.
           sleep 10
           curl -fsS "$EC2_HEALTHCHECK_URL" >/dev/null && echo "✅ Deployment Healthy!"

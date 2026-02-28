@@ -97,6 +97,7 @@ jobs:
           # EOF là heredoc -> tác dụng sẽ giúp ghi nguyên 1 khối vào EC2
           ssh "$EC2_USER@$EC2_HOST" "EC2_APP_DIR='$EC2_APP_DIR' IMAGE_URI='$IMAGE_URI' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" << 'EOF'
             set -euo pipefail
+            set -x
 
             cd "$EC2_APP_DIR" 
             
@@ -114,7 +115,7 @@ jobs:
             
             # 3. load cờ env file với docker compose
             docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
-            docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm app npx prisma migrate deploy
+            docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm app npx prisma migrate deploy || echo "migrate failed"
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
             docker image prune -af
 

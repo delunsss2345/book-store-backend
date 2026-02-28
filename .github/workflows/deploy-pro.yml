@@ -117,14 +117,9 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm app npx prisma migrate deploy
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
             docker image prune -af
-          EOF
 
-      - name: Check Health
-        env:
-          EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/docs' }}
-        run: |
-          # MySQL cần 10-30s để healthy, NestJS cần vài giây để boot. 
-          # Chờ hẳn 45 giây cho chắc ăn, tránh bị curl(7) connection refused.
-          echo "Đang chờ Database và App khởi động..."
-          sleep 45
-          curl -fsS "$EC2_HEALTHCHECK_URL" >/dev/null && echo "✅ Deployment Healthy!"
+            echo "Đang chờ App khởi động..."
+            sleep 40
+            curl -fsS http://127.0.0.1:3301/api/v1/health >/dev/null
+            echo "✅ Deployment Healthy!"
+          EOF

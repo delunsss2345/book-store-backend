@@ -277,6 +277,12 @@ async function upsertPermissions() {
       description: 'Create admin book',
     },
     {
+      code: PermissionCode.ADMIN_CREATE_BOOK_ALL,
+      method: 'POST',
+      pathPattern: '/api/v1/admin/books/all',
+      description: 'Create admin book with full payload',
+    },
+    {
       code: PermissionCode.ADMIN_UPDATE_BOOK,
       method: 'PATCH',
       pathPattern: '/api/v1/admin/books/:bookId',

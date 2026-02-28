@@ -115,12 +115,12 @@ jobs:
             
             # 3. load cờ env file với docker compose
             docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
-            docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm app npx prisma migrate deploy || echo "migrate failed"
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate deploy
             docker image prune -af
 
             echo "Đang chờ App khởi động..."
             sleep 40
-            curl -fsS http://127.0.0.1:3301/api/v1/health >/dev/null
+            curl -fsS http://127.0.0.1:3301/api/v1/docs
             echo "✅ Deployment Healthy!"
           EOF

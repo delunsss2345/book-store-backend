@@ -56,10 +56,10 @@ export class CreateUserOrdersAndPaymentDTO {
     @IsNotEmpty()
     cartId: number;
 
-    @ApiProperty({ example: 1 })
+    @ApiPropertyOptional({ example: 1 })
     @IsNumber()
-    @IsNotEmpty()
-    addressId: number
+    @IsOptional()
+    addressId?: number
 
     @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.VNPAY })
     @IsEnum(PaymentGateway)

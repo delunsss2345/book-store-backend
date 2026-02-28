@@ -112,7 +112,6 @@ type SeededPurchase = {
 
 const CURRENCY_CODE_VND = 'VND';
 const CUSTOMER_COUNT = 20;
-const BOOK_COUNT = 25;
 const SNAPSHOTS_PER_VARIANT = 1;
 const ORDER_COUNT = 0;
 const MIN_REVIEW_PER_BOOK = 10;
@@ -1295,14 +1294,13 @@ function buildEnDescription(blueprint: BookBlueprint, code: string) {
 }
 
 function buildSeedBooks(categorySlugs: string[]): SeedBook[] {
-  if (BOOK_BLUEPRINTS.length !== BOOK_COUNT) {
-    throw new Error(
-      `BOOK_BLUEPRINTS length must be ${BOOK_COUNT}, got ${BOOK_BLUEPRINTS.length}`,
-    );
+  const bookCount = BOOK_BLUEPRINTS.length;
+  if (!bookCount) {
+    throw new Error('BOOK_BLUEPRINTS is empty');
   }
 
   const books: SeedBook[] = [];
-  for (let i = 1; i <= BOOK_COUNT; i += 1) {
+  for (let i = 1; i <= bookCount; i += 1) {
     const blueprint = BOOK_BLUEPRINTS[i - 1];
     const code = i.toString().padStart(3, '0');
     const selectedCategories = blueprint.categorySlugs.filter((slug) =>

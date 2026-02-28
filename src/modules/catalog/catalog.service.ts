@@ -287,7 +287,7 @@ export class CatalogService {
                 })
                 .sort((a, b) => Number(b.score) - Number(a.score));
 
-            const top = scored.slice(0, 10);
+            const top = scored.slice(0, 4);
             const recommendIds = top.map((item) => item.id);
             const recommendMap = await this.buildCardMap(recommendIds, language.id);
             const recommend = this.pickCards(recommendIds, recommendMap);

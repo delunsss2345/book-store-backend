@@ -2,12 +2,12 @@ import { SHIPPING_FEE } from "@/common";
 import { ORDER_EXPIRED_SECONDS } from "@/common/constants/expired-constant";
 import { PrismaService } from "@/database";
 import { LanguageService } from "@/modules/language/language.service";
-import { CreateGuestOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
+import { CreateGuestOrdersAndPaymentDTO, CreateUserOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { CartItem, OrderStatus, PaymentStatus } from "@prisma/client";
+import { CartItem, OrderStatus, PaymentStatus, UserAddress } from "@prisma/client";
 import crypto from 'crypto';
 import { CatalogRepository } from "../catalog/catalog.repository";
 import { PaymentService } from "../payment/payment.service";
@@ -129,6 +129,7 @@ export class OrderService {
                 const lineTotal = unitPrice * item.quantity;
                 subtotal += lineTotal;
 
+                // Tạo book variant hash nếu bookVariant không thay đổi thì dùng bookSnapshot cũ 
                 const contentHash = generateContentHash(bookVariant);
 
                 const bookSnapshot = await tx.bookVariantSnapshot.upsert({
@@ -197,16 +198,174 @@ export class OrderService {
         });
     }
 
-    // async createOrdersUser(userId: bigint, body: CreateOrdersAndPaymentDTO) {
-    //     const order = await this.orderRepository.createOrdersByUserId(userId);
+    async createOrdersUser(userId: bigint, body: CreateUserOrdersAndPaymentDTO, lang?: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const cartId = BigInt(body.cartId);
+            const cart = await tx.cart.findFirst({
+                where: { id: cartId, userId },
+                include: {
+                    items: {
+                        select: {
+                            id: true,
+                            cartId: true,
+                            bookVariantId: true,
+                            quantity: true,
+                            addedAt: true,
+                            variant: {
+                                include: {
+                                    book: {
+                                        include: {
+                                            translations: { select: { title: true, slug: true } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            });
 
-    //     if (!order.totalAmount) return;
+            const cartHash = this.getCartHash(cart?.items as CartItem[]);
+            if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
 
-    //     return this.paymentRepository.createPaymentTransaction(userId, {
-    //         orderId: order.id,
-    //         gateway: body.paymentGateWay,
-    //         amount: order.totalAmount
-    //     })
-    // }
+            const [language, existing] = await Promise.all([
+                this.languageService.resolveLanguage(lang),
+                tx.order.findFirst({
+                    where: { cartHash },
+                    include: {
+                        payments: {
+                            where: { status: PaymentStatus.PENDING },
+                            orderBy: { createdAt: "desc" },
+                            take: 1,
+                        }
+                    }
+                })
+            ]);
+
+            if (cartHash === existing?.cartHash) {
+                return {
+                    id: existing.id,
+                    subtotal: existing.subtotal,
+                    orderCode: existing.orderCode,
+                    payment: existing.payments[0].paymentUrl,
+                    totalAmount: existing.payments[0].amount,
+                };
+            }
+
+            let address: UserAddress | null = null;
+            if (body.addressId !== undefined && body.addressId !== null) {
+                address = await tx.userAddress.findFirst({
+                    where: { id: BigInt(body.addressId), userId, deletedAt: null },
+                });
+            } else {
+                address = await tx.userAddress.findFirst({
+                    where: { userId, isDefault: true, deletedAt: null },
+                });
+                if (!address) {
+                    address = await tx.userAddress.findFirst({
+                        where: { userId, deletedAt: null },
+                        orderBy: { createdAt: "desc" },
+                    });
+                }
+            }
+
+            if (!address) throw new ForbiddenException("Address not found");
+
+            let subtotal = 0;
+
+            const order = await tx.order.create({
+                data: {
+                    userId,
+                    addressId: address.id,
+                    status: OrderStatus.PENDING_PAYMENT,
+                    paymentStatus: PaymentStatus.PENDING,
+                    currencyCode: "VND",
+                    orderCode: generateOrderCode(),
+                    cartHash,
+                    shippingFee: SHIPPING_FEE,
+                    expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+                },
+            });
+
+            for (const item of cart.items) {
+                const bookVariant = await this.catalogRepository.findBookVariantById(
+                    item.bookVariantId,
+                    language.id,
+                );
+
+                if (!bookVariant) throw new ForbiddenException("Book variant not found");
+
+                if (!bookVariant.stock || bookVariant.stock < item.quantity) {
+                    throw new ForbiddenException("Book variant out of stock");
+                }
+
+                const unitPrice = Number(bookVariant.price);
+                const lineTotal = unitPrice * item.quantity;
+                subtotal += lineTotal;
+
+                const contentHash = generateContentHash(bookVariant);
+
+                const bookSnapshot = await tx.bookVariantSnapshot.upsert({
+                    where: { contentHash },
+                    update: {},
+                    create: {
+                        bookVariantId: BigInt(item.bookVariantId),
+                        contentHash,
+                        priceSnapshot: unitPrice,
+                        formatSnapshot: bookVariant.format,
+                        skuSnapshot: generateSKU(bookVariant),
+                        titleSnapshot: bookVariant.book.translations?.[0]?.title ?? item.variant.book.translations[0].title,
+                        coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? "",
+                        currencyCodeSnapshot: "VND"
+                    },
+                });
+
+                await tx.orderItem.create({
+                    data: {
+                        orderId: order.id,
+                        bookVariantSnapshotId: bookSnapshot.id,
+                        quantity: item.quantity,
+                        unitPrice: unitPrice,
+                        lineTotal: lineTotal,
+                    },
+                });
+            }
+
+            const totalAmount = subtotal + SHIPPING_FEE;
+            const updatedOrder = await tx.order.update({
+                where: { id: order.id },
+                data: { subtotal, totalAmount, discountAmount: 0, shippingFee: SHIPPING_FEE },
+            });
+
+            const paymentTxn = await tx.paymentTransaction.create({
+                data: {
+                    orderId: order.id,
+                    userId,
+                    gateway: body.paymentGateway,
+                    status: PaymentStatus.PENDING,
+                    amount: totalAmount,
+                    currencyCode: "VND",
+                    idempotencyKey: order.orderCode,
+                },
+            });
+
+            const gatewayResp = this.paymentService.createTransaction({
+                orderId: order.id,
+                gateway: body.paymentGateway,
+                amount: totalAmount,
+            });
+
+            await tx.paymentTransaction.update({
+                where: { id: paymentTxn.id },
+                data: {
+                    responsePayload: gatewayResp as any,
+                    paymentUrl: gatewayResp.paymentUrl,
+                    providerTxnId: (gatewayResp as any)?.providerTxnId ?? null,
+                },
+            });
+
+            return { orderId: order.id, subtotal: updatedOrder.subtotal, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };
+        });
+    }
 
 }

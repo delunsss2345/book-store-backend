@@ -4,8 +4,8 @@ import { BookSnapShotModule } from '@/modules/book-snapshot/book-snapshot.module
 import { CartModule } from '@/modules/cart/cart.module';
 import { CatalogModule } from '@/modules/catalog';
 import { LanguageModule } from '@/modules/language/language.module';
-import { OrderItemModule } from '@/modules/order-item/order-item.module';
 import { OrderAddressModule } from '@/modules/order-address/order-address.module';
+import { OrderItemModule } from '@/modules/order-item/order-item.module';
 import { Module } from '@nestjs/common';
 import { AuthRepository } from '../auth/auth.repository';
 import { GuestSessionModule } from '../guest-session/guest-session.module';

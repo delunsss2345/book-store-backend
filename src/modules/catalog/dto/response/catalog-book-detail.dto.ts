@@ -68,6 +68,6 @@ export class CatalogBookDetailDto {
     @ApiProperty({ type: Date })
     createdAt: Date;
 
-    @ApiProperty({ type: CatalogBookCardDto })
+    @ApiPropertyOptional({ type: () => [CatalogBookCardDto] })
     recommend?: CatalogBookCardDto[];
 }

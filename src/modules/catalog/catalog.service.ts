@@ -287,9 +287,11 @@ export class CatalogService {
                 })
                 .sort((a, b) => Number(b.score) - Number(a.score));
 
-            const top = scored.slice(0, 10); // tính
-            console.log(top);
-            return this.toBookDetail(book, normalizedSlug);
+            const top = scored.slice(0, 10);
+            const recommendIds = top.map((item) => item.id);
+            const recommendMap = await this.buildCardMap(recommendIds, language.id);
+            const recommend = this.pickCards(recommendIds, recommendMap);
+            return this.toBookDetail(book, normalizedSlug, recommend);
         });
     }
 
@@ -309,7 +311,11 @@ export class CatalogService {
 
 
 
-    private toBookDetail(book: BookDetailRow, slugFallback?: string): CatalogBookDetailDto {
+    private toBookDetail(
+        book: BookDetailRow,
+        slugFallback?: string,
+        recommend?: CatalogBookCardDto[],
+    ): CatalogBookDetailDto {
         const t = book.translations[0];
 
         return {
@@ -329,6 +335,7 @@ export class CatalogService {
             specs: this.toBookSpecs(book),
             badges: this.toBookBadges(book),
             createdAt: book.createdAt,
+            recommend: recommend ?? [],
         };
     }
 

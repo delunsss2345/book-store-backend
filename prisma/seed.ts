@@ -111,12 +111,12 @@ type SeededPurchase = {
 };
 
 const CURRENCY_CODE_VND = 'VND';
-const CUSTOMER_COUNT = 46;
-const BOOK_COUNT = 40;
+const CUSTOMER_COUNT = 20;
+const BOOK_COUNT = 25;
 const SNAPSHOTS_PER_VARIANT = 1;
 const ORDER_COUNT = 0;
-const MIN_REVIEW_PER_BOOK = 20;
-const MAX_REVIEW_PER_BOOK = 40;
+const MIN_REVIEW_PER_BOOK = 10;
+const MAX_REVIEW_PER_BOOK = 10;
 const ORDER_CODE_PREFIX = 'SEED-ORD-';
 const REVIEW_CONTENT_PREFIX = '[seed-review]';
 

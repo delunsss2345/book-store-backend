@@ -18,4 +18,5 @@ export class GuestSessionController {
     getGuestSessionById(@Param('guestSessionId') guestSessionId: string) {
         return this.guestSessionService.getGuestSessionById(guestSessionId);
     }
+
 }

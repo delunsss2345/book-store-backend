@@ -1,27 +1,30 @@
+import { Public } from '@/common/security/decorators/public.decorator';
+import { PresignResponseDto } from '@/modules/r2-service/dto/response/create-persign-url.dto';
+import { PresignRequestDto } from '@/modules/uploads/dto/request/get-single-url.dto';
+import { imageFileFilter } from '@/utils/upload.util';
 import {
+  Body,
   Controller,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { UploadsService } from './uploads.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
   ApiOperation,
-  ApiProperty,
+  ApiResponse
 } from '@nestjs/swagger';
-import { UploadFileDto } from './dto/request/upload-file-single.dto';
-import { Public } from '@/common/security/decorators/public.decorator';
-import { imageFileFilter } from '@/utils/upload.util';
 import { memoryStorage } from 'multer';
+import { UploadFileDto } from './dto/request/upload-file-single.dto';
+import { UploadsService } from './uploads.service';
 
 @Controller('uploads')
 export class UploadsController {
-  constructor(private readonly uploadsService: UploadsService) {}
+  constructor(private readonly uploadsService: UploadsService) { }
 
-  @Post('upload')
+  @Post('/')
   @Public()
   @ApiOperation({ summary: 'Upload product image' })
   @ApiConsumes('multipart/form-data')
@@ -35,6 +38,15 @@ export class UploadsController {
   )
   uploadFile(@UploadedFile() file: Express.Multer.File) {
     return this.uploadsService.uploadFile(file);
+  }
+
+
+  @Post("presigned-url")
+  @Public()
+  @ApiBody({ type: PresignRequestDto })
+  @ApiResponse({ type: PresignResponseDto })
+  getPresignedUrl(@Body() body: PresignRequestDto) {
+    return this.uploadsService.getPresignedUrl(body.fileName, body.fileType);
   }
 }
 

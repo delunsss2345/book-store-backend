@@ -7,11 +7,11 @@ import { RequirePermissions } from '@/common/security/decorators/requirePermissi
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { CategoryService } from './category.service';
 import { CreateCategoryRequestDto } from './dto/request/create-category.request.dto';
 import { GetCategoriesQueryDto } from './dto/request/get-categories.query.dto';
 import { CategoryItemResponseDto } from './dto/response/category-item.response.dto';
 import { CategoryListResponseDto } from './dto/response/category-list.response.dto';
-import { CategoryService } from './category.service';
 
 @ApiTags('category')
 @Controller('categories')

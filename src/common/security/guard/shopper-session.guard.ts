@@ -114,7 +114,7 @@ export class ShopperSessionGuard implements CanActivate {
         response.cookie('guestSessionId', guestSessionId, {
             httpOnly: true,
             sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
+            secure: false,
             maxAge: 1000 * 60 * 60 * 24 * 5,
             path: '/',
         });

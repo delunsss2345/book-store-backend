@@ -1,6 +1,8 @@
 import { Public } from '@/common/security/decorators/public.decorator';
-import { PresignResponseDto } from '@/modules/r2-service/dto/response/create-persign-url.dto';
+import { PresignMultipleRequestDto } from '@/modules/uploads/dto/request/get-presign-multi-url.dto';
 import { PresignRequestDto } from '@/modules/uploads/dto/request/get-single-url.dto';
+import { PresignMultipleResponseDto } from '@/modules/uploads/dto/response/persign-multi.response.dto';
+import { PresignResponseDto } from '@/modules/uploads/dto/response/persign-single.response.dto';
 import { imageFileFilter } from '@/utils/upload.util';
 import {
   Body,
@@ -41,12 +43,21 @@ export class UploadsController {
   }
 
 
-  @Post("presigned-url")
+  @Post("presigned-url/book")
   @Public()
   @ApiBody({ type: PresignRequestDto })
   @ApiResponse({ type: PresignResponseDto })
   getPresignedUrl(@Body() body: PresignRequestDto) {
     return this.uploadsService.getPresignedUrl(body.fileName, body.fileType);
+  }
+
+
+  @Post("presigned-url/multipart-books")
+  @Public()
+  @ApiBody({ type: PresignMultipleRequestDto })
+  @ApiResponse({ type: PresignMultipleResponseDto })
+  getPresignedUrlMultipart(@Body() body: PresignMultipleRequestDto) {
+    return this.uploadsService.getPresignedUrlMultipart(body.files);
   }
 }
 

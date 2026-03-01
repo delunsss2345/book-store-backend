@@ -38,4 +38,5 @@ export class R2ServiceService {
       public_url: `${AppModule.CONFIGURATION.R2_CONFIG.CDN_URL}/${key}`
     }
   }
+  
 }

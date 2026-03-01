@@ -1,4 +1,5 @@
 import { AppModule } from '@/app.module';
+import { PresignRequestDto } from '@/modules/uploads/dto/request/get-single-url.dto';
 import { generateKeyPresign } from '@/modules/uploads/utils/generateKeyImage.util';
 import { optimizeProductImage } from '@/utils/upload.util';
 import { Injectable } from '@nestjs/common';
@@ -24,5 +25,11 @@ export class UploadsService {
   async getPresignedUrl(fileName: string, fileType: string) {
     const key = generateKeyPresign(AppModule.CONFIGURATION.R2_CONFIG.FOLDER_PRODUCT, fileName);
     return this.r2Service.createPresignedUrl(key, fileType);
+  }
+
+  async getPresignedUrlMultipart(files: PresignRequestDto[]) {
+    const keys = files.map((file) => generateKeyPresign(AppModule.CONFIGURATION.R2_CONFIG.FOLDER_PRODUCT, file.fileName));
+    const result = await Promise.all(files.map((files, i) => this.r2Service.createPresignedUrl(keys[i], files.fileName)));
+    return result
   }
 }

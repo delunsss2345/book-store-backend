@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
-    IsIn,
     IsInt,
     IsNotEmpty,
     IsNumber,
@@ -17,11 +16,6 @@ export class SearchBooksQueryDto {
     @IsString()
     @IsNotEmpty()
     q: string;
-
-    @ApiPropertyOptional({ example: 'vi', default: 'vi', enum: ['vi', 'en'] })
-    @IsOptional()
-    @IsIn(['vi', 'en'])
-    lang?: string;
 
     @ApiPropertyOptional({ example: 10, default: 10, minimum: 1, maximum: 50 })
     @IsOptional()

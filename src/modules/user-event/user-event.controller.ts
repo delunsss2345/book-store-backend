@@ -20,10 +20,10 @@ export class UserEventController {
         @Query() query: CatalogHomeQueryDto,
         @GetLanguage() lang: string,
     ) {
-        const effectiveLang = query.lang ?? lang;
         return this.userEventService.getHyperRecommendHome(
             BigInt(user.sub),
-            { ...query, lang: effectiveLang },
+            query,
+            lang,
         );
     }
 

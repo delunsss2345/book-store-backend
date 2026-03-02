@@ -20,12 +20,12 @@ export class SearchService {
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
     // Search sách theo query , topK format maxPrice categoryId
-    async searchBooks(query: SearchBooksQueryDto, lang?: string): Promise<any> {
+    async searchBooks(query: SearchBooksQueryDto, lang: string): Promise<any> {
         const q = query.q?.trim();
         if (!q) {
             throw new BadRequestException('q is required');
         }
-        const language = await this.languageService.resolveLanguage(query.lang ?? lang);
+        const language = await this.languageService.resolveLanguage(lang);
         const cacheKey = `query:books-sematic:${q}:${language.code}:${query.page ?? 1}:${query.limit ?? 10}`;
         const cached = await this.cache.get<any>(cacheKey);
         if (cached) return cached;
@@ -54,11 +54,11 @@ export class SearchService {
 
         const cartBooks = await this.catalogService.queryListBook(
             {
-                lang: language.code,
                 page: page ?? 1,
                 limit,
             },
             orderedBookIds,
+            language.code,
         );
 
         const sortedItems = [...cartBooks.items].sort((a, b) => {

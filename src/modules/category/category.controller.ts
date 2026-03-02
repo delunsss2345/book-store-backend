@@ -35,7 +35,6 @@ export class CategoryController {
     @Get()
     @ApiOkResponse({ type: CategoryListResponseDto })
     getCategories(@Query() query: GetCategoriesQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.categoryService.getCategories({ ...query, lang: effectiveLang });
+        return this.categoryService.getCategories(query, lang);
     }
 }

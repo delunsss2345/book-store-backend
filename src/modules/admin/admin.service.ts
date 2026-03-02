@@ -402,10 +402,10 @@ export class AdminService {
         });
     }
 
-    async getBooks(query: AdminBookListQueryDto): Promise<AdminBookListResponseDto> {
+    async getBooks(query: AdminBookListQueryDto, lang: string): Promise<AdminBookListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.adminRepository.countBooks(),

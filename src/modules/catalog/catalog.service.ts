@@ -43,14 +43,14 @@ export class CatalogService {
     ) { }
 
     // Lấy giớ hạn không lấy phân trang
-    async getCatalogHome(query: CatalogHomeQueryDto): Promise<any> {
+    async getCatalogHome(query: CatalogHomeQueryDto, lang: string): Promise<any> {
         const limit = query.limit ?? 12;
-        const lang = await this.languageService.resolveLanguage(query.lang);
-        const cacheKey = `catalog:home:${lang.code}:${limit}`;
+        const language = await this.languageService.resolveLanguage(lang);
+        const cacheKey = `catalog:home:${language.code}:${limit}`;
 
         return this.withCache(cacheKey, HOME_CACHE_TTL, async () => {
             const [newestRows, saleTopLimit] = await Promise.all([
-                this.repo.findNewestActiveBookIds(lang.id, limit),
+                this.repo.findNewestActiveBookIds(language.id, limit),
                 this.repo.groupBookSales(limit),
             ]);
 
@@ -66,7 +66,7 @@ export class CatalogService {
 
             const cardMap = await this.buildCardMap(
                 allUniqueIds,
-                lang.id,
+                language.id,
             );
 
             return {
@@ -172,10 +172,10 @@ export class CatalogService {
         }
     }
 
-    async listBooks(query: CatalogBookListQueryDto): Promise<CatalogBookListResponseDto> {
+    async listBooks(query: CatalogBookListQueryDto, lang: string): Promise<CatalogBookListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const cacheKey = `catalog:books:lang=${language.code}:p${page}:l${limit}`;
 
@@ -214,10 +214,14 @@ export class CatalogService {
         });
     }
 
-    async queryListBook(query: CatalogBookListQueryDto, ids: bigint[]): Promise<CatalogBookListResponseDto> {
+    async queryListBook(
+        query: CatalogBookListQueryDto,
+        ids: bigint[],
+        lang: string,
+    ): Promise<CatalogBookListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.repo.countBooksForList(language.id),

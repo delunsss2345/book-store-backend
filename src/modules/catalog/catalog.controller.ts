@@ -2,11 +2,10 @@ import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
 import {
     CatalogBookListQueryDto,
-    CatalogCategoriesQueryDto,
     CatalogHomeQueryDto
 } from './dto/request';
 import {
@@ -25,50 +24,40 @@ export class CatalogController {
     @Get('home')
     @ApiOkResponse({ type: CatalogHomeResponseDto })
     getCatalogHome(@Query() query: CatalogHomeQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.catalogService.getCatalogHome({ ...query, lang: effectiveLang });
+        return this.catalogService.getCatalogHome(query, lang);
     }
 
     @Public()
     @Get('books')
     @ApiOkResponse({ type: CatalogBookListResponseDto })
     listBooks(@Query() query: CatalogBookListQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.catalogService.listBooks({ ...query, lang: effectiveLang });
+        return this.catalogService.listBooks(query, lang);
     }
 
     @Public()
     @Get('books/:bookId')
     @ApiOkResponse({ type: CatalogBookDetailDto })
-    @ApiQuery({ name: 'lang', required: false })
     getBookDetail(
         @Param('bookId') bookId: string,
-        @Query('lang') lang?: string,
-        @GetLanguage() language?: string,
+        @GetLanguage() lang?: string,
     ) {
-        const effectiveLang = lang ?? language;
-        return this.catalogService.getBookDetail(parseBigIntRequired(bookId, 'bookId'), effectiveLang);
+        return this.catalogService.getBookDetail(parseBigIntRequired(bookId, 'bookId'), lang);
     }
 
     @Public()
     @Get('books/slug/:slug')
     @ApiOkResponse({ type: CatalogBookDetailDto })
-    @ApiQuery({ name: 'lang', required: false })
     getBookDetailBySlug(
         @Param('slug') slug: string,
-        @Query('lang') lang?: string,
-        @GetLanguage() language?: string,
+        @GetLanguage() lang?: string,
     ) {
-        const effectiveLang = lang ?? language;
-        return this.catalogService.getBookDetailBySlug(slug, effectiveLang);
+        return this.catalogService.getBookDetailBySlug(slug, lang);
     }
 
     @Public()
     @Get('categories')
-    @ApiQuery({ name: 'lang', required: false })
     @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
-    getCategories(@Query() query: CatalogCategoriesQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.catalogService.getCategories(effectiveLang);
+    getCategories(@GetLanguage() lang: string) {
+        return this.catalogService.getCategories(lang);
     }
 }

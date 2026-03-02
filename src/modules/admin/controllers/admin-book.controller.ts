@@ -80,7 +80,6 @@ export class AdminBookController {
     @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: AdminBookListResponseDto })
     getBooks(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.adminService.getBooks({ ...query, lang: effectiveLang });
+        return this.adminService.getBooks(query, lang);
     }
 }

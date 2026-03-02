@@ -84,9 +84,10 @@ export class UserEventService {
     async getHyperRecommendHome(
         userId: bigint,
         query: CatalogHomeQueryDto,
+        lang: string,
     ): Promise<CatalogRecommendRequestDto> {
         const limit = query.limit ?? 12;
-        const recommend = await this.getRecommend(userId, query.lang, limit);
+        const recommend = await this.getRecommend(userId, lang, limit);
 
         return {
             recommend,

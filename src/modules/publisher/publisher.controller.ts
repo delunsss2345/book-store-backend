@@ -41,10 +41,10 @@ export class PublisherController {
         @Query() query: GetPublisherBooksQueryDto,
         @GetLanguage() lang: string,
     ) {
-        const effectiveLang = query.lang ?? lang;
         return this.publisherService.getPublisherBooks(
             parseBigIntRequired(publisherId, 'publisherId'),
-            { ...query, lang: effectiveLang },
+            query,
+            lang,
         );
     }
 

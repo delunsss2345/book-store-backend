@@ -30,8 +30,7 @@ export class AuthorController {
     @Get()
     @ApiOkResponse({ type: AuthorListResponseDto })
     getAuthors(@Query() query: GetAuthorsQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.authorService.getAuthors({ ...query, lang: effectiveLang });
+        return this.authorService.getAuthors(query, lang);
     }
 
     @Public()
@@ -42,10 +41,10 @@ export class AuthorController {
         @Query() query: GetAuthorBooksQueryDto,
         @GetLanguage() lang: string,
     ) {
-        const effectiveLang = query.lang ?? lang;
         return this.authorService.getAuthorBooks(
             parseBigIntRequired(authorId, 'authorId'),
-            { ...query, lang: effectiveLang },
+            query,
+            lang,
         );
     }
 }

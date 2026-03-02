@@ -60,6 +60,7 @@ export class ReviewService {
     async getBookReviews(
         slug: string,
         query: GetBookReviewsQueryDto,
+        lang: string,
     ): Promise<ReviewListResponseDto> {
         const normalizedSlug = slug?.trim();
         if (!normalizedSlug) {
@@ -68,7 +69,7 @@ export class ReviewService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const book = await this.reviewRepository.findBookBySlug(normalizedSlug, language.id);
         if (!book) {

@@ -45,7 +45,6 @@ export class ReviewController {
         @Query() query: GetBookReviewsQueryDto,
         @GetLanguage() lang: string,
     ) {
-        const effectiveLang = query.lang ?? lang;
-        return this.reviewService.getBookReviews(slug, { ...query, lang: effectiveLang });
+        return this.reviewService.getBookReviews(slug, query, lang);
     }
 }

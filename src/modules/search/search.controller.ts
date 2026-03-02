@@ -16,8 +16,7 @@ export class SearchController {
     @Get('')
     @ApiOkResponse({ type: SearchBookItemDto, isArray: true })
     searchSemantic(@Query() query: SearchBooksQueryDto, @GetLanguage() lang: string) {
-        const effectiveLang = query.lang ?? lang;
-        return this.searchService.searchBooks({ ...query, lang: effectiveLang }, effectiveLang);
+        return this.searchService.searchBooks(query, lang);
     }
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')
@@ -29,8 +28,7 @@ export class SearchController {
 
     @Public()
     @Get('/isbn')
-    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string, @Query('lang') language?: string) {
-        const langs = language ?? lang;
-        return this.searchService.searchISBN(isbn, langs);
+    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string) {
+        return this.searchService.searchISBN(isbn, lang);
     }
 }

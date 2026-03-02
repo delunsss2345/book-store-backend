@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { LanguageService } from '../language/language.service';
 import { CategoryRepository } from './category.repository';
 import { CreateCategoryRequestDto } from './dto/request/create-category.request.dto';
@@ -57,10 +57,10 @@ export class CategoryService {
         };
     }
 
-    async getCategories(query: GetCategoriesQueryDto): Promise<CategoryListResponseDto> {
+    async getCategories(query: GetCategoriesQueryDto, lang: string): Promise<CategoryListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.categoryRepository.countActiveCategoriesByLanguage(language.id),

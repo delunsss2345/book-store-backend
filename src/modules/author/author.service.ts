@@ -50,10 +50,10 @@ export class AuthorService {
         }));
     }
 
-    async getAuthors(query: GetAuthorsQueryDto): Promise<AuthorListResponseDto> {
+    async getAuthors(query: GetAuthorsQueryDto, lang: string): Promise<AuthorListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.authorRepository.countAuthors(),
@@ -77,6 +77,7 @@ export class AuthorService {
     async getAuthorBooks(
         authorId: bigint,
         query: GetAuthorBooksQueryDto,
+        lang: string,
     ): Promise<AuthorBookListResponseDto> {
         const exists = await this.authorRepository.existsById(authorId);
         if (!exists) {
@@ -85,7 +86,7 @@ export class AuthorService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.bookAuthorService.countBooksByAuthor(authorId, language.id),

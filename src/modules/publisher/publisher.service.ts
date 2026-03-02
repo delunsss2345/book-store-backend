@@ -50,6 +50,7 @@ export class PublisherService {
     async getPublisherBooks(
         publisherId: bigint,
         query: GetPublisherBooksQueryDto,
+        lang: string,
     ): Promise<PublisherBookListResponseDto> {
         const exists = await this.publisherRepository.existsById(publisherId);
         if (!exists) {
@@ -58,7 +59,7 @@ export class PublisherService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(query.lang);
+        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.publisherRepository.countBooksByPublisher(publisherId, language.id),

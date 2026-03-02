@@ -78,5 +78,20 @@ export class OrderRepository {
         })
     }
 
+    findOrderBySessionGuestId(guestId: string, page: number, limit: number, lang: string) {
+        return this.prisma.order.findMany({
+            take: limit,
+            skip: (page - 1) * limit,
+            where: { guestSessionId: guestId },
+            orderBy: { createdAt: 'desc' }
+        })
+    }
 
+    findOrderByUserId(userId: bigint, page: number, limit: number, lang: string) {
+        return this.prisma.order.findMany({
+            take: limit,
+            skip: (page - 1) * limit,
+            where: { userId: userId }
+        })
+    }
 }

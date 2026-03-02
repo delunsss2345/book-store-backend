@@ -3,12 +3,14 @@ import { ORDER_EXPIRED_SECONDS } from "@/common/constants/expired-constant";
 import { PrismaService } from "@/database";
 import { LanguageService } from "@/modules/language/language.service";
 import { CreateGuestOrdersAndPaymentDTO, CreateUserOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
+import { OrderRepository } from "@/modules/order/order.repository";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { CartItem, OrderStatus, PaymentStatus, UserAddress } from "@prisma/client";
 import crypto from 'crypto';
+import { PaymentGateway } from "generated/prisma/enums";
 import { CatalogRepository } from "../catalog/catalog.repository";
 import { PaymentService } from "../payment/payment.service";
 @Injectable()
@@ -17,6 +19,7 @@ export class OrderService {
         private readonly paymentService: PaymentService,
         private readonly catalogRepository: CatalogRepository,
         private readonly languageService: LanguageService,
+        private readonly orderRepository: OrderRepository,
         private readonly prisma: PrismaService
     ) { }
     getCartHash(items: CartItem[]) {
@@ -176,6 +179,15 @@ export class OrderService {
                     idempotencyKey: order.orderCode, // hoặc key khác cho payment attempt
                 },
             });
+            if (body.paymentGateway === PaymentGateway.COD) {
+                return {
+                    orderId: order.id,
+                    subtotal: updatedOrder.subtotal,
+                    totalAmount: updatedOrder.totalAmount,
+                    orderCode: order.orderCode
+                };
+
+            }
 
             // 8) gọi gateway tạo transaction
             const gatewayResp = this.paymentService.createTransaction({
@@ -368,4 +380,11 @@ export class OrderService {
         });
     }
 
+    async getOrderGuest(sessionGuestId: string, page: number, limit: number, lang: string) {
+        return this.orderRepository.findOrderBySessionGuestId(sessionGuestId, page, limit, lang);
+    }
+
+    async getOrderUser(userId: bigint, page: number, limit: number, lang: string) {
+        return this.orderRepository.findOrderByUserId(userId, page, limit, lang);
+    }
 }

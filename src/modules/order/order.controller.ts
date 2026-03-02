@@ -1,9 +1,12 @@
+import type { JwtPayload } from '@/common';
 import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { CreateGuestOrdersAndPaymentDTO, CreateUserOrdersAndPaymentDTO } from '@/modules/order/dto/request/create-orders.dto';
+import { GetOrderDto } from '@/modules/order/dto/request/get-order.dto';
 import { OrderService } from '@/modules/order/order.service';
-import { Body, Controller, ForbiddenException, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 @Controller('orders')
 @UseGuards(ShopperSessionGuard)
@@ -21,6 +24,22 @@ export class OrderController {
         return this.orderService.createOrdersGuest(guestSessionId, body, lang);
     }
 
+    @Get("/")
+    @Public()
+    getOrders(
+        @Req() req: Request,
+        @Query() query: GetOrderDto,
+        @GetLanguage() lang: string,
+        @GetUser() user: JwtPayload
+    ) {
+        const guestSessionId = req['guestSessionId'] as string;
+        console.log(guestSessionId);
+        if (guestSessionId) {
+            return this.orderService.getOrderGuest(guestSessionId, query.page ?? 1, query.limit ?? 12, lang);
+        }
+
+        return this.orderService.getOrderUser(BigInt(user.sub), query.page ?? 1, query.limit ?? 12, lang);
+    }
     @Post('/user/checkout')
     createOrdersUser(
         @Body() body: CreateUserOrdersAndPaymentDTO,

@@ -1,11 +1,14 @@
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
+import { PaymentRepository } from '@/modules/payment/payment.repository';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { JobStatus } from '@prisma/client';
+import { JobStatus, PaymentGateway } from '@prisma/client';
 import { HooksRepository } from './hooks.repository';
 
 @Injectable()
 export class HooksService {
-    constructor(private readonly hooksRepository: HooksRepository) { }
+    constructor(private readonly hooksRepository: HooksRepository,
+        private readonly paymentRepository: PaymentRepository
+    ) { }
 
     async handleSepayWebhook(body: SePayHooksDto) {
         // Chống trùng lặp 
@@ -16,6 +19,7 @@ export class HooksService {
 
         const existedWebhook =
             await this.hooksRepository.findWebhookByProviderEventId(providerEventId);
+
         const webhookInbox =
             existedWebhook ??
             (await this.hooksRepository.saveSepayWebhook(providerEventId, body));
@@ -36,20 +40,14 @@ export class HooksService {
         const normalizedOrderCode = this.extractNormalizedOrderCode(body);
 
         if (!normalizedOrderCode) {
-            const failedWebhook = await this.hooksRepository.updateWebhookStatus(
+            await this.hooksRepository.updateWebhookStatus(
                 webhookInbox.id,
                 JobStatus.FAILED,
                 attempts,
                 'Order code not found in webhook payload',
             );
 
-            return {
-                ok: false,
-                duplicate: Boolean(existedWebhook),
-                providerEventId,
-                webhookInboxId: failedWebhook.id.toString(),
-                message: 'Order code not found in webhook payload',
-            };
+            throw new BadRequestException('Order code not found in webhook payload');
         }
 
         // Tạo tìm order cũ đó xem có không
@@ -60,23 +58,36 @@ export class HooksService {
 
         // Nếu không JOB FAILED
         if (!order) {
-            const failedWebhook = await this.hooksRepository.updateWebhookStatus(
+            await this.hooksRepository.updateWebhookStatus(
                 webhookInbox.id,
                 JobStatus.FAILED,
                 attempts,
                 `Order not found for code: ${normalizedOrderCode}`,
             );
 
-            return {
-                ok: false,
-                duplicate: Boolean(existedWebhook),
-                providerEventId,
-                webhookInboxId: failedWebhook.id.toString(),
-                normalizedOrderCode,
-                message: 'Order not found',
-            };
+            throw new BadRequestException('Order not found');
+
+        }
+        if (!order?.subtotal) {
+            throw new BadRequestException('Order not found');
         }
 
+        if (body.transferAmount < Number(order?.subtotal) || body.transferAmount > Number(order?.subtotal)) {
+            if (order.userId) {
+                await this.paymentRepository.createPaymentTransaction(order.userId, {
+                    orderId: order.id,
+                    amount: body.transferAmount,
+                    gateway: PaymentGateway.SEPAY,
+                })
+            } else if (order.guestSessionId) {
+                await this.paymentRepository.createPaymentTransactionGuestId({
+                    orderId: order.id,
+                    amount: body.transferAmount,
+                    gateway: PaymentGateway.SEPAY,
+                })
+            }
+
+        }
         const paidOrder = await this.hooksRepository.markOrderAndPaymentSuccess(
             order.id,
             providerEventId,

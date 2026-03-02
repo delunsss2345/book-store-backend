@@ -94,6 +94,9 @@ export class HooksRepository {
                 status: true,
                 paymentStatus: true,
                 updatedAt: true,
+                subtotal: true,
+                userId: true,
+                guestSessionId: true,
             },
         });
 

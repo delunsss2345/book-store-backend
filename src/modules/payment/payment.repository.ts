@@ -16,6 +16,9 @@ export class PaymentRepository {
             }
         })
     }
+
+
+
     createPaymentTransactionGuestId(payment: CreatePaymentTransactionDto) {
         return this.prisma.paymentTransaction.create({
             data: {

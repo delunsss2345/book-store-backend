@@ -22,11 +22,11 @@ export class OrderService {
         private readonly orderRepository: OrderRepository,
         private readonly prisma: PrismaService
     ) { }
-    getCartHash(items: CartItem[]) {
+    getCartHash(items: CartItem[], cardId: bigint) {
         const sortedItems = items.sort((a, b) => (a.id.toString()).localeCompare((b.id.toString())));
         const content = sortedItems.map(item => `${item.bookVariantId}:${item.quantity}`).join("|");
 
-        return crypto.createHash("md5").update(content).digest("hex");
+        return crypto.createHash("md5").update(content + `${cardId}`).digest("hex");
     };
 
     async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, lang?: string) {
@@ -57,9 +57,10 @@ export class OrderService {
                 },
             });
 
-
-            const cartHash = this.getCartHash(cart?.items as CartItem[]);
             if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
+
+            // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
+            const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
 
             const [language, existing] = await Promise.all([
                 this.languageService.resolveLanguage(lang),
@@ -236,9 +237,10 @@ export class OrderService {
                     },
                 },
             });
-
-            const cartHash = this.getCartHash(cart?.items as CartItem[]);
             if (!cart || cart.items.length === 0) throw new ForbiddenException("Cart not found");
+
+            // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
+            const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
 
             const [language, existing] = await Promise.all([
                 this.languageService.resolveLanguage(lang),

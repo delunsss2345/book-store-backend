@@ -14,7 +14,7 @@ export class PaymentService {
      * Khởi tạo giao dịch thanh toán
      */
 
-    createTransaction(dto: CreatePaymentTransactionDto) {
+    createTransactionUrl(dto: CreatePaymentTransactionDto) {
         const { orderId, gateway, amount } = dto;
 
         try {

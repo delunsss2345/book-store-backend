@@ -14,6 +14,12 @@ export type FindWebhookInboxParams = {
     status?: JobStatus;
 };
 
+const PaymentNotSuccessStatus = {
+    PAYMENT_SHORTFALL: "PAYMENT_SHORTFALL",
+    PAYMENT_OVERAGE: "PAYMENT_OVERAGE"
+} as const;
+
+type PaymentNotSuccess = typeof PaymentNotSuccessStatus[keyof typeof PaymentNotSuccessStatus];
 @Injectable()
 export class HooksRepository {
     constructor(private readonly prisma: PrismaService) { }
@@ -97,6 +103,7 @@ export class HooksRepository {
                 subtotal: true,
                 userId: true,
                 guestSessionId: true,
+                totalAmount: true
             },
         });
 
@@ -139,6 +146,20 @@ export class HooksRepository {
             return order;
         });
     }
+    // Đảm bảo nhất quán 
+    markPaymentNotSuccess(orderId: bigint, providerEventId: string, payload: unknown, status: PaymentNotSuccess) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.paymentTransaction.updateMany({
+                where: { orderId },
+                data: {
+                    status,
+                    providerTxnId: providerEventId,
+                    responsePayload: payload as Prisma.InputJsonValue,
+                },
+            });
+        });
+    }
+
 
     findOrderStatusById(orderId: bigint) {
         return this.prisma.order.findUnique({

@@ -1,28 +1,38 @@
+import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { PaymentRepository } from '@/modules/payment/payment.repository';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { JobStatus, PaymentGateway } from '@prisma/client';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { JobStatus, PaymentGateway, PaymentStatus } from '@prisma/client';
+import type { Cache } from 'cache-manager';
 import { HooksRepository } from './hooks.repository';
 
 @Injectable()
 export class HooksService {
     constructor(private readonly hooksRepository: HooksRepository,
-        private readonly paymentRepository: PaymentRepository
+        private readonly paymentRepository: PaymentRepository,
+        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
     ) { }
 
     async handleSepayWebhook(body: SePayHooksDto) {
         // Chống trùng lặp 
+        Logger.debug('Received webhook event', body);
         const providerEventId = this.extractProviderEventId(body);
         if (!providerEventId) {
             throw new BadRequestException('Missing webhook event id');
         }
-
+        // Check đã tồn tại web hook này chưa 
         const existedWebhook =
             await this.hooksRepository.findWebhookByProviderEventId(providerEventId);
 
+        Logger.debug('Received webhook event existedWebhook', existedWebhook);
+
+        // Nếu tồn tại thì dùng, chưa thì lưu web hooks mới 
         const webhookInbox =
             existedWebhook ??
             (await this.hooksRepository.saveSepayWebhook(providerEventId, body));
+
+        Logger.debug('Received webhook event webhookInbox', webhookInbox);
 
         if (webhookInbox.status === JobStatus.DONE) {
             return {
@@ -72,7 +82,10 @@ export class HooksService {
             throw new BadRequestException('Order not found');
         }
 
-        if (body.transferAmount < Number(order?.subtotal) || body.transferAmount > Number(order?.subtotal)) {
+        // Nếu không bằng 
+        if (Number(body.transferAmount) !== Number(order?.totalAmount)) {
+            Logger.debug('subtotal', Number(body.transferAmount), Number(order?.totalAmount));
+
             if (order.userId) {
                 await this.paymentRepository.createPaymentTransaction(order.userId, {
                     orderId: order.id,
@@ -85,6 +98,12 @@ export class HooksService {
                     amount: body.transferAmount,
                     gateway: PaymentGateway.SEPAY,
                 })
+            }
+            // Check thanh toán sai 
+            if (body.transferAmount < Number(order?.totalAmount)) {
+                return this.hooksRepository.markPaymentNotSuccess(order.id, providerEventId, body, PaymentStatus.PAYMENT_SHORTFALL);
+            } else {
+                return this.hooksRepository.markPaymentNotSuccess(order.id, providerEventId, body, PaymentStatus.PAYMENT_OVERAGE);
             }
 
         }
@@ -114,6 +133,8 @@ export class HooksService {
 
     async getOrderStatus(orderIdText: string) {
         let order: Awaited<ReturnType<HooksRepository['findOrderStatusById']>> = null;
+        const cachedOrder = await this.cacheManager.get(`order:status:${orderIdText}`);
+        if (cachedOrder) return cachedOrder;
         if (/^\d+$/.test(orderIdText)) {
             order = await this.hooksRepository.findOrderStatusById(BigInt(orderIdText));
         }
@@ -131,6 +152,8 @@ export class HooksService {
             throw new NotFoundException('Order not found');
         }
 
+        await this.cacheManager.set(`order:status:${orderIdText}`, order, ORDER_STATUS_TTL);
+        
         return {
             id: order.id.toString(),
             orderCode: order.orderCode,

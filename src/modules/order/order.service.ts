@@ -68,13 +68,14 @@ export class OrderService {
                     where: { cartHash },
                     include: {
                         payments: {
-                            where: { status: PaymentStatus.PENDING },
+                            where: { status: { in: [PaymentStatus.PENDING, PaymentStatus.PAYMENT_OVERAGE, PaymentStatus.PAYMENT_SHORTFALL] } },
                             orderBy: { createdAt: "desc" },
                             take: 1,
                         }
                     }
                 })
             ])
+            console.log(existing);
             if (cartHash === existing?.cartHash) {
                 return {
                     id: existing.id,
@@ -169,17 +170,6 @@ export class OrderService {
                 data: { subtotal, totalAmount, discountAmount: 0, shippingFee: SHIPPING_FEE },
             });
 
-            // 7) tạo paymentTransaction PENDING
-            const paymentTxn = await tx.paymentTransaction.create({
-                data: {
-                    orderId: order.id,
-                    gateway: body.paymentGateway,
-                    status: PaymentStatus.PENDING,
-                    amount: totalAmount,
-                    currencyCode: "VND",
-                    idempotencyKey: order.orderCode, // hoặc key khác cho payment attempt
-                },
-            });
             if (body.paymentGateway === PaymentGateway.COD) {
                 return {
                     orderId: order.id,
@@ -189,23 +179,15 @@ export class OrderService {
                 };
 
             }
-
+            // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout) 
+            // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền 
             // 8) gọi gateway tạo transaction
-            const gatewayResp = this.paymentService.createTransaction({
+            const gatewayResp = this.paymentService.createTransactionUrl({
                 orderId: order.id,
                 gateway: body.paymentGateway,
                 amount: totalAmount,
             });
 
-            // 9) lưu response payload để retry trả lại paymentUrl
-            await tx.paymentTransaction.update({
-                where: { id: paymentTxn.id },
-                data: {
-                    responsePayload: gatewayResp as any,
-                    paymentUrl: gatewayResp.paymentUrl,
-                    providerTxnId: (gatewayResp as any)?.providerTxnId ?? null,
-                },
-            });
 
             return { orderId: order.id, subtotal: updatedOrder.subtotal, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };
         });
@@ -351,31 +333,10 @@ export class OrderService {
                 data: { subtotal, totalAmount, discountAmount: 0, shippingFee: SHIPPING_FEE },
             });
 
-            const paymentTxn = await tx.paymentTransaction.create({
-                data: {
-                    orderId: order.id,
-                    userId,
-                    gateway: body.paymentGateway,
-                    status: PaymentStatus.PENDING,
-                    amount: totalAmount,
-                    currencyCode: "VND",
-                    idempotencyKey: order.orderCode,
-                },
-            });
-
-            const gatewayResp = this.paymentService.createTransaction({
+            const gatewayResp = this.paymentService.createTransactionUrl({
                 orderId: order.id,
                 gateway: body.paymentGateway,
                 amount: totalAmount,
-            });
-
-            await tx.paymentTransaction.update({
-                where: { id: paymentTxn.id },
-                data: {
-                    responsePayload: gatewayResp as any,
-                    paymentUrl: gatewayResp.paymentUrl,
-                    providerTxnId: (gatewayResp as any)?.providerTxnId ?? null,
-                },
             });
 
             return { orderId: order.id, subtotal: updatedOrder.subtotal, totalAmount: updatedOrder.totalAmount, paymentUrl: (gatewayResp as any)?.paymentUrl, orderCode: order.orderCode };

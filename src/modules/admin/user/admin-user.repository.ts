@@ -4,12 +4,33 @@ import { RoleCode } from '@prisma/client';
 
 @Injectable()
 export class AdminUserRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   countUsers() {
     return this.prisma.user.count({
       where: {
         deletedAt: null,
+      },
+    });
+  }
+
+  countCustomersLoggedInSince(since: Date) {
+    return this.prisma.user.count({
+      where: {
+        deletedAt: null,
+        lastLoginAt: {
+          gte: since,
+        },
+        userRoles: {
+          some: {
+            deletedAt: null,
+            role: {
+              deletedAt: null,
+              isActive: true,
+              code: RoleCode.CUSTOMER,
+            },
+          },
+        },
       },
     });
   }

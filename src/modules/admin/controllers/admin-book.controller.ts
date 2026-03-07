@@ -26,12 +26,21 @@ import {
 import {
   AdminBookItemResponseDto,
   AdminBookListResponseDto,
+  AdminBookStatsResponseDto,
 } from '../dto/response';
 
 @ApiTags('admin')
 @Controller('admin/books')
 export class AdminBookController {
-  constructor(private readonly adminBookService: AdminBookService) {}
+  constructor(private readonly adminBookService: AdminBookService) { }
+
+  @Get('stats')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminBookStatsResponseDto })
+  getStats() {
+    return this.adminBookService.getStats();
+  }
 
   @Post()
   @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK)

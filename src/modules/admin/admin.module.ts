@@ -1,3 +1,4 @@
+import { CacheProvider } from '@/config/redis.config';
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { LanguageModule } from '@/modules/language/language.module';
@@ -5,6 +6,8 @@ import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { Module } from '@nestjs/common';
 import { AdminBookRepository } from './book/admin-book.repository';
 import { AdminBookService } from './book/admin-book.service';
+import { AdminCategoryRepository } from './categories/admin-category.repository';
+import { AdminCategoryService } from './categories/admin-category.service';
 import { AdminOrderRepository } from './order/admin-order.repository';
 import { AdminOrderService } from './order/admin-order.service';
 import { AdminUserRepository } from './user/admin-user.repository';
@@ -12,16 +15,24 @@ import { AdminUserService } from './user/admin-user.service';
 import { AdminBookController } from './controllers/admin-book.controller';
 import { AdminBookSnapshotController } from './controllers/admin-book-snapshot.controller';
 import { AdminBookTranslationController } from './controllers/admin-book-translation.controller';
+import { AdminCategoryController } from './controllers/admin-category.controller';
 import { AdminOrderController } from './controllers/admin-order.controller';
 import { AdminOrderDetailController } from './controllers/admin-order-detail.controller';
 import { AdminUserController } from './controllers/admin-user.controller';
 
 @Module({
-  imports: [LanguageModule, AuditLogModule, PublisherModule, AuthorModule],
+  imports: [
+    CacheProvider,
+    LanguageModule,
+    AuditLogModule,
+    PublisherModule,
+    AuthorModule,
+  ],
   controllers: [
     AdminBookController,
     AdminBookTranslationController,
     AdminBookSnapshotController,
+    AdminCategoryController,
     AdminUserController,
     AdminOrderController,
     AdminOrderDetailController,
@@ -31,6 +42,8 @@ import { AdminUserController } from './controllers/admin-user.controller';
     AdminBookRepository,
     AdminUserService,
     AdminUserRepository,
+    AdminCategoryService,
+    AdminCategoryRepository,
     AdminOrderService,
     AdminOrderRepository,
   ],
@@ -39,6 +52,8 @@ import { AdminUserController } from './controllers/admin-user.controller';
     AdminBookRepository,
     AdminUserService,
     AdminUserRepository,
+    AdminCategoryService,
+    AdminCategoryRepository,
     AdminOrderService,
     AdminOrderRepository,
   ],

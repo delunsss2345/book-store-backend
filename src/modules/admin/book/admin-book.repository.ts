@@ -78,7 +78,7 @@ const adminBookSelect = {
 
 @Injectable()
 export class AdminBookRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findPublisherById(publisherId: bigint) {
     return this.prisma.publisher.findUnique({
@@ -291,7 +291,34 @@ export class AdminBookRepository {
     });
   }
 
-  countBooks() {
+  private buildBookListWhere(
+    languageId: number,
+    searchPhrase?: string,
+  ): Prisma.BookWhereInput {
+    return {
+      deletedAt: null,
+      ...(searchPhrase
+        ? {
+          translations: {
+            some: {
+              languageId,
+              title: {
+                contains: searchPhrase,
+              },
+            },
+          },
+        }
+        : {}),
+    };
+  }
+
+  countBooks(languageId: number, searchPhrase?: string) {
+    return this.prisma.book.count({
+      where: this.buildBookListWhere(languageId, searchPhrase),
+    });
+  }
+
+  countTotalBooks() {
     return this.prisma.book.count({
       where: {
         deletedAt: null,
@@ -299,11 +326,31 @@ export class AdminBookRepository {
     });
   }
 
-  findBooks(page: number, limit: number, languageId: number) {
-    return this.prisma.book.findMany({
+  countActiveBooks() {
+    return this.prisma.book.count({
       where: {
         deletedAt: null,
+        isActive: true,
       },
+    });
+  }
+
+  countAuthors() {
+    return this.prisma.author.count();
+  }
+
+  countPublishers() {
+    return this.prisma.publisher.count();
+  }
+
+  findBooks(
+    page: number,
+    limit: number,
+    languageId: number,
+    searchPhrase?: string,
+  ) {
+    return this.prisma.book.findMany({
+      where: this.buildBookListWhere(languageId, searchPhrase),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,

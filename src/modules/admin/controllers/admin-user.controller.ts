@@ -4,12 +4,23 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AdminUserService } from '../user/admin-user.service';
 import { AdminUserListQueryDto } from '../dto/request';
-import { AdminUserListResponseDto } from '../dto/response';
+import {
+  AdminUserListResponseDto,
+  AdminUserStatsResponseDto,
+} from '../dto/response';
 
 @ApiTags('admin')
 @Controller('admin/users')
 export class AdminUserController {
   constructor(private readonly adminUserService: AdminUserService) {}
+
+  @Get('stats')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminUserStatsResponseDto })
+  getStats() {
+    return this.adminUserService.getStats();
+  }
 
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)

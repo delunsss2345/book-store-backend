@@ -6,17 +6,16 @@ import { LanguageService } from '@/modules/language/language.service';
 import { PublisherService } from '@/modules/publisher/publisher.service';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import {
-  AdminBookRepository,
-  CreateBookAuthorLinkInput,
-} from './admin-book.repository';
+import type { Cache } from 'cache-manager';
 import {
   AdminBookListQueryDto,
   AdminBookSnapshotListQueryDto,
@@ -29,8 +28,13 @@ import {
   AdminBookListResponseDto,
   AdminBookSnapshotItemResponseDto,
   AdminBookSnapshotListResponseDto,
+  AdminBookStatsResponseDto,
   AdminBookTranslationResponseDto,
 } from '../dto/response';
+import {
+  AdminBookRepository,
+  CreateBookAuthorLinkInput,
+} from './admin-book.repository';
 
 type BookRow = Awaited<ReturnType<AdminBookRepository['findBookById']>>;
 type BookListRow = Awaited<
@@ -39,6 +43,9 @@ type BookListRow = Awaited<
 type SnapshotRow = Awaited<
   ReturnType<AdminBookRepository['findBookSnapshots']>
 >[number];
+
+const ADMIN_STATS_CACHE_KEY = 'admin:stats';
+const ADMIN_STATS_CACHE_TTL = 86_400_000;
 
 @Injectable()
 export class AdminBookService {
@@ -49,7 +56,8 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
-  ) {}
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) { }
 
   async createBook(
     body: CreateAdminBookRequestDto,
@@ -447,11 +455,17 @@ export class AdminBookService {
   ): Promise<AdminBookListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const searchPhrase = query.searchPhrase?.trim() || undefined;
     const language = await this.languageService.resolveLanguage(lang);
 
     const [total, rows] = await Promise.all([
-      this.adminBookRepository.countBooks(),
-      this.adminBookRepository.findBooks(page, limit, language.id),
+      this.adminBookRepository.countBooks(language.id, searchPhrase),
+      this.adminBookRepository.findBooks(
+        page,
+        limit,
+        language.id,
+        searchPhrase,
+      ),
     ]);
 
     return {
@@ -461,6 +475,39 @@ export class AdminBookService {
       totalPages: total ? Math.ceil(total / limit) : 0,
       items: rows.map((row) => this.toAdminBookListItem(row)),
     };
+  }
+
+  async getStats(): Promise<AdminBookStatsResponseDto> {
+    const cached =
+      await this.cacheManager.get<AdminBookStatsResponseDto>(
+        ADMIN_STATS_CACHE_KEY,
+      );
+    if (cached) {
+      return cached;
+    }
+
+    const [totalBooks, activeBooks, totalAuthors, totalPublishers] =
+      await Promise.all([
+        this.adminBookRepository.countTotalBooks(),
+        this.adminBookRepository.countActiveBooks(),
+        this.adminBookRepository.countAuthors(),
+        this.adminBookRepository.countPublishers(),
+      ]);
+
+    const response: AdminBookStatsResponseDto = {
+      totalBooks,
+      activeBooks,
+      totalAuthors,
+      totalPublishers,
+    };
+
+    await this.cacheManager.set(
+      ADMIN_STATS_CACHE_KEY,
+      response,
+      ADMIN_STATS_CACHE_TTL,
+    );
+
+    return response;
   }
 
   async getBookSnapshots(
@@ -532,12 +579,12 @@ export class AdminBookService {
       updatedAt: row.updatedAt,
       translation: translation
         ? {
-            id: translation.id.toString(),
-            languageId: translation.languageId,
-            title: translation.title,
-            description: translation.description ?? null,
-            slug: translation.slug ?? '',
-          }
+          id: translation.id.toString(),
+          languageId: translation.languageId,
+          title: translation.title,
+          description: translation.description ?? null,
+          slug: translation.slug ?? '',
+        }
         : null,
       variants: row.variants.map((variant) => ({
         id: variant.id.toString(),
@@ -569,12 +616,12 @@ export class AdminBookService {
       updatedAt: row.updatedAt,
       translation: translation
         ? {
-            id: translation.id.toString(),
-            languageId: translation.languageId,
-            title: translation.title,
-            description: translation.description ?? null,
-            slug: translation.slug ?? '',
-          }
+          id: translation.id.toString(),
+          languageId: translation.languageId,
+          title: translation.title,
+          description: translation.description ?? null,
+          slug: translation.slug ?? '',
+        }
         : null,
       variants: row.variants.map((variant) => ({
         id: variant.id.toString(),

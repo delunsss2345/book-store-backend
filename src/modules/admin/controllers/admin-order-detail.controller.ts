@@ -3,20 +3,20 @@ import { RequirePermissions } from '@/common/security/decorators/requirePermissi
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { AdminService } from '../admin.service';
+import { AdminOrderService } from '../order/admin-order.service';
 import { AdminOrderDetailResponseDto } from '../dto/response';
 
 @ApiTags('admin')
 @Controller('admin/order-details')
 export class AdminOrderDetailController {
-    constructor(private readonly adminService: AdminService) { }
+  constructor(private readonly adminOrderService: AdminOrderService) {}
 
-    @Get(':orderId')
-    @RequirePermissions(PermissionCode.ADMIN_READ)
-    @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: AdminOrderDetailResponseDto })
-    getOrderDetail(@Param('orderId') orderId: string) {
-        const parsedOrderId = parseBigIntRequired(orderId, 'orderId');
-        return this.adminService.getOrderDetail(parsedOrderId);
-    }
+  @Get(':orderId')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminOrderDetailResponseDto })
+  getOrderDetail(@Param('orderId') orderId: string) {
+    const parsedOrderId = parseBigIntRequired(orderId, 'orderId');
+    return this.adminOrderService.getOrderDetail(parsedOrderId);
+  }
 }

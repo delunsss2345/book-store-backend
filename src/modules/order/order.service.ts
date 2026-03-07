@@ -8,9 +8,8 @@ import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { CartItem, OrderStatus, PaymentStatus, UserAddress } from "@prisma/client";
+import { CartItem, OrderStatus, PaymentGateway, PaymentStatus, UserAddress } from "@prisma/client";
 import crypto from 'crypto';
-import { PaymentGateway } from "generated/prisma/enums";
 import { CatalogRepository } from "../catalog/catalog.repository";
 import { PaymentService } from "../payment/payment.service";
 @Injectable()
@@ -75,8 +74,22 @@ export class OrderService {
                     }
                 })
             ])
-            console.log(existing);
+
             if (cartHash === existing?.cartHash) {
+                // Nếu bấm mà chưa tạo payment chỉ toàn kiểu tạo order (ko thanh toán) thì mình tiếng hành gửi lại cái mã mới mà không phải tạo lại order
+                if (existing?.payments.length <= 0) {
+                    return {
+                        id: existing.id,
+                        subtotal: existing.subtotal,
+                        orderCode: existing.orderCode,
+                        payment: this.paymentService.createTransactionUrl({
+                            orderId: existing.id,
+                            gateway: PaymentGateway.SEPAY,
+                            amount: Number(existing.totalAmount)
+                        }),
+                        totalAmount: existing.totalAmount,
+                    }
+                }
                 return {
                     id: existing.id,
                     subtotal: existing.subtotal,

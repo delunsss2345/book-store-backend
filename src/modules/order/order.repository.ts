@@ -91,7 +91,8 @@ export class OrderRepository {
         return this.prisma.order.findMany({
             take: limit,
             skip: (page - 1) * limit,
-            where: { userId: userId }
+            where: { userId: userId },
+            orderBy: { createdAt: 'desc' }
         })
     }
 }

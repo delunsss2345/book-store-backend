@@ -131,18 +131,16 @@ export class HooksService {
         };
     }
 
-    async getOrderStatus(orderIdText: string) {
-        let order: Awaited<ReturnType<HooksRepository['findOrderStatusById']>> = null;
-        const cachedOrder = await this.cacheManager.get(`order:status:${orderIdText}`);
+    async getOrderStatus(orderCode: string) {
+        let order: Awaited<ReturnType<HooksRepository['findOrderByNormalizedOrderCode']>> = null;
+        const orderCodeUppercase = orderCode.toUpperCase();
+        const normalizedOrderCode = orderCodeUppercase
+            .replace(/[^A-Z0-9]/g, '');
+
+        const cachedOrder = await this.cacheManager.get(`order:status:${normalizedOrderCode}`);
         if (cachedOrder) return cachedOrder;
-        if (/^\d+$/.test(orderIdText)) {
-            order = await this.hooksRepository.findOrderStatusById(BigInt(orderIdText));
-        }
 
         if (!order) {
-            const normalizedOrderCode = orderIdText
-                .toUpperCase()
-                .replace(/[^A-Z0-9]/g, '');
             order = await this.hooksRepository.findOrderByNormalizedOrderCode(
                 normalizedOrderCode,
             );
@@ -152,8 +150,8 @@ export class HooksService {
             throw new NotFoundException('Order not found');
         }
 
-        await this.cacheManager.set(`order:status:${orderIdText}`, order, ORDER_STATUS_TTL);
-        
+        await this.cacheManager.set(`order:status:${normalizedOrderCode}`, order, ORDER_STATUS_TTL);
+
         return {
             id: order.id.toString(),
             orderCode: order.orderCode,

@@ -33,7 +33,6 @@ export class OrderController {
         @GetUser() user: JwtPayload
     ) {
         const guestSessionId = req['guestSessionId'] as string;
-        console.log(guestSessionId);
         if (guestSessionId) {
             return this.orderService.getOrderGuest(guestSessionId, query.page ?? 1, query.limit ?? 12, lang);
         }

@@ -17,9 +17,11 @@ export class HooksController {
     async sePayPayment(@Body() body: SePayHooksDto) {
         return this.hooksService.handleSepayWebhook(body);
     }
-    @Get(':orderId/status')
+    @Get(':orderCode/status')
     @Public()
-    getOrderStatus(@Param('orderId') orderId: string) {
-        return this.hooksService.getOrderStatus(orderId);
+    getOrderStatus(@Param('orderCode') orderCode: string) {
+        return this.hooksService.getOrderStatus(orderCode);
     }
+
+
 }

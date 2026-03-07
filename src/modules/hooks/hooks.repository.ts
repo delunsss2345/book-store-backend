@@ -173,4 +173,16 @@ export class HooksRepository {
             },
         });
     }
+    findOrderStatusByOrderCode(orderCode: string) {
+        return this.prisma.order.findUnique({
+            where: { orderCode },
+            select: {
+                id: true,
+                orderCode: true,
+                status: true,
+                paymentStatus: true,
+                updatedAt: true,
+            },
+        });
+    }
 }

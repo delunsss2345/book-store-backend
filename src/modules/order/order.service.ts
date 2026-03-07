@@ -21,6 +21,14 @@ export class OrderService {
         private readonly orderRepository: OrderRepository,
         private readonly prisma: PrismaService
     ) { }
+
+    /**
+     * Generates a hash string for the given cart items and cartId.
+     *
+     * @param items Cart items to generate the hash string from.
+     * @param cartId Cart id to generate the hash string from.
+     * @returns A hash string representing the given cart items and cartId.
+     */
     getCartHash(items: CartItem[], cartId: bigint) {
         // Clone để tránh đổi array
         const sortedItems = [...items].sort((a, b) =>
@@ -35,7 +43,8 @@ export class OrderService {
     }
 
 
-    // Xử lí orderItems 
+    // Xử lí orderItems
+    // Optimize from N + 1 queries to 5 queries
     private async processOrderItems(
         tx: any,
         cart: any,
@@ -115,6 +124,13 @@ export class OrderService {
         return subtotal;
     }
 
+    /**
+     * Tạo order cho người dùng khách
+     * @param guestSessionId id của phiên guest
+     * @param body thông tin về order
+     * @param lang mã ngôn ngữ
+     * 
+    **/
     async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, lang?: string) {
         return this.prisma.$transaction(async (tx) => {
             // tìm cart đầu tiên để thứ nhất vừa tính lại tiền 

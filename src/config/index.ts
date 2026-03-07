@@ -3,6 +3,7 @@ import { BaseConfiguration } from '@/config/base.config';
 import { GoogleConfiguration } from '@/config/google.config';
 import { JwtConfiguration } from '@/config/jwt.config';
 import { NodemailerConfiguration } from '@/config/nodemailer.config';
+import { PaymentConfiguration } from '@/config/payment.config';
 import { RedisConfiguration } from '@/config/redis.config';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
@@ -38,6 +39,10 @@ class Configuration extends BaseConfiguration {
   @ValidateNested()
   @Type(() => GoogleConfiguration)
   GOOGLE_CONFIG = new GoogleConfiguration();
+
+  @ValidateNested()
+  @Type(() => PaymentConfiguration)
+  PAYMENT_CONFIG = new PaymentConfiguration();
 }
 export const CONFIGURATION = new Configuration();
 export type TConfiguration = typeof CONFIGURATION;

@@ -4,6 +4,7 @@ import { PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
 import { PaymentStatus } from '@prisma/client';
+import { OrderStatus } from 'generated/prisma/enums';
 
 export type OrderByUserRow = {
     quantity: number;
@@ -94,5 +95,51 @@ export class OrderRepository {
             where: { userId: userId },
             orderBy: { createdAt: 'desc' }
         })
+
+
+    }
+
+
+    findOrderIsExpire(orderSecondMinutes: number) {
+        return this.prisma.order.findMany({
+            where: {
+                expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
+            },
+            select: {
+                items: {
+                    select: {
+                        quantity: true,
+                        bookVariantSnapshot: {
+                            select: {
+                                bookVariantId: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    clearOrder(variantMap: Map<string, number>, orderSecondMinutes: number) {
+        return this.prisma.$transaction(async (tx) => {
+            for (const [key, value] of variantMap) {
+                await tx.bookVariant.updateMany({
+                    where: { id: BigInt(key) },
+                    data: {
+                        stock: { increment: value },
+                        reserved: { decrement: value }
+                    }
+                })
+            }
+            await tx.order.updateMany({
+                where: {
+                    expiredAt: new Date(Date.now() + orderSecondMinutes * 1000)
+                },
+                data: {
+                    status: OrderStatus.CANCELLED
+                }
+            })
+        })
     }
 }
+

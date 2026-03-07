@@ -70,16 +70,17 @@ export class OrderService {
         );
 
         bookVariants.forEach(v => {
-            const variant = mapBookVariant.get(v.id.toString());
+            const variantCardItem = mapBookVariant.get(v.id.toString());
+            const variant = variantMap.get(v.id.toString());
+            const available = variant?.stock ?? 0 - (variant?.reserved ?? 0);
             if (!v) throw new ForbiddenException("Book variant not found");
 
-            if (!v.stock || v.stock < (variant?.quantity ?? 0)) {
+            if (!v.stock || available > (variantCardItem?.quantity ?? 0)) {
                 throw new ForbiddenException("Book variant out of stock");
             }
         });
 
         let subtotal = 0;
-
         await Promise.all(
             cart.items.map(async item => {
                 const bookVariant = variantMap.get(item.bookVariantId.toString());
@@ -389,5 +390,21 @@ export class OrderService {
 
     async getOrderUser(userId: bigint, page: number, limit: number, lang: string) {
         return this.orderRepository.findOrderByUserId(userId, page, limit, lang);
+    }
+
+    async cleanOrder(orderSecondMinutes: number) {
+        const expiredOrders = await this.orderRepository.findOrderIsExpire(orderSecondMinutes);
+        const variantMap = new Map<string, number>();
+
+        for (const order of expiredOrders) {
+            for (const item of order.items) {
+                const key = item.bookVariantSnapshot.bookVariantId.toString();
+                variantMap.set(
+                    key,
+                    (variantMap.get(key) ?? 0) + item.quantity
+                );
+            }
+        }
+        return this.orderRepository.clearOrder(variantMap, orderSecondMinutes);
     }
 }

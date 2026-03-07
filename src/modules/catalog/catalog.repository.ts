@@ -161,6 +161,7 @@ export class CatalogRepository {
                 stock: true,
                 format: true,
                 bookId: true,
+                reserved: true,
                 book: {
                     select: {
                         id: true,

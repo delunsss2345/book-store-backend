@@ -5,7 +5,6 @@ import { Injectable } from "@nestjs/common";
 @Injectable()
 export class PaymentRepository {
     constructor(private readonly prisma: PrismaService) {
-
     }
 
     createPaymentTransaction(userId: bigint, payment: CreatePaymentTransactionDto) {

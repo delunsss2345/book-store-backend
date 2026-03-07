@@ -42,13 +42,6 @@ export class PaymentService {
         }
     }
 
-    generateVnPayUrl(orderId: bigint, amount: number) {
-
-    }
-
-    generateMoMoUrl(orderId: bigint, amount: number) {
-    }
-
     generateQrUrl(amount: number): string {
         return `https://qr.sepay.vn/img?bank=${this.bank}&acc=${this.stk}&template=${this.template}&amount=${amount}`;
     }

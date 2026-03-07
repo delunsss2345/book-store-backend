@@ -21,12 +21,99 @@ export class OrderService {
         private readonly orderRepository: OrderRepository,
         private readonly prisma: PrismaService
     ) { }
-    getCartHash(items: CartItem[], cardId: bigint) {
-        const sortedItems = items.sort((a, b) => (a.id.toString()).localeCompare((b.id.toString())));
-        const content = sortedItems.map(item => `${item.bookVariantId}:${item.quantity}`).join("|");
+    getCartHash(items: CartItem[], cartId: bigint) {
+        // Clone để tránh đổi array
+        const sortedItems = [...items].sort((a, b) =>
+            a.id.toString().localeCompare(b.id.toString())
+        );
 
-        return crypto.createHash("md5").update(content + `${cardId}`).digest("hex");
-    };
+        const content = sortedItems
+            .map(item => `${item.bookVariantId}:${item.quantity}`)
+            .join("|");
+
+        return crypto.createHash("md5").update(content + cartId.toString()).digest("hex");
+    }
+
+
+    // Xử lí orderItems 
+    private async processOrderItems(
+        tx: any,
+        cart: any,
+        languageId: number,
+        orderId: bigint
+    ) {
+        const mapBookVariant = new Map<string, { quantity: number; price: number }>();
+
+        cart.items.forEach(item =>
+            mapBookVariant.set(item.bookVariantId.toString(), {
+                quantity: item.quantity,
+                price: Number(item.variant.price)
+            })
+        );
+
+        const bookVariants = await this.catalogRepository.findBookVariantByIds(
+            [...mapBookVariant.keys()].map(id => BigInt(id)),
+            languageId
+        );
+
+        const variantMap = new Map(
+            bookVariants.map(v => [v.id.toString(), v])
+        );
+
+        bookVariants.forEach(v => {
+            const variant = mapBookVariant.get(v.id.toString());
+            if (!v) throw new ForbiddenException("Book variant not found");
+
+            if (!v.stock || v.stock < (variant?.quantity ?? 0)) {
+                throw new ForbiddenException("Book variant out of stock");
+            }
+        });
+
+        let subtotal = 0;
+
+        await Promise.all(
+            cart.items.map(async item => {
+                const bookVariant = variantMap.get(item.bookVariantId.toString());
+                if (!bookVariant) throw new ForbiddenException("Book variant not found");
+
+                const unitPrice = Number(bookVariant.price);
+                const lineTotal = unitPrice * item.quantity;
+
+                subtotal += lineTotal;
+
+                const contentHash = generateContentHash(bookVariant);
+
+                const snapshot = await tx.bookVariantSnapshot.upsert({
+                    where: { contentHash },
+                    update: {},
+                    create: {
+                        bookVariantId: bookVariant.id,
+                        contentHash,
+                        priceSnapshot: unitPrice,
+                        formatSnapshot: bookVariant.format,
+                        skuSnapshot: generateSKU(bookVariant),
+                        titleSnapshot:
+                            bookVariant.book.translations?.[0]?.title ??
+                            item.variant.book.translations[0].title,
+                        coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? "",
+                        currencyCodeSnapshot: "VND"
+                    }
+                });
+
+                await tx.orderItem.create({
+                    data: {
+                        orderId,
+                        bookVariantSnapshotId: snapshot.id,
+                        quantity: item.quantity,
+                        unitPrice,
+                        lineTotal
+                    }
+                });
+            })
+        );
+
+        return subtotal;
+    }
 
     async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, lang?: string) {
         return this.prisma.$transaction(async (tx) => {
@@ -99,8 +186,6 @@ export class OrderService {
                 }
             }
 
-            // 2) Tính total dựa trên dữ liệu mới nhất (bookVariant)
-            let subtotal = 0;
 
             // 3) Tạo order trước (chưa có subtotal chính xác cũng được, lát update)
             const order = await tx.order.create({
@@ -130,51 +215,7 @@ export class OrderService {
                 },
             });
 
-            // 5) tạo items + snapshot + subtotal
-            for (const item of cart.items) {
-                const bookVariant = await this.catalogRepository.findBookVariantById(
-                    item.bookVariantId,
-                    language.id,
-                );
-
-                if (!bookVariant) throw new ForbiddenException("Book variant not found");
-
-                if (!bookVariant.stock || bookVariant.stock < item.quantity) {
-                    throw new ForbiddenException("Book variant out of stock");
-                }
-
-                const unitPrice = Number(bookVariant.price);
-                const lineTotal = unitPrice * item.quantity;
-                subtotal += lineTotal;
-
-                // Tạo book variant hash nếu bookVariant không thay đổi thì dùng bookSnapshot cũ 
-                const contentHash = generateContentHash(bookVariant);
-
-                const bookSnapshot = await tx.bookVariantSnapshot.upsert({
-                    where: { contentHash },
-                    update: {},
-                    create: {
-                        bookVariantId: BigInt(item.bookVariantId),
-                        contentHash,
-                        priceSnapshot: unitPrice,
-                        formatSnapshot: bookVariant.format,
-                        skuSnapshot: generateSKU(bookVariant),
-                        titleSnapshot: bookVariant.book.translations?.[0]?.title ?? item.variant.book.translations[0].title,
-                        coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? "",
-                        currencyCodeSnapshot: "VND"
-                    },
-                });
-
-                await tx.orderItem.create({
-                    data: {
-                        orderId: order.id,
-                        bookVariantSnapshotId: bookSnapshot.id,
-                        quantity: item.quantity,
-                        unitPrice: unitPrice,
-                        lineTotal: lineTotal,
-                    },
-                });
-            }
+            const subtotal = await this.processOrderItems(tx, cart, language.id, order.id);
 
             // 6) update totals
             const totalAmount = subtotal + SHIPPING_FEE;
@@ -280,7 +321,6 @@ export class OrderService {
 
             if (!address) throw new ForbiddenException("Address not found");
 
-            let subtotal = 0;
 
             const order = await tx.order.create({
                 data: {
@@ -296,56 +336,27 @@ export class OrderService {
                 },
             });
 
-            for (const item of cart.items) {
-                const bookVariant = await this.catalogRepository.findBookVariantById(
-                    item.bookVariantId,
-                    language.id,
-                );
 
-                if (!bookVariant) throw new ForbiddenException("Book variant not found");
-
-                if (!bookVariant.stock || bookVariant.stock < item.quantity) {
-                    throw new ForbiddenException("Book variant out of stock");
-                }
-
-                const unitPrice = Number(bookVariant.price);
-                const lineTotal = unitPrice * item.quantity;
-                subtotal += lineTotal;
-
-                const contentHash = generateContentHash(bookVariant);
-
-                const bookSnapshot = await tx.bookVariantSnapshot.upsert({
-                    where: { contentHash },
-                    update: {},
-                    create: {
-                        bookVariantId: BigInt(item.bookVariantId),
-                        contentHash,
-                        priceSnapshot: unitPrice,
-                        formatSnapshot: bookVariant.format,
-                        skuSnapshot: generateSKU(bookVariant),
-                        titleSnapshot: bookVariant.book.translations?.[0]?.title ?? item.variant.book.translations[0].title,
-                        coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? "",
-                        currencyCodeSnapshot: "VND"
-                    },
-                });
-
-                await tx.orderItem.create({
-                    data: {
-                        orderId: order.id,
-                        bookVariantSnapshotId: bookSnapshot.id,
-                        quantity: item.quantity,
-                        unitPrice: unitPrice,
-                        lineTotal: lineTotal,
-                    },
-                });
-            }
-
+            const subtotal = await this.processOrderItems(tx, cart, language.id, order.id);
             const totalAmount = subtotal + SHIPPING_FEE;
+
             const updatedOrder = await tx.order.update({
                 where: { id: order.id },
                 data: { subtotal, totalAmount, discountAmount: 0, shippingFee: SHIPPING_FEE },
             });
 
+            if (body.paymentGateway === PaymentGateway.COD) {
+                return {
+                    orderId: order.id,
+                    subtotal: updatedOrder.subtotal,
+                    totalAmount: updatedOrder.totalAmount,
+                    orderCode: order.orderCode
+                };
+
+            }
+            // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout) 
+            // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền 
+            // 8) gọi gateway tạo transaction
             const gatewayResp = this.paymentService.createTransactionUrl({
                 orderId: order.id,
                 gateway: body.paymentGateway,

@@ -151,6 +151,34 @@ export class CatalogRepository {
         });
     }
 
+    findBookVariantByIds(bookVariantId: bigint[], languageId: number) {
+        return this.prisma.bookVariant.findMany({
+            where: { id: { in: bookVariantId } },
+            select: {
+                id: true,
+                price: true,
+                currencyCode: true,
+                stock: true,
+                format: true,
+                bookId: true,
+                book: {
+                    select: {
+                        id: true,
+                        coverImageUrl: true,
+                        translations: {
+                            where: { languageId },
+                            select: {
+                                title: true,
+                                slug: true,
+                            },
+                            take: 1,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
     findNewestActiveBookIds(languageId: number, limit: number) {
         return this.prisma.book.findMany({
             where: {

@@ -1,5 +1,6 @@
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
+import { OrderRepository } from '@/modules/order/order.repository';
 import { PaymentRepository } from '@/modules/payment/payment.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -11,7 +12,8 @@ import { HooksRepository } from './hooks.repository';
 export class HooksService {
     constructor(private readonly hooksRepository: HooksRepository,
         private readonly paymentRepository: PaymentRepository,
-        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+        private readonly orderRepository: OrderRepository
     ) { }
 
     async handleSepayWebhook(body: SePayHooksDto) {
@@ -105,19 +107,28 @@ export class HooksService {
             } else {
                 return this.hooksRepository.markPaymentNotSuccess(order.id, providerEventId, body, PaymentStatus.PAYMENT_OVERAGE);
             }
-
         }
-        const paidOrder = await this.hooksRepository.markOrderAndPaymentSuccess(
+        const [paidOrder, doneWebhook] = await Promise.all([this.hooksRepository.markOrderAndPaymentSuccess(
             order.id,
             providerEventId,
             body,
-        );
-        const doneWebhook = await this.hooksRepository.updateWebhookStatus(
+        ),
+        this.hooksRepository.updateWebhookStatus(
             webhookInbox.id,
             JobStatus.DONE,
             attempts,
-        );
+        )
+        ])
 
+
+        // Lấy ra các order item
+        const orders = await this.orderRepository.findOrderItemWWithParentVariantByOrderId(paidOrder.id);
+        // Chuyển thành bookVariantId, và quantity 
+        const variantMapWithQuantity = new Map<string, number>(orders?.items.map(item =>
+            [item.bookVariantSnapshot.bookVariant.id.toString(), item.quantity]));
+
+        // Update trừ số quantity trong order vào variant 
+        await this.orderRepository.updateOrderDone(variantMapWithQuantity, paidOrder.id);
         return {
             ok: true,
             duplicate: Boolean(existedWebhook),

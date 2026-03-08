@@ -23,6 +23,7 @@ export type OrderWithItemsRow = {
     }[];
 };
 
+
 @Injectable()
 export class OrderRepository {
     constructor(private readonly prisma: PrismaService) { }
@@ -40,6 +41,32 @@ export class OrderRepository {
                     select: {
                         id: true,
                         bookVariantSnapshotId: true,
+                        quantity: true,
+                        createdAt: true,
+                    }
+                }
+            }
+        })
+
+    }
+
+    async findOrderItemWWithParentVariantByOrderId(orderId: bigint) {
+        return this.prisma.order.findFirst({
+            where: { id: orderId },
+            select: {
+                id: true,
+                items: {
+                    select: {
+                        id: true,
+                        bookVariantSnapshot: {
+                            select: {
+                                bookVariant: {
+                                    select: {
+                                        id: true
+                                    }
+                                }
+                            }
+                        },
                         quantity: true,
                         createdAt: true,
                     }
@@ -99,7 +126,6 @@ export class OrderRepository {
 
     }
 
-
     findOrderIsExpire(orderSecondMinutes: number) {
         return this.prisma.order.findMany({
             where: {
@@ -137,6 +163,28 @@ export class OrderRepository {
                 },
                 data: {
                     status: OrderStatus.CANCELLED
+                }
+            })
+        })
+    }
+
+    updateOrderDone(variantMap: Map<string, number>, orderId: bigint) {
+        return this.prisma.$transaction(async (tx) => {
+            for (const [key, value] of variantMap) {
+                await tx.bookVariant.updateMany({
+                    where: { id: BigInt(key) },
+                    data: {
+                        stock: { decrement: value },
+                        reserved: { decrement: value }
+                    }
+                })
+            }
+            await tx.order.update({
+                where:
+                    { id: orderId }
+                ,
+                data: {
+                    status: OrderStatus.PAID
                 }
             })
         })

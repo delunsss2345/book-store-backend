@@ -14,6 +14,7 @@ import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { ReviewModule } from '@/modules/review/review.module';
 import { SearchModule } from '@/modules/search/search.module';
+import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { WishlistModule } from '@/modules/wishlist/wishlist.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
@@ -62,6 +63,7 @@ import { R2ServiceModule } from './modules/r2-service/r2-service.module';
     ReviewModule,
     PublisherModule,
     AuthorModule,
+    SupplierModule,
     UserEventModule,
     SearchModule,
     WishlistModule,

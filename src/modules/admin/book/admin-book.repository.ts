@@ -132,10 +132,8 @@ export class AdminBookRepository {
         format: body.format,
         edition: body.edition,
         isbn: body.isbn,
-        costPrice: body.costPrice,
         price: body.price,
         currencyCode: body.currencyCode,
-        stock: body.stock,
         isActive: body.isActive,
       },
     });
@@ -187,10 +185,8 @@ export class AdminBookRepository {
         format: body.format,
         edition: body.edition ?? null,
         isbn: body.isbn ?? null,
-        costPrice: body.costPrice as any,
         price: body.price as any,
         currencyCode: body.currencyCode ?? null,
-        stock: body.stock ?? null,
         isActive: body.isActive ?? true,
       }),
     );

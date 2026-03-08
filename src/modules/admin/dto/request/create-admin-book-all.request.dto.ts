@@ -110,12 +110,6 @@ export class CreateBookVariantDto {
     @MaxLength(20)
     isbn?: string;
 
-    @ApiProperty({ example: 45000, description: 'Giá nhập. Dùng number ở API, convert sang Decimal ở service' })
-    @Type(() => Number)
-    @IsNumber()
-    @Min(0)
-    costPrice!: number;
-
     @ApiProperty({ example: 79000, description: 'Giá bán' })
     @Type(() => Number)
     @IsNumber()
@@ -127,13 +121,6 @@ export class CreateBookVariantDto {
     @IsString()
     @MaxLength(3)
     currencyCode?: string;
-
-    @ApiPropertyOptional({ example: 120, description: 'Tồn kho ban đầu' })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(0)
-    stock?: number;
 
     @ApiPropertyOptional({ example: true, default: true })
     @IsOptional()

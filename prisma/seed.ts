@@ -270,6 +270,24 @@ async function upsertPermissions() {
       description: 'Create category',
     },
     {
+      code: PermissionCode.SUPPLIER_READ,
+      method: 'GET',
+      pathPattern: '/api/v1/suppliers',
+      description: 'List suppliers',
+    },
+    {
+      code: PermissionCode.SUPPLIER_CREATE,
+      method: 'POST',
+      pathPattern: '/api/v1/suppliers',
+      description: 'Create supplier',
+    },
+    {
+      code: PermissionCode.SUPPLIER_UPDATE,
+      method: 'PATCH',
+      pathPattern: '/api/v1/suppliers/:supplierId/active',
+      description: 'Toggle supplier active status',
+    },
+    {
       code: PermissionCode.ADMIN_CREATE_BOOK,
       method: 'POST',
       pathPattern: '/api/v1/admin/books',
@@ -495,6 +513,9 @@ async function upsertRolePermissions(
     [RoleCode.WAREHOUSE]: [
       PermissionCode.HEALTH_READ,
       PermissionCode.DEVICE_READ,
+      PermissionCode.SUPPLIER_READ,
+      PermissionCode.SUPPLIER_CREATE,
+      PermissionCode.SUPPLIER_UPDATE,
     ],
     [RoleCode.CUSTOMER]: [
       PermissionCode.HEALTH_READ,

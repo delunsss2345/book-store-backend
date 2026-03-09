@@ -556,6 +556,9 @@ model Supplier {
   updatedAt   DateTime @updatedAt @map("updated_at")
   isActive    Boolean  @default(true) @map("is_active") 
   stockImports StockImport[]
+
+  @@map("supplier")
+
 }
 
 model StockImport {

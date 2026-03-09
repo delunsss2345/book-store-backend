@@ -116,6 +116,7 @@ jobs:
             # 3. load cờ env file với docker compose
             docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate resolve --rolled-back "20260308153821_supplier_isactive"
             docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate deploy
             docker image prune -af
 

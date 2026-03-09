@@ -544,6 +544,7 @@ model Publisher {
   defaultName String   @unique @map("default_name") @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  books Book[] 
 
   @@map("publishers")
 }
@@ -606,6 +607,7 @@ model Book {
   variants     BookVariant[]
   specs        BookSpec?
   bookBadge    BookBadge[]
+  publisher    Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
 
   reviews Review[]
 

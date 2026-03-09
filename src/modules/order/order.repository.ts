@@ -3,8 +3,8 @@ import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
-import { OrderStatus } from 'generated/prisma/enums';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
+
 
 export type OrderByUserRow = {
     quantity: number;

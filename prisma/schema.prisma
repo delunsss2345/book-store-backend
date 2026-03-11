@@ -584,12 +584,12 @@ model StockImport {
 model StockImportItem {
   id            String      @id @default(cuid())
   stockImportId String      @map("stock_import_id")
-  variantId     BigInt      @map("variant_id")
+  bookVariantId     BigInt      @map("variant_id")
   quantity      Int
   importPrice   Decimal     @db.Decimal(12, 2) @map("import_price")
 
   stockImport   StockImport @relation(fields: [stockImportId], references: [id], onDelete: Cascade)
-  variant       BookVariant @relation("BookVariantToStockImportItem" ,fields: [variantId], references: [id])
+  variant       BookVariant @relation("BookVariantToStockImportItem" ,fields: [bookVariantId], references: [id])
 
   @@map("stock_import_item")
 }
@@ -599,7 +599,7 @@ model PurchaseOrder {
   code         String                @unique
   supplierId   BigInt
   createdById  String
-  approvedById String?
+  approvedById BigInt
   status       PurchaseOrderStatus   @default(PENDING)
   note         String?
   totalAmount  Decimal               @db.Decimal(18, 2)

@@ -4,6 +4,7 @@ import { AuditLogService } from '@/modules/audit-log/audit-log.service';
 import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PublisherService } from '@/modules/publisher/publisher.service';
+import { SupplierRepository } from '@/modules/supplier/supplier.repository';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -19,9 +20,8 @@ import type { Cache } from 'cache-manager';
 import {
   AdminBookListQueryDto,
   AdminBookSnapshotListQueryDto,
-  CreateAdminBookRequestDto,
   CreateAdminBookTranslationRequestDto,
-  UpdateAdminBookRequestDto,
+  UpdateAdminBookRequestDto
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
@@ -56,55 +56,10 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
+    private readonly supplierRepository: SupplierRepository,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
-  async createBook(
-    body: CreateAdminBookRequestDto,
-    actorUserId: bigint,
-    ip?: string,
-  ): Promise<AdminBookItemResponseDto> {
-    const publisherId = this.parsePublisherId(body.publisherId);
-
-    if (publisherId !== undefined) {
-      const publisher =
-        await this.adminBookRepository.findPublisherById(publisherId);
-      if (!publisher) {
-        throw new NotFoundException('Publisher not found');
-      }
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const created = await this.adminBookRepository.createBook(
-        {
-          publisherId,
-          publicationYear: body.publicationYear,
-          pageCount: body.pageCount,
-          weightGrams: body.weightGrams,
-          coverImageUrl: body.coverImageUrl,
-          actorUserId,
-        },
-        tx,
-      );
-
-      const response = this.toAdminBookItem(created);
-
-      await this.auditLogService.createAuditLog(
-        {
-          actorUserId,
-          action: 'ADMIN_BOOK_CREATE',
-          entityType: 'BOOK',
-          entityId: response.id,
-          before: null,
-          after: response as unknown as Prisma.InputJsonValue,
-          ip,
-        },
-        tx,
-      );
-
-      return response;
-    });
-  }
 
   // Tạo sách cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
@@ -117,15 +72,22 @@ export class AdminBookService {
       throw new BadRequestException('publisherName is required');
     }
 
-    const publisher = await this.publisherService.createPublisher({
-      defaultName: normalizedPublisherName,
-    });
-
+    const [publisher, supplier] = await Promise.all([
+      this.publisherService.createPublisher({
+        defaultName: normalizedPublisherName,
+      }),
+      this.supplierRepository.findSupplierById(body.supplierId)
+    ]);
     const publisherId = this.parsePublisherId(publisher.id);
+
     if (!publisherId) {
       throw new BadRequestException('Invalid publisher id');
     }
 
+    if (!supplier) {
+      throw new BadRequestException('Invalid supplier');
+
+    }
     const normalizedAuthorMap = new Map<
       string,
       { name: string; isPrimary: boolean }
@@ -193,6 +155,7 @@ export class AdminBookService {
           weightGrams: body.weightGrams,
           coverImageUrl: body.coverImageUrl,
           actorUserId,
+          supplerId: body.supplierId,
         },
         tx,
       );

@@ -28,7 +28,6 @@ export class EmailProcessor extends WorkerHost {
         const { outboxId, verificationCodeId } = job.data;
         const outBox = await this.emailOutbox.findByIdEmailBox((outboxId));
         try {
-
             if (!outBox) return;
             let path = VerifyCodePath.VERIFY_EMAIL;
             const token = randomKey();

@@ -15,6 +15,7 @@ export type CreateAdminBookParams = {
   weightGrams?: number;
   coverImageUrl?: string;
   actorUserId: bigint;
+  supplerId: bigint
 };
 
 export type UpdateAdminBookParams = {

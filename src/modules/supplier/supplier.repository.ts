@@ -1,9 +1,10 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SupplierRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   countSuppliers() {
     return this.prisma.supplier.count();
@@ -35,6 +36,21 @@ export class SupplierRepository {
         updatedAt: true,
       },
     });
+  }
+
+
+  createSupplierTx(name: string, tx: Prisma.TransactionClient) {
+    const db: Prisma.TransactionClient = tx ?? this.prisma;
+    return db.supplier.create({
+      data: { name },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    },);
   }
 
   findSupplierById(supplierId: bigint) {

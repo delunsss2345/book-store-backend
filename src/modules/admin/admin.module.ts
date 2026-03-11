@@ -3,22 +3,23 @@ import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
+import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { Module } from '@nestjs/common';
 import { AdminBookRepository } from './book/admin-book.repository';
 import { AdminBookService } from './book/admin-book.service';
 import { AdminCategoryRepository } from './categories/admin-category.repository';
 import { AdminCategoryService } from './categories/admin-category.service';
+import { AdminBookSnapshotController } from './controllers/admin-book-snapshot.controller';
+import { AdminBookTranslationController } from './controllers/admin-book-translation.controller';
+import { AdminBookController } from './controllers/admin-book.controller';
+import { AdminCategoryController } from './controllers/admin-category.controller';
+import { AdminOrderDetailController } from './controllers/admin-order-detail.controller';
+import { AdminOrderController } from './controllers/admin-order.controller';
+import { AdminUserController } from './controllers/admin-user.controller';
 import { AdminOrderRepository } from './order/admin-order.repository';
 import { AdminOrderService } from './order/admin-order.service';
 import { AdminUserRepository } from './user/admin-user.repository';
 import { AdminUserService } from './user/admin-user.service';
-import { AdminBookController } from './controllers/admin-book.controller';
-import { AdminBookSnapshotController } from './controllers/admin-book-snapshot.controller';
-import { AdminBookTranslationController } from './controllers/admin-book-translation.controller';
-import { AdminCategoryController } from './controllers/admin-category.controller';
-import { AdminOrderController } from './controllers/admin-order.controller';
-import { AdminOrderDetailController } from './controllers/admin-order-detail.controller';
-import { AdminUserController } from './controllers/admin-user.controller';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AdminUserController } from './controllers/admin-user.controller';
     AuditLogModule,
     PublisherModule,
     AuthorModule,
+    SupplierModule
   ],
   controllers: [
     AdminBookController,
@@ -58,4 +60,4 @@ import { AdminUserController } from './controllers/admin-user.controller';
     AdminOrderRepository,
   ],
 })
-export class AdminModule {}
+export class AdminModule { }

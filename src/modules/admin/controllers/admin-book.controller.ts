@@ -20,8 +20,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AdminBookService } from '../book/admin-book.service';
 import {
   AdminBookListQueryDto,
-  CreateAdminBookRequestDto,
-  UpdateAdminBookRequestDto,
+  UpdateAdminBookRequestDto
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
@@ -42,18 +41,6 @@ export class AdminBookController {
     return this.adminBookService.getStats();
   }
 
-  @Post()
-  @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK)
-  @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminBookItemResponseDto })
-  createBook(
-    @Body() body: CreateAdminBookRequestDto,
-    @GetUser() user: JwtPayload,
-    @Ip() ip: string,
-  ) {
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
-    return this.adminBookService.createBook(body, actorUserId, ip);
-  }
 
   @Post('/all')
   // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK_ALL)

@@ -92,6 +92,49 @@ export class CreateCategoriesDto {
     categoryId: bigint
 }
 
+export class CreateBookVariantAndSupplierImportDto {
+    @ApiProperty({ enum: BookFormat, example: BookFormat.PAPERBACK })
+    @IsEnum(BookFormat)
+    format!: BookFormat;
+
+    @ApiPropertyOptional({ example: 1, description: 'Edition, có thể null' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    edition?: number;
+
+    @ApiPropertyOptional({ example: '9786040000001', maxLength: 20 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(20)
+    isbn?: string;
+
+    @ApiProperty({ example: 79000, description: 'Giá bán' })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    price!: number;
+
+    @ApiPropertyOptional({ example: 'VND', maxLength: 3 })
+    @IsOptional()
+    @IsString()
+    @MaxLength(3)
+    currencyCode?: string;
+
+    @ApiPropertyOptional({ example: true, default: true })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    isActive?: boolean;
+
+    @ApiPropertyOptional({ example: 0, default: 0 })
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    stock: number
+}
+
 export class CreateBookVariantDto {
     @ApiProperty({ enum: BookFormat, example: BookFormat.PAPERBACK })
     @IsEnum(BookFormat)
@@ -127,6 +170,7 @@ export class CreateBookVariantDto {
     @Type(() => Boolean)
     @IsBoolean()
     isActive?: boolean;
+
 }
 
 export class CreateAdminBookAllRequestDto {
@@ -207,14 +251,14 @@ export class CreateAdminBookAllRequestDto {
 
     // Variants (book_variants)
     @ApiProperty({
-        type: () => [CreateBookVariantDto],
+        type: () => [CreateBookVariantAndSupplierImportDto],
         description: 'Ít nhất 1 variant; unique theo (bookId, format, edition)',
     })
     @IsArray()
     @ArrayMinSize(1)
     @ValidateNested({ each: true })
-    @Type(() => CreateBookVariantDto)
-    variants!: CreateBookVariantDto[];
+    @Type(() => CreateBookVariantAndSupplierImportDto)
+    variants!: CreateBookVariantAndSupplierImportDto[];
 
 
     @IsArray()
@@ -222,6 +266,8 @@ export class CreateAdminBookAllRequestDto {
     @ValidateNested({ each: true })
     @Type(() => CreateCategoriesDto)
     categories!: CreateCategoriesDto[]
+
+    supplierId: bigint
 }
 
 

@@ -23,7 +23,7 @@ export class SupplierController {
   constructor(private readonly supplierService: SupplierService) {}
 
   @Get()
-  @RequirePermissions(PermissionCode.SUPPLIER_READ)
+  // @RequirePermissions(PermissionCode.SUPPLIER_READ)
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: SupplierListResponseDto })
   getSuppliers(@Query() query: GetSuppliersQueryDto) {

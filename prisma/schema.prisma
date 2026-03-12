@@ -603,6 +603,8 @@ model PurchaseOrder {
   status       PurchaseOrderStatus   @default(PENDING)
   note         String?
   totalAmount  Decimal               @db.Decimal(18, 2)
+  taxAmount  Decimal                @db.Decimal(18, 2)
+  
   approvedAt   DateTime?
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt

@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePurchaseOrderItemRequestDto {
-
     @ApiProperty({
         example: 1,
         description: 'ID của biến thể sách'
@@ -31,9 +30,45 @@ export class CreatePurchaseOrderRequestDto {
 
     @ApiProperty({
         example: 1,
-        description: 'ID nhà cung cấp'
+        description: 'ID nhà cung cấp',
+        type: Number
     })
     supplierId: bigint;
+
+    @ApiProperty({
+        example: 'PO-20260312-001',
+        description: 'Mã đơn nhập'
+    })
+    code: string;
+
+    @ApiProperty({
+        example: '2026-03-12T10:00:00.000Z',
+        description: 'Ngày tạo đơn',
+        type: String,
+        format: 'date-time'
+    })
+    createdAt: Date;
+
+    @ApiProperty({
+        example: 'Nhập hàng tháng 3',
+        description: 'Ghi chú',
+        required: false
+    })
+    note: string;
+
+    @ApiProperty({
+        example: 1500000,
+        description: 'Tổng tiền trước thuế',
+        type: Number
+    })
+    totalAmount: number;
+
+    @ApiProperty({
+        example: 150000,
+        description: 'Tiền thuế',
+        type: Number
+    })
+    taxAmount: number;
 
     @ApiProperty({
         type: [CreatePurchaseOrderItemRequestDto],

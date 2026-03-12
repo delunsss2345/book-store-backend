@@ -1,4 +1,7 @@
 import { CacheProvider } from '@/config/redis.config';
+import { AdminBookVariantsRepository } from '@/modules/admin/bookVariant/admin-book-variant.repository';
+import { AdminBookVariantsService } from '@/modules/admin/bookVariant/admin-book-variant.service';
+import { AdminBookVariantController } from '@/modules/admin/controllers/admin-book-variants.controller';
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { LanguageModule } from '@/modules/language/language.module';
@@ -38,20 +41,25 @@ import { AdminUserService } from './user/admin-user.service';
     AdminUserController,
     AdminOrderController,
     AdminOrderDetailController,
+    AdminBookVariantController
   ],
   providers: [
     AdminBookService,
     AdminBookRepository,
+    AdminBookVariantsService,
+    AdminBookVariantsRepository,
     AdminUserService,
     AdminUserRepository,
     AdminCategoryService,
     AdminCategoryRepository,
     AdminOrderService,
-    AdminOrderRepository,
+    AdminOrderRepository
   ],
   exports: [
     AdminBookService,
+    AdminBookVariantsService,
     AdminBookRepository,
+    AdminBookVariantsRepository,
     AdminUserService,
     AdminUserRepository,
     AdminCategoryService,

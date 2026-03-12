@@ -24,7 +24,7 @@ export class AdminBookVariantController {
     @RequirePermissions(PermissionCode.ADMIN_READ)
     @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: AdminBookListResponseDto })
-    getBooks(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
+    getBookVariants(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
         return this.adminBookVariantService.getBookVariants(query, lang);
     }
 

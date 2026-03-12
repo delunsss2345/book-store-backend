@@ -96,4 +96,5 @@ export class AdminBookController {
   getBooks(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
     return this.adminBookService.getBooks(query, lang);
   }
+
 }

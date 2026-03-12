@@ -61,12 +61,13 @@ export class AdminBookService {
   ) { }
 
 
-  // Tạo sách cùng 1 lúc nhiều phần variant, translation, author
+  // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
     body: CreateAdminBookAllRequestDto,
     actorUserId: bigint,
     ip?: string,
   ) {
+    // Kiem tra publisher
     const normalizedPublisherName = body.publisherName?.trim();
     if (!normalizedPublisherName) {
       throw new BadRequestException('publisherName is required');

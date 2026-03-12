@@ -1,9 +1,11 @@
-import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
+import { StockImportItemRepository } from './stock-import-item.repository';
 
 @Injectable()
-export class StockImportItemRepository {
-  constructor(private readonly prisma: PrismaService) {}
+export class StockImportItemService {
+  constructor(
+    private readonly stockImportItemRepository: StockImportItemRepository,
+  ) {}
 
   createStockImportItemsFromPurchaseOrder(
     purchaseOrderId: string,
@@ -12,7 +14,7 @@ export class StockImportItemRepository {
     throw new Error('Method not implemented.');
   }
 
-  findStockImportItemsByStockImportId(stockImportId: string) {
+  getStockImportItemsByStockImportId(stockImportId: string) {
     throw new Error('Method not implemented.');
   }
 }

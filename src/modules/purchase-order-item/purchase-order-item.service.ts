@@ -1,10 +1,12 @@
-import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { CreatePurchaseOrderRequestDto } from '../purchase-order/dto';
+import { PurchaseOrderItemRepository } from './purchase-order-item.repository';
 
 @Injectable()
-export class PurchaseOrderItemRepository {
-  constructor(private readonly prisma: PrismaService) {}
+export class PurchaseOrderItemService {
+  constructor(
+    private readonly purchaseOrderItemRepository: PurchaseOrderItemRepository,
+  ) {}
 
   createPurchaseOrderItems(
     purchaseOrderId: string,
@@ -13,7 +15,7 @@ export class PurchaseOrderItemRepository {
     throw new Error('Method not implemented.');
   }
 
-  findPurchaseOrderItemsByPurchaseOrderId(purchaseOrderId: string) {
+  getPurchaseOrderItemsByPurchaseOrderId(purchaseOrderId: string) {
     throw new Error('Method not implemented.');
   }
 }

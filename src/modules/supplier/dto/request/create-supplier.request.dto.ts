@@ -7,4 +7,10 @@ export class CreateSupplierRequestDto {
   @IsNotEmpty()
   @MaxLength(255)
   name: string;
+
+  @ApiProperty({ example: 'Mã code cua nha cung cap', maxLength: 50 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code: string;
 }

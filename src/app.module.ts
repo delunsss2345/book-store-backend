@@ -12,6 +12,7 @@ import { GuestSessionModule } from '@/modules/guest-session/guest-session.module
 import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
+import { PurchaseOrderModule } from '@/modules/purchase-order';
 import { ReviewModule } from '@/modules/review/review.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { SupplierModule } from '@/modules/supplier/supplier.module';
@@ -29,11 +30,11 @@ import { MailModule } from './modules/mail/mail.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 import { RoleModule } from './modules/role/role.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-import { UploadsModule } from './modules/uploads/uploads.module';
-import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { R2ServiceModule } from './modules/r2-service/r2-service.module';
     LanguageModule,
     UploadsModule,
     R2ServiceModule,
+    PurchaseOrderModule
   ],
 })
 export class AppModule implements NestModule {

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional } from 'class-validator';
 
 export class CreatePurchaseOrderItemRequestDto {
     @ApiProperty({
@@ -27,13 +28,12 @@ export class CreatePurchaseOrderItemRequestDto {
 }
 
 export class CreatePurchaseOrderRequestDto {
-
     @ApiProperty({
         example: 1,
         description: 'ID nhà cung cấp',
         type: Number
     })
-    supplierId: bigint;
+    supplierId: number;
 
     @ApiProperty({
         example: 'PO-20260312-001',
@@ -68,7 +68,8 @@ export class CreatePurchaseOrderRequestDto {
         description: 'Tiền thuế',
         type: Number
     })
-    taxAmount: number;
+    @IsOptional()
+    taxAmount?: number;
 
     @ApiProperty({
         type: [CreatePurchaseOrderItemRequestDto],

@@ -25,9 +25,9 @@ export class SupplierRepository {
     });
   }
 
-  createSupplier(name: string) {
+  createSupplier(name: string, code: string) {
     return this.prisma.supplier.create({
-      data: { name },
+      data: { name, code },
       select: {
         id: true,
         name: true,
@@ -39,10 +39,10 @@ export class SupplierRepository {
   }
 
 
-  createSupplierTx(name: string, tx: Prisma.TransactionClient) {
+  createSupplierTx(name: string, code: string, tx: Prisma.TransactionClient) {
     const db: Prisma.TransactionClient = tx ?? this.prisma;
     return db.supplier.create({
-      data: { name },
+      data: { name, code },
       select: {
         id: true,
         name: true,

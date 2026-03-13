@@ -13,7 +13,7 @@ import { PurchaseOrderService } from './purchase-order.service';
 @ApiTags('purchase-orders')
 @Controller('purchase-orders')
 export class PurchaseOrderController {
-  constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
+  constructor(private readonly purchaseOrderService: PurchaseOrderService) { }
 
   @Post()
   @ApiBearerAuth('access-token')
@@ -21,6 +21,8 @@ export class PurchaseOrderController {
     @Body() body: CreatePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
   ) {
+    console.log(body);
+    console.log(user);
     const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
     return this.purchaseOrderService.createPurchaseOrder(actorUserId, body);
   }

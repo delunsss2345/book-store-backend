@@ -14,7 +14,7 @@ type SupplierDetailRow = Awaited<
 
 @Injectable()
 export class SupplierService {
-  constructor(private readonly supplierRepository: SupplierRepository) {}
+  constructor(private readonly supplierRepository: SupplierRepository) { }
 
   async getSuppliers(
     query: GetSuppliersQueryDto,
@@ -39,7 +39,7 @@ export class SupplierService {
   async createSupplier(
     body: CreateSupplierRequestDto,
   ): Promise<SupplierItemResponseDto> {
-    const created = await this.supplierRepository.createSupplier(body.name);
+    const created = await this.supplierRepository.createSupplier(body.name, body.code);
     return this.toSupplierItem(created);
   }
 

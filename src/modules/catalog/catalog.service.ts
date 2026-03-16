@@ -1,4 +1,5 @@
 import { CATEGORY_CACHE_TTL, DETAIL_CACHE_TTL, HOME_CACHE_TTL, LIST_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { CatalogBookListQueryDto, CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
 import {
     CatalogBookCardDto,
@@ -204,13 +205,7 @@ export class CatalogService {
                 };
             });
 
-            return {
-                page,
-                limit,
-                total,
-                totalPages: total ? Math.ceil(total / limit) : 0,
-                items,
-            };
+            return buildPaginatedResult(items, total, page, limit);
         });
     }
 
@@ -246,13 +241,7 @@ export class CatalogService {
             };
         });
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 
 

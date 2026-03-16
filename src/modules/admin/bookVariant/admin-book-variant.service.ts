@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { AdminBookVariantsRepository } from '@/modules/admin/bookVariant/admin-book-variant.repository';
 import { LanguageService } from '@/modules/language/language.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -42,13 +43,12 @@ export class AdminBookVariantsService {
             ),
         ]);
 
-        return {
+        return buildPaginatedResult(
+            rows.map((row) => (row)),
+            total,
             page,
             limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items: rows.map((row) => (row)),
-        };
+        );
     }
 
 

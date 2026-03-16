@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
@@ -36,13 +37,12 @@ export class AdminUserService {
       this.adminUserRepository.findUsers(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toUserItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toUserItem(row)),
-    };
+    );
   }
 
   async getNonCustomerUsers(
@@ -56,13 +56,12 @@ export class AdminUserService {
       this.adminUserRepository.findNonCustomerUsers(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toUserItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toUserItem(row)),
-    };
+    );
   }
 
   async getStats(): Promise<AdminUserStatsResponseDto> {

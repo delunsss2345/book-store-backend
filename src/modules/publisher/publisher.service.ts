@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LanguageService } from '../language/language.service';
 import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
@@ -38,13 +39,7 @@ export class PublisherService {
             name: row.defaultName,
         }));
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 
     async getPublisherBooks(
@@ -79,12 +74,6 @@ export class PublisherService {
             };
         });
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 }

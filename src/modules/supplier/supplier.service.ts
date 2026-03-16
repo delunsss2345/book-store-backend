@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSupplierRequestDto } from './dto/request/create-supplier.request.dto';
 import { GetSuppliersQueryDto } from './dto/request/get-suppliers.query.dto';
@@ -27,13 +28,12 @@ export class SupplierService {
       this.supplierRepository.findSuppliers(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toSupplierItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toSupplierItem(row)),
-    };
+    );
   }
 
   async createSupplier(

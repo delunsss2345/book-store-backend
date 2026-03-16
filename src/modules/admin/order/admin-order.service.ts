@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AdminOrderRepository } from './admin-order.repository';
@@ -25,13 +26,12 @@ export class AdminOrderService {
       this.adminOrderRepository.findOrders(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toOrderItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toOrderItem(row)),
-    };
+    );
   }
 
   async getOrderDetail(orderId: bigint): Promise<AdminOrderDetailResponseDto> {

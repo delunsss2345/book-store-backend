@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { LanguageService } from '../language/language.service';
 import { CreateReviewRequestDto } from './dto/request/create-review.request.dto';
@@ -97,12 +98,6 @@ export class ReviewService {
             };
         });
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 }

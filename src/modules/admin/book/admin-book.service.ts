@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AuditLogService } from '@/modules/audit-log/audit-log.service';
@@ -430,13 +431,12 @@ export class AdminBookService {
       ),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toAdminBookListItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toAdminBookListItem(row)),
-    };
+    );
   }
 
 
@@ -484,13 +484,12 @@ export class AdminBookService {
       this.adminBookRepository.findBookSnapshots(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => this.toSnapshotItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toSnapshotItem(row)),
-    };
+    );
   }
 
   private parsePublisherId(value?: string): bigint | undefined {

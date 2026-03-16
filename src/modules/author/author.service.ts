@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BookAuthorService } from '../book-author/book-author.service';
 import { LanguageService } from '../language/language.service';
@@ -65,13 +66,7 @@ export class AuthorService {
             name: row.translations[0]?.displayName ?? row.defaultName,
         }));
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 
     async getAuthorBooks(
@@ -108,12 +103,6 @@ export class AuthorService {
             };
         });
 
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 }

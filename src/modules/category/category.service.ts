@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LanguageService } from '../language/language.service';
@@ -68,13 +69,7 @@ export class CategoryService {
         ]);
 
         const items = rows.map((row) => this.toCategoryItem(row));
-        return {
-            page,
-            limit,
-            total,
-            totalPages: total ? Math.ceil(total / limit) : 0,
-            items,
-        };
+        return buildPaginatedResult(items, total, page, limit);
     }
 
     private toCategoryItem(row: CategoryRow): CategoryItemResponseDto {

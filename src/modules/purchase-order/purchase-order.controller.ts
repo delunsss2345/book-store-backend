@@ -21,15 +21,16 @@ export class PurchaseOrderController {
     @Body() body: CreatePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
   ) {
-    console.log(body);
-    console.log(user);
+    ;
     const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
     return this.purchaseOrderService.createPurchaseOrder(actorUserId, body);
   }
 
   @Get()
+  @ApiBearerAuth('access-token')
   getPurchaseOrders(@Query() query: GetPurchaseOrdersQueryDto) {
-    throw new Error('Method not implemented.');
+    console.log('Get purchase orders with query:', query);
+    return this.purchaseOrderService.getPurchaseOrders(query);
   }
 
   @Get(':purchaseOrderId')

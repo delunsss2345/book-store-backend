@@ -75,7 +75,7 @@ export class PurchaseOrderService {
   }
 
   getPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
-    throw new Error('Method not implemented.');
+    return this.purchaseOrderRepository.findPurchaseOrders(query);
   }
 
   getPurchaseOrderDetail(purchaseOrderId: string) {

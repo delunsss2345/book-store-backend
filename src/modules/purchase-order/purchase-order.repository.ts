@@ -39,7 +39,7 @@ const purchaseOrderDetailSelect = {
 
 @Injectable()
 export class PurchaseOrderRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   withTransaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -88,7 +88,22 @@ export class PurchaseOrderRepository {
   }
 
   findPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
-    throw new Error('Method not implemented.');
+    return this.prisma.purchaseOrder.findMany({
+      take: query.limit ?? 20,
+      skip: ((query.page ?? 1) - 1) * (query.limit ?? 0),
+      select: {
+        id: true,
+        supplierId: true,
+        code: true,
+        status: true,
+        note: true,
+        totalAmount: true,
+        taxAmount: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
   }
 
   findPurchaseOrderById(purchaseOrderId: string, tx?: DbClient) {

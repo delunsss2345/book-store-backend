@@ -600,7 +600,7 @@ model PurchaseOrder {
   code         String                @unique
   supplierId   BigInt
   createdById  String
-  approvedById BigInt
+  approvedById BigInt?                
   status       PurchaseOrderStatus   @default(PENDING)
   note         String?
   totalAmount  Decimal               @db.Decimal(18, 2)

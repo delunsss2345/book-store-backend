@@ -1,29 +1,53 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+    IsArray,
+    IsDateString,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Min,
+    ValidateNested,
+} from 'class-validator';
 
 export class CreatePurchaseOrderItemRequestDto {
     @ApiProperty({
         example: 1,
-        description: 'ID của biến thể sách'
+        description: 'ID của biến thể sách',
+        type: Number,
     })
-    bookVariantId: bigint;
+    @Type(() => Number)
+    @IsNumber()
+    bookVariantId: number;
 
     @ApiProperty({
         example: 10,
-        description: 'Số lượng'
+        description: 'Số lượng',
+        type: Number,
     })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
     quantity: number;
 
     @ApiProperty({
         example: 120000,
-        description: 'Giá mỗi đơn vị'
+        description: 'Giá mỗi đơn vị',
+        type: Number,
     })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
     unitPrice: number;
 
     @ApiProperty({
         example: 1200000,
-        description: 'Tổng tiền'
+        description: 'Tổng tiền',
+        type: Number,
     })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
     totalPrice: number;
 }
 
@@ -31,49 +55,65 @@ export class CreatePurchaseOrderRequestDto {
     @ApiProperty({
         example: 1,
         description: 'ID nhà cung cấp',
-        type: Number
+        type: Number,
     })
+    @Type(() => Number)
+    @IsNumber()
     supplierId: number;
 
     @ApiProperty({
         example: 'PO-20260312-001',
-        description: 'Mã đơn nhập'
+        description: 'Mã đơn nhập',
     })
+    @IsString()
     code: string;
 
     @ApiProperty({
-        example: '2026-03-12T10:00:00.000Z',
+        example: '2026-03-12',
         description: 'Ngày tạo đơn',
         type: String,
-        format: 'date-time'
+        format: 'date',
     })
-    createdAt: Date;
+    @IsDateString()
+    createdAt: string;
 
     @ApiProperty({
         example: 'Nhập hàng tháng 3',
         description: 'Ghi chú',
-        required: false
+        required: false,
     })
-    note: string;
+    @IsOptional()
+    @IsString()
+    note?: string;
 
     @ApiProperty({
         example: 1500000,
         description: 'Tổng tiền trước thuế',
-        type: Number
+        type: Number,
     })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
     totalAmount: number;
 
     @ApiProperty({
         example: 150000,
         description: 'Tiền thuế',
-        type: Number
+        type: Number,
+        required: false,
     })
     @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
     taxAmount?: number;
 
     @ApiProperty({
         type: [CreatePurchaseOrderItemRequestDto],
-        description: 'Danh sách sản phẩm'
+        description: 'Danh sách sản phẩm',
     })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreatePurchaseOrderItemRequestDto)
     items: CreatePurchaseOrderItemRequestDto[];
 }

@@ -1,3 +1,4 @@
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -74,8 +75,18 @@ export class PurchaseOrderService {
     return this.toPurchaseOrderCreateResponse(createdOrder);
   }
 
-  getPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
-    return this.purchaseOrderRepository.findPurchaseOrders(query);
+  async getPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const [total, items] = await Promise.all([
+      this.purchaseOrderRepository.findCountPurchaseOrders(),
+      this.purchaseOrderRepository.findPurchaseOrders({
+        page,
+        limit,
+      }),
+    ]);
+
+    return buildPaginatedResult(items, total, page, limit)
   }
 
   getPurchaseOrderDetail(purchaseOrderId: string) {

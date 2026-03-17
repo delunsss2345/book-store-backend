@@ -28,8 +28,7 @@ export class PurchaseOrderController {
 
   @Get()
   @ApiBearerAuth('access-token')
-  getPurchaseOrders(@Query() query: GetPurchaseOrdersQueryDto) {
-    console.log('Get purchase orders with query:', query);
+  async getPurchaseOrders(@Query() query: GetPurchaseOrdersQueryDto) {
     return this.purchaseOrderService.getPurchaseOrders(query);
   }
 

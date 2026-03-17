@@ -101,9 +101,14 @@ export class PurchaseOrderRepository {
         taxAmount: true,
         createdAt: true,
         updatedAt: true,
+        supplier: true
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
+  }
+
+  findCountPurchaseOrders() {
+    return this.prisma.purchaseOrder.count();
   }
 
   findPurchaseOrderById(purchaseOrderId: string, tx?: DbClient) {

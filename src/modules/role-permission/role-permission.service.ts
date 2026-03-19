@@ -45,6 +45,7 @@ export class RolePermissionService {
 
     async getByRoleId(roleId: bigint) {
         const rows = await this.rolePermissionRepository.findByRoleId(roleId);
+        console.log(rows);
         return rows.map((row) => row.permission.code);
     }
 

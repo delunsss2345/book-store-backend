@@ -1,3 +1,4 @@
+import { PERMISSION_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { PERMISSION_KEY } from '@/common/security/decorators/requirePermission.decorator';
 import { RolePermissionService } from '@/modules/role-permission/role-permission.service';
@@ -29,26 +30,27 @@ export class PermissionsGuard implements CanActivate {
         const { user } = context.switchToHttp().getRequest();
         const roleIds = await this.userRoleService.getRoleIdsByUserId(user.sub);
 
+        // hàm tạo key cache theo roleId, có thể dùng chung cho tất cả cache liên quan đến roleId, tránh việc tạo nhiều key khác nhau cho cùng 1 data
+        const keyOf = (id: bigint) => `role_user:${id}:perms`; // key roles
 
-        const keyOf = (id: bigint) => `role:${id}:perms`; // key roles
-        const keys = roleIds.map((id: bigint) => `role:${id}:perms`); // return mảng key
+        //  get cache theo key, nếu có trả về, nếu không có thì get từ db và cache lại
+        const keys = roleIds.map((id: bigint) => `role_per:${id}:perms`); // return mảng key
         const cached = await Promise.all(keys.map(k => this.cacheManager.get<string[]>(k))); // get cache xem có ko
 
         const permsByRole: any = await Promise.all(
             roleIds.map(async (roleId, i) => {
-
                 const permissionCached = cached[i];  // nếu có trả về 
                 if (permissionCached) {
                     return permissionCached;
                 }
 
                 const permissions = await this.rolePermissionService.getByRoleId(roleId); // nếu chưa thì get và cached
-                await this.cacheManager.set(keyOf(roleId), permissions);
+                await this.cacheManager.set(keyOf(roleId), permissions, PERMISSION_CACHE_TTL); // cache 1h
                 return permissions;
             })
         );
         const userPerms = new Set(permsByRole.flat());
-
+        console.log(userPerms);
         if (!userPerms.has(requireRemission)) throw new ForbiddenException();
         return true;
     }

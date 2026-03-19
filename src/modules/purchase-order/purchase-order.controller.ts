@@ -21,7 +21,6 @@ export class PurchaseOrderController {
     @Body() body: CreatePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
   ) {
-    ;
     const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
     return this.purchaseOrderService.createPurchaseOrder(actorUserId, body);
   }

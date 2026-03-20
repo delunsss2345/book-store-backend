@@ -118,22 +118,14 @@ export class AdminBookVariantsRepository {
             take: limit,
             select: {
                 id: true,
-                publisherId: true,
-                publicationYear: true,
-                pageCount: true,
-                weightGrams: true,
                 coverImageUrl: true,
                 isActive: true,
-                deletedAt: true,
-                createdAt: true,
-                updatedAt: true,
                 translations: {
                     where: { languageId },
                     select: {
                         id: true,
                         languageId: true,
                         title: true,
-                        description: true,
                         slug: true,
                     },
                     take: 1,

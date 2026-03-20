@@ -9,7 +9,7 @@ import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
   GetPurchaseOrderItemsQueryDto,
-  GetPurchaseOrdersQueryDto,
+  GetPurchaseOrdersQueryDto
 } from './dto';
 import { PurchaseOrderRepository } from './purchase-order.repository';
 
@@ -149,9 +149,13 @@ export class PurchaseOrderService {
   approvePurchaseOrder(
     purchaseOrderId: string,
     approvedById: bigint,
-    body?: ApprovePurchaseOrderRequestDto,
+    body: ApprovePurchaseOrderRequestDto,
   ) {
-    throw new Error('Method not implemented.');
+    return this.purchaseOrderRepository.updatePurchaseOrderStatus(
+      purchaseOrderId,
+      approvedById,
+      body.status,
+    );
   }
 
   private toPurchaseOrderCreateResponse(

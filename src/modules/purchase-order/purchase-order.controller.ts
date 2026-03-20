@@ -51,7 +51,14 @@ export class PurchaseOrderController {
   approvePurchaseOrder(
     @Param('purchaseOrderId') purchaseOrderId: string,
     @Body() body: ApprovePurchaseOrderRequestDto,
+    @GetUser() user: JwtPayload,
   ) {
-    throw new Error('Method not implemented.');
+    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    return this.purchaseOrderService.approvePurchaseOrder(
+      purchaseOrderId,
+      actorUserId,
+      body,
+    );
+
   }
 }

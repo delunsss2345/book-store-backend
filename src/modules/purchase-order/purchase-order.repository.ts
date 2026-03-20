@@ -1,11 +1,10 @@
 import { PrismaService } from '@/database';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import {
-  ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderItemRequestDto,
   CreatePurchaseOrderRequestDto,
-  GetPurchaseOrdersQueryDto,
+  GetPurchaseOrdersQueryDto
 } from './dto';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
@@ -186,12 +185,19 @@ export class PurchaseOrderRepository {
     });
   }
 
-  approvePurchaseOrder(
+  updatePurchaseOrderStatus(
     purchaseOrderId: string,
     approvedById: bigint,
-    body?: ApprovePurchaseOrderRequestDto,
+    status: PurchaseOrderStatus,
   ) {
-    throw new Error('Method not implemented.');
+    return this.prisma.purchaseOrder.update({
+      where: { id: purchaseOrderId },
+      data: {
+        status,
+        approvedById,
+        approvedAt: new Date(),
+      },
+    })
   }
 
   async createPurchaseOrderItems(

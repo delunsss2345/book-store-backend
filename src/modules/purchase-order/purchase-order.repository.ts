@@ -21,6 +21,24 @@ const purchaseOrderItemSelect = {
   updatedAt: true,
 };
 
+const purchaseOrderItemWithBookVariantSelect = {
+  ...purchaseOrderItemSelect,
+  bookVariant: {
+    select: {
+      format: true,
+      book: {
+        select: {
+          translations: {
+            select: {
+              title: true,
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 const purchaseOrderDetailSelect = {
   id: true,
   supplierId: true,
@@ -111,6 +129,12 @@ export class PurchaseOrderRepository {
     return this.prisma.purchaseOrder.count();
   }
 
+  findCountPurchaseOrderItems(purchaseOrderId: string) {
+    return this.prisma.purchaseOrderItem.count({
+      where: { purchaseOrderId },
+    });
+  }
+
   findPurchaseOrderById(purchaseOrderId: string, tx?: DbClient) {
     const db = this.getDb(tx);
     return db.purchaseOrder.findUnique({
@@ -124,6 +148,41 @@ export class PurchaseOrderRepository {
     return db.purchaseOrder.findUnique({
       where: { code },
       select: purchaseOrderDetailSelect,
+    });
+  }
+
+  findPurchaseOrderItemsByPurchaseOrderId(params: {
+    purchaseOrderId: string;
+    languageId: number;
+    limit: number;
+    offset: number;
+  }) {
+    const { purchaseOrderId, languageId, limit, offset } = params;
+
+    return this.prisma.purchaseOrderItem.findMany({
+      where: { purchaseOrderId },
+      take: limit,
+      skip: offset,
+      select: {
+        ...purchaseOrderItemWithBookVariantSelect,
+        bookVariant: {
+          select: {
+            format: true,
+            book: {
+              select: {
+                translations: {
+                  where: { languageId },
+                  take: 1,
+                  select: {
+                    title: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
   }
 

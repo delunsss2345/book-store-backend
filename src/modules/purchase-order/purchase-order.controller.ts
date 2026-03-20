@@ -1,4 +1,5 @@
 import type { JwtPayload } from '@/common';
+import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
@@ -6,6 +7,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
+  GetPurchaseOrderItemsQueryDto,
   GetPurchaseOrdersQueryDto,
 } from './dto';
 import { PurchaseOrderService } from './purchase-order.service';
@@ -32,8 +34,17 @@ export class PurchaseOrderController {
   }
 
   @Get(':purchaseOrderId')
-  getPurchaseOrderDetail(@Param('purchaseOrderId') purchaseOrderId: string) {
-    throw new Error('Method not implemented.');
+  @ApiBearerAuth('access-token')
+  getPurchaseOrderDetail(
+    @Param('purchaseOrderId') purchaseOrderId: string,
+    @Query() query: GetPurchaseOrderItemsQueryDto,
+    @GetLanguage() lang: string,
+  ) {
+    return this.purchaseOrderService.getPurchaseOrderDetail(
+      purchaseOrderId,
+      query,
+      lang,
+    );
   }
 
   @Post(':purchaseOrderId/approve')

@@ -189,15 +189,18 @@ export class PurchaseOrderRepository {
     purchaseOrderId: string,
     approvedById: bigint,
     status: PurchaseOrderStatus,
+    tx?: DbClient,
   ) {
-    return this.prisma.purchaseOrder.update({
+    const db = this.getDb(tx);
+
+    return db.purchaseOrder.update({
       where: { id: purchaseOrderId },
       data: {
         status,
         approvedById,
         approvedAt: new Date(),
       },
-    })
+    });
   }
 
   async createPurchaseOrderItems(

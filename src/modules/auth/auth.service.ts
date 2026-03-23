@@ -217,6 +217,8 @@ export class AuthService {
     }
 
     async login(body: LoginRequestDto, userAgent: string, ip: string) {
+        console.log('Login successful for user');
+
         const user = await this.authRepository.findAuthByEmailPassword(body.email);
         if (!user) {
             await this.loginAttemptService.createLoginAttempt({
@@ -270,7 +272,7 @@ export class AuthService {
             })
         ])
 
-
+        console.log('Login successful for user:', safeUser.email, 'with roles:');
         return { user: safeUser, ...signature }
     }
 

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { StockImportItemResponseDto } from './stock-import-item.response.dto';
+import { StockImportItemDetailResponseDto } from './stock-import-item-detail.response.dto';
 
-export class StockImportListResponseDto {
+export class StockImportItemListResponseDto {
   @ApiProperty({ example: 1 })
   page: number;
 
@@ -14,6 +14,6 @@ export class StockImportListResponseDto {
   @ApiProperty({ example: 5 })
   totalPages: number;
 
-  @ApiProperty({ type: () => [StockImportItemResponseDto] })
-  items: StockImportItemResponseDto[];
+  @ApiProperty({ type: () => [StockImportItemDetailResponseDto] })
+  items: StockImportItemDetailResponseDto[];
 }

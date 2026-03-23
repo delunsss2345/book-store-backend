@@ -1,1 +1,1 @@
-export * from './create-stock-import-item.request.dto';
+export * from './get-stock-import-items.query.dto';

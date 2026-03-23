@@ -2,9 +2,15 @@ import {
   buildPaginatedResult,
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
+import { BookVariantService } from '@/modules/book-variant';
 import { LanguageService } from '@/modules/language/language.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { StockImportRepository } from '@/modules/stock-import';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
@@ -62,6 +68,8 @@ export class PurchaseOrderService {
   constructor(
     private readonly purchaseOrderRepository: PurchaseOrderRepository,
     private readonly languageService: LanguageService,
+    private readonly stockImportRepository: StockImportRepository,
+    private readonly bookVariantService: BookVariantService,
   ) { }
 
   async createPurchaseOrder(
@@ -146,16 +154,102 @@ export class PurchaseOrderService {
     );
   }
 
-  approvePurchaseOrder(
+  async approvePurchaseOrder(
     purchaseOrderId: string,
     approvedById: bigint,
     body: ApprovePurchaseOrderRequestDto,
-  ) {
-    return this.purchaseOrderRepository.updatePurchaseOrderStatus(
-      purchaseOrderId,
-      approvedById,
-      body.status,
+  ): Promise<PurchaseOrderCreateResponse> {
+    if (
+      body.status !== PurchaseOrderStatus.APPROVED &&
+      body.status !== PurchaseOrderStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        'Purchase order status must be APPROVED or REJECTED',
+      );
+    }
+
+    const updatedOrder = await this.purchaseOrderRepository.withTransaction(
+      async (tx) => {
+        // Tai don mua truoc khi cap nhat de chan xu ly lap lai.
+        const purchaseOrder =
+          await this.purchaseOrderRepository.findPurchaseOrderById(
+            purchaseOrderId,
+            tx,
+          );
+
+        if (!purchaseOrder) {
+          throw new NotFoundException('Purchase order not found');
+        }
+
+        if (purchaseOrder.status !== PurchaseOrderStatus.PENDING) {
+          throw new BadRequestException(
+            'Purchase order has already been processed',
+          );
+        }
+
+        if (!purchaseOrder.items.length) {
+          throw new BadRequestException(
+            'Purchase order must have at least one item',
+          );
+        }
+
+        await this.purchaseOrderRepository.updatePurchaseOrderStatus(
+          purchaseOrderId,
+          approvedById,
+          body.status,
+          tx,
+        );
+
+        if (body.status === PurchaseOrderStatus.APPROVED) {
+          // Tao stock import va item tu purchase order trong cung transaction.
+          const stockImport =
+            await this.stockImportRepository.createStockImportFromPurchaseOrder(
+              {
+                purchaseOrderId: purchaseOrder.id,
+                supplierId: purchaseOrder.supplierId,
+                createdById: approvedById,
+                note: purchaseOrder.note ?? null,
+                totalAmount: this.toDecimalNumber(purchaseOrder.totalAmount),
+                taxAmount: this.toDecimalNumber(purchaseOrder.taxAmount),
+              },
+              tx,
+            );
+
+          await this.stockImportRepository.createStockImportItemsFromPurchaseOrder(
+            stockImport.id,
+            purchaseOrder.items.map((item) => ({
+              bookVariantId: item.bookVariantId,
+              quantity: item.quantity,
+              importPrice: this.toDecimalNumber(item.unitPrice),
+            })),
+            tx,
+          );
+
+          // Sau khi tao stock import item, cap nhat ton kho va gia cua variant.
+          for (const item of purchaseOrder.items) {
+            await this.bookVariantService.applyStockImport(
+              {
+                bookVariantId: item.bookVariantId,
+                quantity: item.quantity,
+                costPrice: this.toDecimalNumber(item.unitPrice),
+              },
+              tx,
+            );
+          }
+        }
+
+        return this.purchaseOrderRepository.findPurchaseOrderById(
+          purchaseOrderId,
+          tx,
+        );
+      },
     );
+
+    if (!updatedOrder) {
+      throw new Error('Updated purchase order could not be loaded');
+    }
+
+    return this.toPurchaseOrderCreateResponse(updatedOrder);
   }
 
   private toPurchaseOrderCreateResponse(

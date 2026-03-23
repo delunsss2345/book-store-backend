@@ -187,6 +187,7 @@ model User {
   categoryCreator    Category[]         @relation("CategoryCreator")
   categoryUpdater    Category[]         @relation("CategoryUpdater")
 
+  purchaseOder PurchaseOrder[] @relation("PurchaseOrderCreator")
   stockImportCreator StockImport[] @relation("StockImportCreator")
   bookCreator Book[] @relation("BookCreator")
   bookUpdater Book[] @relation("BookUpdater")
@@ -571,10 +572,14 @@ model Supplier {
 
 model StockImport {
   id         String            @id @default(cuid())
+  purchaseOrderId String?      @unique @map("purchase_order_id")
   supplierId BigInt            @map("supplier_id")
   createdBy  BigInt            @map("created_by")
   createdAt  DateTime          @default(now()) @map("created_at")
-
+  note         String?
+  totalAmount  Decimal               @db.Decimal(18, 2)
+  taxAmount  Decimal                @db.Decimal(18, 2)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
   supplier   Supplier          @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   creator    User              @relation("StockImportCreator" ,fields: [createdBy], references: [id], onDelete: Restrict)
   items      StockImportItem[]
@@ -599,7 +604,7 @@ model PurchaseOrder {
   id           String                @id @default(cuid())
   code         String                @unique
   supplierId   BigInt
-  createdById  String
+  createdById  BigInt
   approvedById BigInt?                
   status       PurchaseOrderStatus   @default(PENDING)
   note         String?
@@ -610,9 +615,12 @@ model PurchaseOrder {
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
-  items  PurchaseOrderItem[] 
-  supplier Supplier @relation(fields: [supplierId] , references: [id] , onDelete: Restrict)
 
+
+  items  PurchaseOrderItem[] 
+  stockImport StockImport?
+  supplier Supplier @relation(fields: [supplierId] , references: [id] , onDelete: Restrict)
+  creator User @relation(name: "PurchaseOrderCreator",fields: [createdById] , references: [id] , onDelete: Restrict)
   @@map("purchase_orders")
 }
 

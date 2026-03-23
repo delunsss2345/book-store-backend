@@ -1,31 +1,100 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
-import {
-  CreateStockImportFromPurchaseOrderDto,
-  GetStockImportsQueryDto,
-} from './dto';
+import { Prisma } from '@prisma/client';
+import { GetStockImportsQueryDto } from './dto';
+
+type DbClient = Prisma.TransactionClient | PrismaService;
+
+const stockImportListSelect = {
+  id: true,
+  purchaseOrderId: true,
+  supplierId: true,
+  note: true,
+  totalAmount: true,
+  taxAmount: true,
+  createdAt: true,
+  supplier: {
+    select: {
+      name: true,
+    },
+  },
+} satisfies Prisma.StockImportSelect;
 
 @Injectable()
 export class StockImportRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   createStockImportFromPurchaseOrder(
-    purchaseOrderId: string,
-    createdById: bigint,
-    body?: CreateStockImportFromPurchaseOrderDto,
+    params: {
+      purchaseOrderId: string;
+      supplierId: bigint;
+      createdById: bigint;
+      note?: string | null;
+      totalAmount: number;
+      taxAmount: number;
+    },
+    tx?: DbClient,
   ) {
-    throw new Error('Method not implemented.');
+    const db = this.getDb(tx);
+
+    return db.stockImport.create({
+      data: {
+        purchaseOrderId: params.purchaseOrderId,
+        supplierId: params.supplierId,
+        createdBy: params.createdById,
+        note: params.note ?? null,
+        totalAmount: params.totalAmount,
+        taxAmount: params.taxAmount,
+      },
+      select: {
+        id: true,
+      },
+    });
   }
 
-  findStockImports(query: GetStockImportsQueryDto) {
-    throw new Error('Method not implemented.');
+  createStockImportItemsFromPurchaseOrder(
+    stockImportId: string,
+    items: Array<{
+      bookVariantId: bigint;
+      quantity: number;
+      importPrice: number;
+    }>,
+    tx?: DbClient,
+  ) {
+    if (!items.length) {
+      return Promise.resolve({ count: 0 });
+    }
+
+    const db = this.getDb(tx);
+
+    return db.stockImportItem.createMany({
+      data: items.map((item) => ({
+        stockImportId,
+        bookVariantId: item.bookVariantId,
+        quantity: item.quantity,
+        importPrice: item.importPrice,
+      })),
+    });
   }
 
-  findStockImportById(stockImportId: string) {
-    throw new Error('Method not implemented.');
+  findCountStockImports(_query?: GetStockImportsQueryDto) {
+    return this.prisma.stockImport.count();
   }
 
-  createStockImportItemsFromPurchaseOrder(purchaseOrderId: string, stockImportId: string) {
-    throw new Error('Method not implemented.');
+  findStockImports(query: {
+    page: number;
+    limit: number;
+    offset: number;
+  }) {
+    return this.prisma.stockImport.findMany({
+      take: query.limit,
+      skip: query.offset,
+      select: stockImportListSelect,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  private getDb(tx?: DbClient): DbClient {
+    return tx ?? this.prisma;
   }
 }

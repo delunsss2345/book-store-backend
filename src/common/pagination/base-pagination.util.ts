@@ -1,8 +1,11 @@
-export function getPaginationParams(page: number, limit: number) {
+export function getPaginationParams(page?: number, limit?: number) {
+    const normalizedPage = page && page > 0 ? page : 1;
+    const normalizedLimit = limit && limit > 0 ? limit : 20;
+
     return {
-        page: page > 0 ? page : 1,
-        limit: limit > 0 ? limit : 20,
-        offset: page > 0 && limit > 0 ? (page - 1) * limit : 0,
+        page: normalizedPage,
+        limit: normalizedLimit,
+        offset: (normalizedPage - 1) * normalizedLimit,
     };
 }
 

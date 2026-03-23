@@ -1,9 +1,6 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
-import {
-  CreateStockImportFromPurchaseOrderDto,
-  GetStockImportsQueryDto,
-} from './dto';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { GetStockImportsQueryDto, StockImportListResponseDto } from './dto';
 import { StockImportService } from './stock-import.service';
 
 @ApiTags('stock-imports')
@@ -11,21 +8,10 @@ import { StockImportService } from './stock-import.service';
 export class StockImportController {
   constructor(private readonly stockImportService: StockImportService) {}
 
-  @Post('purchase-orders/:purchaseOrderId')
-  createStockImportFromPurchaseOrder(
-    @Param('purchaseOrderId') purchaseOrderId: string,
-    @Body() body: CreateStockImportFromPurchaseOrderDto,
-  ) {
-    throw new Error('Method not implemented.');
-  }
-
   @Get()
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: StockImportListResponseDto })
   getStockImports(@Query() query: GetStockImportsQueryDto) {
-    throw new Error('Method not implemented.');
-  }
-
-  @Get(':stockImportId')
-  getStockImportDetail(@Param('stockImportId') stockImportId: string) {
-    throw new Error('Method not implemented.');
+    return this.stockImportService.getStockImports(query);
   }
 }

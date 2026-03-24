@@ -1,5 +1,8 @@
 import { CATEGORY_CACHE_TTL, DETAIL_CACHE_TTL, HOME_CACHE_TTL, LIST_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
-import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
+import {
+    buildPaginatedResult,
+    getPaginationParams,
+} from '@/common/pagination/base-pagination.util';
 import { CatalogBookListQueryDto, CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
 import {
     CatalogBookCardDto,
@@ -34,6 +37,9 @@ type BookDetailBySlugRow = NonNullable<
     Awaited<ReturnType<CatalogRepository['findBookDetailBySlug']>>
 >;
 type BookDetailRow = BookDetailByIdRow | BookDetailBySlugRow;
+type BookListRow = Awaited<
+    ReturnType<CatalogRepository['findBooksForList']>
+>[number];
 
 @Injectable()
 export class CatalogService {
@@ -174,11 +180,28 @@ export class CatalogService {
     }
 
     async listBooks(query: CatalogBookListQueryDto, lang: string): Promise<CatalogBookListResponseDto> {
-        const page = query.page ?? 1;
-        const limit = query.limit ?? 20;
+        const { page, limit } = getPaginationParams(query.page, query.limit);
         const language = await this.languageService.resolveLanguage(lang);
-
+        const slugCategory = query.slugCategory?.trim();
         const cacheKey = `catalog:books:lang=${language.code}:p${page}:l${limit}`;
+
+        if (slugCategory) {
+            return this.withCache(`${cacheKey}:cat=${slugCategory}`, LIST_CACHE_TTL, async () => {
+                const category = await this.repo.findCategoryBySlug(slugCategory, language.id);
+                if (!category) {
+                    throw new NotFoundException('Category not found');
+                }
+
+                const [total, rows] = await Promise.all([
+                    this.repo.countBooksForListByCategory(category.id, language.id),
+                    this.repo.findBooksForListByCategory(category.id, language.id, page, limit),
+                ]);
+
+                const items: CatalogBookCardDto[] = rows.map((book) => this.toListBookCard(book));
+
+                return buildPaginatedResult(items, total, page, limit);
+            });
+        }
 
         return this.withCache(cacheKey, LIST_CACHE_TTL, async () => {
             const [total, rows] = await Promise.all([
@@ -186,24 +209,7 @@ export class CatalogService {
                 this.repo.findBooksForList(language.id, page, limit),
             ]);
 
-            const items: CatalogBookCardDto[] = rows.map((book) => {
-                const translation = book.translations[0];
-                const cheapestVariant = book.variants[0];
-                const stock = cheapestVariant?.stock ?? 0;
-
-                return {
-                    id: book.id.toString(),
-                    title: translation?.title ?? `Book ${book.id.toString()}`,
-                    slug: translation?.slug ?? null,
-                    coverImageUrl: book.coverImageUrl ?? null,
-                    price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
-                    currencyCode: cheapestVariant?.currencyCode ?? null,
-                    isOutOfStock: !cheapestVariant || stock <= 0,
-                    createdAt: book.createdAt,
-                    bookVariantId: cheapestVariant.id,
-                    format: cheapestVariant.format
-                };
-            });
+            const items: CatalogBookCardDto[] = rows.map((book) => this.toListBookCard(book));
 
             return buildPaginatedResult(items, total, page, limit);
         });
@@ -214,8 +220,7 @@ export class CatalogService {
         ids: bigint[],
         lang: string,
     ): Promise<CatalogBookListResponseDto> {
-        const page = query.page ?? 1;
-        const limit = query.limit ?? 20;
+        const { page, limit } = getPaginationParams(query.page, query.limit);
         const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
@@ -237,7 +242,8 @@ export class CatalogService {
                 currencyCode: cheapestVariant?.currencyCode ?? null,
                 isOutOfStock: !cheapestVariant || stock <= 0,
                 createdAt: book.createdAt,
-                bookVariantId: cheapestVariant.id,
+                bookVariantId: cheapestVariant?.id,
+                categories: this.toListBookCategories(book.categories ?? []),
             };
         });
 
@@ -300,6 +306,42 @@ export class CatalogService {
         const union = new Set([...setA, ...setB]);
 
         return intersection.size / union.size;
+    }
+
+    private toListBookCategories(bookCategories: BookListRow['categories']): CatalogCategoryDto[] {
+        return (bookCategories ?? []).map((x) => {
+            const category = x.category;
+            const translation = category.categoryTranslation?.[0];
+
+            return {
+                id: category.id.toString(),
+                parentId: category.parentId ? category.parentId.toString() : null,
+                sortOrder: category.sortOrder ?? 0,
+                name: translation?.name ?? `Category ${category.id.toString()}`,
+                slug: translation?.slug ?? null,
+            };
+        });
+    }
+
+    private toListBookCard(book: BookListRow): CatalogBookCardDto {
+        const translation = book.translations[0];
+        const cheapestVariant = book.variants[0];
+        const stock = cheapestVariant?.stock ?? 0;
+
+        return {
+            id: book.id.toString(),
+            title: translation?.title ?? `Book ${book.id.toString()}`,
+            slug: translation?.slug ?? null,
+            coverImageUrl: book.coverImageUrl ?? null,
+            price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
+            currencyCode: cheapestVariant?.currencyCode ?? null,
+            isOutOfStock: !cheapestVariant || stock <= 0,
+            createdAt: book.createdAt,
+            bookVariantId: cheapestVariant?.id,
+            format: cheapestVariant?.format ?? null,
+            categories: this.toListBookCategories(book.categories ?? []),
+            badges: (book.bookBadge ?? []).map((badge) => badge.code),
+        };
     }
 
 

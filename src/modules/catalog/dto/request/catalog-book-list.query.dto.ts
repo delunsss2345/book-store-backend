@@ -1,4 +1,7 @@
 import { BasePaginationDto } from '@/common/pagination/request/base-pagination.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
 
 export enum CatalogBookSort {
     NEWEST = 'newest',
@@ -8,4 +11,10 @@ export enum CatalogBookSort {
     BEST_SELLER = 'best_seller',
 }
 
-export class CatalogBookListQueryDto extends BasePaginationDto { }
+export class CatalogBookListQueryDto extends BasePaginationDto {
+    @ApiPropertyOptional({ example: 'programming' })
+    @IsOptional()
+    @IsString()
+    @Type(() => String)
+    slugCategory?: string;
+}

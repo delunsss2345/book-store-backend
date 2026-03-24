@@ -44,6 +44,9 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: 'PAPERBACK' })
     format?: string | null;
 
+    @ApiPropertyOptional({ type: () => [CatalogCategoryDto] })
+    categories?: CatalogCategoryDto[];
+
     @ApiProperty()
     badges?: Badge[]
 

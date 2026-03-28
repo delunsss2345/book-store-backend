@@ -1,7 +1,6 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { BookAuthorService } from '../book-author/book-author.service';
-import { LanguageService } from '../language/language.service';
 import { AuthorRepository } from './author.repository';
 import { CreateAuthorRequestDto } from './dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from './dto/request/get-author-books.query.dto';
@@ -16,7 +15,6 @@ export class AuthorService {
     constructor(
         private readonly authorRepository: AuthorRepository,
         private readonly bookAuthorService: BookAuthorService,
-        private readonly languageService: LanguageService,
     ) { }
 
     async createAuthor(body: CreateAuthorRequestDto): Promise<AuthorItemResponseDto> {
@@ -51,14 +49,13 @@ export class AuthorService {
         }));
     }
 
-    async getAuthors(query: GetAuthorsQueryDto, lang: string): Promise<AuthorListResponseDto> {
+    async getAuthors(query: GetAuthorsQueryDto, langId: number): Promise<AuthorListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
             this.authorRepository.countAuthors(),
-            this.authorRepository.findAuthors(language.id, page, limit),
+            this.authorRepository.findAuthors(langId, page, limit),
         ]);
 
         const items: AuthorItemResponseDto[] = rows.map((row) => ({
@@ -72,7 +69,7 @@ export class AuthorService {
     async getAuthorBooks(
         authorId: bigint,
         query: GetAuthorBooksQueryDto,
-        lang: string,
+        langId: number,
     ): Promise<AuthorBookListResponseDto> {
         const exists = await this.authorRepository.existsById(authorId);
         if (!exists) {
@@ -81,11 +78,10 @@ export class AuthorService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
-            this.bookAuthorService.countBooksByAuthor(authorId, language.id),
-            this.bookAuthorService.findBooksByAuthor(authorId, language.id, page, limit),
+            this.bookAuthorService.countBooksByAuthor(authorId, langId),
+            this.bookAuthorService.findBooksByAuthor(authorId, langId, page, limit),
         ]);
 
         const items: AuthorBookItemResponseDto[] = rows.map((row) => {

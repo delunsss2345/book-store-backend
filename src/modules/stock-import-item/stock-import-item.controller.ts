@@ -1,4 +1,4 @@
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
@@ -20,12 +20,12 @@ export class StockImportItemController {
   getStockImportItemsByStockImportId(
     @Param('stockImportId') stockImportId: string,
     @Query() query: GetStockImportItemsQueryDto,
-    @GetLanguage() lang: string,
+    @GetLanguageId() langId: number,
   ) {
     return this.stockImportItemService.getStockImportItemsByStockImportId(
       stockImportId,
       query,
-      lang,
+      langId,
     );
   }
 }

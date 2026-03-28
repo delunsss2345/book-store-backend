@@ -13,7 +13,6 @@ import {
     CatalogCategoryDto,
     CatalogCategoryTreeDto,
 } from '@/modules/catalog/dto/response';
-import { LanguageService } from '@/modules/language/language.service';
 import { parseBigIntOptional } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
@@ -45,19 +44,17 @@ type BookListRow = Awaited<
 export class CatalogService {
     constructor(
         private readonly repo: CatalogRepository,
-        private readonly languageService: LanguageService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
 
     // Lấy giớ hạn không lấy phân trang
-    async getCatalogHome(query: CatalogHomeQueryDto, lang: string): Promise<any> {
+    async getCatalogHome(query: CatalogHomeQueryDto, langId: number): Promise<any> {
         const limit = query.limit ?? 12;
-        const language = await this.languageService.resolveLanguage(lang);
-        const cacheKey = `catalog:home:${language.code}:${limit}`;
+        const cacheKey = `catalog:home:${langId}:${limit}`;
 
         return this.withCache(cacheKey, HOME_CACHE_TTL, async () => {
             const [newestRows, saleTopLimit] = await Promise.all([
-                this.repo.findNewestActiveBookIds(language.id, limit),
+                this.repo.findNewestActiveBookIds(langId, limit),
                 this.repo.groupBookSales(limit),
             ]);
 
@@ -73,7 +70,7 @@ export class CatalogService {
 
             const cardMap = await this.buildCardMap(
                 allUniqueIds,
-                language.id,
+                langId,
             );
 
             return {
@@ -82,19 +79,18 @@ export class CatalogService {
         });
     }
 
-    async getCategories(lang?: string): Promise<CatalogCategoryTreeDto[]> {
-        const language = await this.languageService.resolveLanguage(lang);
-        const cacheKey = `catalog:categories:${language.code}`;
+    async getCategories(langId: number): Promise<CatalogCategoryTreeDto[]> {
+        const cacheKey = `catalog:categories:${langId}`;
 
         return this.withCache(cacheKey, CATEGORY_CACHE_TTL, async () => {
-            const rows = await this.repo.findActiveCategoriesByLanguage(language.id);
+            const rows = await this.repo.findActiveCategoriesByLanguage(langId);
             return this.buildCategoryTree(rows);
         });
     }
 
     async getBookCardsByVariantIds(
         variantIds: string[],
-        lang?: string,
+        langId: number,
     ): Promise<Map<string, CatalogBookCardDto>> {
         const parsedIds = variantIds
             .map((id) => parseBigIntOptional(id))
@@ -104,8 +100,7 @@ export class CatalogService {
             return new Map<string, CatalogBookCardDto>();
         }
 
-        const language = await this.languageService.resolveLanguage(lang);
-        return this.buildCardVariantMap(parsedIds, language.id);
+        return this.buildCardVariantMap(parsedIds, langId);
     }
 
     private async buildCardMap(
@@ -179,22 +174,21 @@ export class CatalogService {
         }
     }
 
-    async listBooks(query: CatalogBookListQueryDto, lang: string): Promise<CatalogBookListResponseDto> {
+    async listBooks(query: CatalogBookListQueryDto, langId: number): Promise<CatalogBookListResponseDto> {
         const { page, limit } = getPaginationParams(query.page, query.limit);
-        const language = await this.languageService.resolveLanguage(lang);
         const slugCategory = query.slugCategory?.trim();
-        const cacheKey = `catalog:books:lang=${language.code}:p${page}:l${limit}`;
+        const cacheKey = `catalog:books:langId=${langId}:p${page}:l${limit}`;
 
         if (slugCategory) {
             return this.withCache(`${cacheKey}:cat=${slugCategory}`, LIST_CACHE_TTL, async () => {
-                const category = await this.repo.findCategoryBySlug(slugCategory, language.id);
+                const category = await this.repo.findCategoryBySlug(slugCategory, langId);
                 if (!category) {
                     throw new NotFoundException('Category not found');
                 }
 
                 const [total, rows] = await Promise.all([
-                    this.repo.countBooksForListByCategory(category.id, language.id),
-                    this.repo.findBooksForListByCategory(category.id, language.id, page, limit),
+                    this.repo.countBooksForListByCategory(category.id, langId),
+                    this.repo.findBooksForListByCategory(category.id, langId, page, limit),
                 ]);
 
                 const items: CatalogBookCardDto[] = rows.map((book) => this.toListBookCard(book));
@@ -205,8 +199,8 @@ export class CatalogService {
 
         return this.withCache(cacheKey, LIST_CACHE_TTL, async () => {
             const [total, rows] = await Promise.all([
-                this.repo.countBooksForList(language.id),
-                this.repo.findBooksForList(language.id, page, limit),
+                this.repo.countBooksForList(langId),
+                this.repo.findBooksForList(langId, page, limit),
             ]);
 
             const items: CatalogBookCardDto[] = rows.map((book) => this.toListBookCard(book));
@@ -218,14 +212,13 @@ export class CatalogService {
     async queryListBook(
         query: CatalogBookListQueryDto,
         ids: bigint[],
-        lang: string,
+        langId: number,
     ): Promise<CatalogBookListResponseDto> {
         const { page, limit } = getPaginationParams(query.page, query.limit);
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
-            this.repo.countBooksForList(language.id),
-            this.repo.findBooksByIds(ids, language.id, page, limit),
+            this.repo.countBooksForList(langId),
+            this.repo.findBooksByIds(ids, langId, page, limit),
         ]);
 
         const items: CatalogBookCardDto[] = rows.map((book) => {
@@ -251,28 +244,26 @@ export class CatalogService {
     }
 
 
-    async getBookDetail(bookId: bigint, lang?: string): Promise<CatalogBookDetailDto> {
-        const language = await this.languageService.resolveLanguage(lang);
-        const cacheKey = `catalog:detail:${bookId.toString()}:${language.code}`;
+    async getBookDetail(bookId: bigint, langId: number): Promise<CatalogBookDetailDto> {
+        const cacheKey = `catalog:detail:${bookId.toString()}:${langId}`;
 
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
-            const book = await this.repo.findBookDetailById(bookId, language.id);
+            const book = await this.repo.findBookDetailById(bookId, langId);
             if (!book) throw new NotFoundException('Book not found');
             return this.toBookDetail(book);
         });
     }
 
-    async getBookDetailBySlug(slug: string, lang?: string): Promise<CatalogBookDetailDto> {
-        const language = await this.languageService.resolveLanguage(lang);
+    async getBookDetailBySlug(slug: string, langId: number): Promise<CatalogBookDetailDto> {
         const normalizedSlug = slug?.trim();
         if (!normalizedSlug) {
             throw new BadRequestException('slug is required');
         }
 
-        const cacheKey = `catalog:detail:slug:${normalizedSlug}:${language.code}`;
+        const cacheKey = `catalog:detail:slug:${normalizedSlug}:${langId}`;
 
         return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
-            const book = await this.repo.findBookDetailBySlug(normalizedSlug, language.id);
+            const book = await this.repo.findBookDetailBySlug(normalizedSlug, langId);
             if (!book) throw new NotFoundException('Book not found');
             const bookIds = new Set(book.categories.map((c) => c.category.id));
 
@@ -288,7 +279,7 @@ export class CatalogService {
 
             const top = scored.slice(0, 4);
             const recommendIds = top.map((item) => item.id);
-            const recommendMap = await this.buildCardMap(recommendIds, language.id);
+            const recommendMap = await this.buildCardMap(recommendIds, langId);
             const recommend = this.pickCards(recommendIds, recommendMap);
             return this.toBookDetail(book, normalizedSlug, recommend);
         });

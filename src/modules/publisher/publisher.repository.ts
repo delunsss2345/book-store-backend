@@ -13,13 +13,6 @@ export class PublisherRepository {
         });
     }
 
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
     countPublishers() {
         return this.prisma.publisher.count();
     }

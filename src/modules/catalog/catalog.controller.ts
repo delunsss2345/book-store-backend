@@ -1,4 +1,4 @@
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Controller, Get, Param, Query } from '@nestjs/common';
@@ -23,15 +23,15 @@ export class CatalogController {
     @Public()
     @Get('home')
     @ApiOkResponse({ type: CatalogHomeResponseDto })
-    getCatalogHome(@Query() query: CatalogHomeQueryDto, @GetLanguage() lang: string) {
-        return this.catalogService.getCatalogHome(query, lang);
+    getCatalogHome(@Query() query: CatalogHomeQueryDto, @GetLanguageId() langId: number) {
+        return this.catalogService.getCatalogHome(query, langId);
     }
 
     @Public()
     @Get('books')
     @ApiOkResponse({ type: CatalogBookListResponseDto })
-    listBooks(@Query() query: CatalogBookListQueryDto, @GetLanguage() lang: string) {
-        return this.catalogService.listBooks(query, lang);
+    listBooks(@Query() query: CatalogBookListQueryDto, @GetLanguageId() langId: number) {
+        return this.catalogService.listBooks(query, langId);
     }
 
     @Public()
@@ -39,9 +39,9 @@ export class CatalogController {
     @ApiOkResponse({ type: CatalogBookDetailDto })
     getBookDetail(
         @Param('bookId') bookId: string,
-        @GetLanguage() lang?: string,
+        @GetLanguageId() langId: number,
     ) {
-        return this.catalogService.getBookDetail(parseBigIntRequired(bookId, 'bookId'), lang);
+        return this.catalogService.getBookDetail(parseBigIntRequired(bookId, 'bookId'), langId);
     }
 
     @Public()
@@ -49,15 +49,15 @@ export class CatalogController {
     @ApiOkResponse({ type: CatalogBookDetailDto })
     getBookDetailBySlug(
         @Param('slug') slug: string,
-        @GetLanguage() lang?: string,
+        @GetLanguageId() langId: number,
     ) {
-        return this.catalogService.getBookDetailBySlug(slug, lang);
+        return this.catalogService.getBookDetailBySlug(slug, langId);
     }
 
     @Public()
     @Get('categories')
     @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
-    getCategories(@GetLanguage() lang: string) {
-        return this.catalogService.getCategories(lang);
+    getCategories(@GetLanguageId() langId: number) {
+        return this.catalogService.getCategories(langId);
     }
 }

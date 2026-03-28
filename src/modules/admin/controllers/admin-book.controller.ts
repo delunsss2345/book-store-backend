@@ -1,5 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
@@ -93,8 +93,8 @@ export class AdminBookController {
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookListResponseDto })
-  getBooks(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
-    return this.adminBookService.getBooks(query, lang);
+  getBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+    return this.adminBookService.getBooks(query, langId);
   }
 
 }

@@ -1,4 +1,5 @@
 import { CatalogService } from '@/modules/catalog/catalog.service';
+import { LanguageRepository } from '@/modules/language/language.repository';
 import { CreateReviewDraftRequestDto } from '@/modules/review/dto/request/create-review-daft.request.dto';
 import { ReviewRepository } from '@/modules/review/review.repository';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { ReviewDraftResponseDto } from '../review/dto/response/review-daft.respo
 export class ReviewAIService {
     constructor(private readonly reviewRepository: ReviewRepository,
         private readonly catalogService: CatalogService,
+        private readonly languageRepository: LanguageRepository,
         private readonly geminiService: GeminiService) { }
 
     async createReviewDraft(
@@ -37,9 +39,11 @@ export class ReviewAIService {
             throw new BadRequestException('userHint is required');
         }
 
+        const language = await this.loadLanguageByCode(body.language ?? 'vi');
+
         const book = await this.catalogService.getBookDetail(
             bookId,
-            body.language ?? 'vi',
+            language.id,
         );
 
         const bookVariant = book.variants.find(
@@ -65,6 +69,21 @@ export class ReviewAIService {
             draftText: draft.draftText,
             wordCount: draft.wordCount
         };
+    }
+
+    private async loadLanguageByCode(langCode: string) {
+        const normalized = langCode.trim().toLowerCase();
+        const found = await this.languageRepository.findLanguageByCode(normalized);
+        if (found) {
+            return found;
+        }
+
+        const fallback = await this.languageRepository.findDefaultLanguage();
+        if (!fallback) {
+            throw new NotFoundException('No active language found');
+        }
+
+        return fallback;
     }
 
 }

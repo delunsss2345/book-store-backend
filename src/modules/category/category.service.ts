@@ -1,7 +1,6 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { LanguageService } from '../language/language.service';
 import { CategoryRepository } from './category.repository';
 import { CreateCategoryRequestDto } from './dto/request/create-category.request.dto';
 import { GetCategoriesQueryDto } from './dto/request/get-categories.query.dto';
@@ -16,15 +15,13 @@ type CategoryRow = Awaited<
 export class CategoryService {
     constructor(
         private readonly categoryRepository: CategoryRepository,
-        private readonly languageService: LanguageService,
     ) { }
 
     async createCategory(
         body: CreateCategoryRequestDto,
         actorUserId: bigint,
-        lang?: string,
+        langId: number,
     ): Promise<CategoryItemResponseDto> {
-        const language = await this.languageService.resolveLanguage(lang);
         const parentId =
             body.parentId !== undefined
                 ? parseBigIntRequired(body.parentId, 'parentId')
@@ -44,7 +41,7 @@ export class CategoryService {
             name: body.name,
             slug: body.slug,
             description: body.description,
-            languageId: language.id,
+            languageId: langId,
             actorUserId,
         });
 
@@ -58,14 +55,13 @@ export class CategoryService {
         };
     }
 
-    async getCategories(query: GetCategoriesQueryDto, lang: string): Promise<CategoryListResponseDto> {
+    async getCategories(query: GetCategoriesQueryDto, langId: number): Promise<CategoryListResponseDto> {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
-            this.categoryRepository.countActiveCategoriesByLanguage(language.id),
-            this.categoryRepository.findActiveCategoriesByLanguage(language.id, page, limit),
+            this.categoryRepository.countActiveCategoriesByLanguage(langId),
+            this.categoryRepository.findActiveCategoriesByLanguage(langId, page, limit),
         ]);
 
         const items = rows.map((row) => this.toCategoryItem(row));

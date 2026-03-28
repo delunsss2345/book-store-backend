@@ -1,6 +1,5 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { LanguageService } from '../language/language.service';
 import { CreateReviewRequestDto } from './dto/request/create-review.request.dto';
 import { GetBookReviewsQueryDto } from './dto/request/get-book-reviews.query.dto';
 import {
@@ -14,7 +13,6 @@ import { ReviewRepository } from './review.repository';
 export class ReviewService {
     constructor(
         private readonly reviewRepository: ReviewRepository,
-        private readonly languageService: LanguageService,
     ) { }
 
 
@@ -61,7 +59,7 @@ export class ReviewService {
     async getBookReviews(
         slug: string,
         query: GetBookReviewsQueryDto,
-        lang: string,
+        langId: number,
     ): Promise<ReviewListResponseDto> {
         const normalizedSlug = slug?.trim();
         if (!normalizedSlug) {
@@ -70,9 +68,8 @@ export class ReviewService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(lang);
 
-        const book = await this.reviewRepository.findBookBySlug(normalizedSlug, language.id);
+        const book = await this.reviewRepository.findBookBySlug(normalizedSlug, langId);
         if (!book) {
             throw new NotFoundException('Book not found');
         }

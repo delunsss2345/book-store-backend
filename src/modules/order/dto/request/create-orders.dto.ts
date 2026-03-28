@@ -53,31 +53,27 @@ export class CreateGuestOrdersAndPaymentDTO {
 export class CreateUserOrdersAndPaymentDTO {
     @ApiProperty({ example: 123 })
     @IsNumber()
+    @Type(() => Number)
     @IsNotEmpty()
     cartId: number;
 
     @ApiPropertyOptional({ example: 1 })
     @IsNumber()
+    @Type(() => Number)
     @IsOptional()
     addressId?: number
 
     @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.VNPAY })
     @IsEnum(PaymentGateway)
     @IsNotEmpty()
+    @Type(() => String)
     paymentGateway: PaymentGateway;
-
 
 
     @ApiPropertyOptional({ example: "Giao giờ hành chính" })
     @IsString()
     @IsOptional()
     note?: string;
-
-    @ApiProperty({ example: 1 })
-    @IsNumber()
-    @IsNotEmpty()
-    languageId: number;
-
 }
 
 export class CreateGuestOrderDTO {

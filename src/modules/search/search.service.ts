@@ -1,7 +1,6 @@
 import { AppModule } from '@/app.module';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { GeminiService } from '@/modules/gemini/gemini.service';
-import { LanguageService } from '@/modules/language/language.service';
 import { PineconeService } from '@/modules/pinecone/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
 import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
@@ -14,19 +13,17 @@ import type { Cache } from 'cache-manager';
 export class SearchService {
     constructor(
         private readonly catalogService: CatalogService,
-        private readonly languageService: LanguageService,
         private readonly pineconeService: PineconeService,
         private readonly geminiService: GeminiService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
     ) { }
     // Search sách theo query , topK format maxPrice categoryId
-    async searchBooks(query: SearchBooksQueryDto, lang: string): Promise<any> {
+    async searchBooks(query: SearchBooksQueryDto, langId: number): Promise<any> {
         const q = query.q?.trim();
         if (!q) {
             throw new BadRequestException('q is required');
         }
-        const language = await this.languageService.resolveLanguage(lang);
-        const cacheKey = `query:books-sematic:${q}:${language.code}:${query.page ?? 1}:${query.limit ?? 10}`;
+        const cacheKey = `query:books-sematic:${q}:${langId}:${query.page ?? 1}:${query.limit ?? 10}`;
         const cached = await this.cache.get<any>(cacheKey);
         if (cached) return cached;
 
@@ -58,7 +55,7 @@ export class SearchService {
                 limit,
             },
             orderedBookIds,
-            language.code,
+            langId,
         );
 
         const sortedItems = [...cartBooks.items].sort((a, b) => {
@@ -78,16 +75,16 @@ export class SearchService {
         return this.pineconeService.fullReindexBooks();
     }
 
-    async searchISBN(isbn: string, langs: string) {
+    async searchISBN(isbn: string, langId: number, langCode: string) {
         if (validateISBN(isbn) === false) {
             throw new BadRequestException('Invalid ISBN format input failed');
         };
-        const key = `isbn:${isbn}:lang:${langs}`;
+        const key = `isbn:${isbn}:langId:${langId}`;
         const cached = await this.cache.get<QuickBookFillResponseDto>(key);
         if (cached) return cached;
         const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${AppModule.CONFIGURATION.GOOGLE_CONFIG.GOOGLE_API_KEY_BOOK}`);
         const json = await response.json();
-        const book = await this.geminiService.generateBookData(json, langs);
+        const book = await this.geminiService.generateBookData(json, langCode);
         await this.cache.set(key, book);
         return book
     }

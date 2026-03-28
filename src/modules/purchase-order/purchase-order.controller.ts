@@ -1,5 +1,5 @@
 import type { JwtPayload } from '@/common';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
@@ -38,12 +38,12 @@ export class PurchaseOrderController {
   getPurchaseOrderDetail(
     @Param('purchaseOrderId') purchaseOrderId: string,
     @Query() query: GetPurchaseOrderItemsQueryDto,
-    @GetLanguage() lang: string,
+    @GetLanguageId() langId: number,
   ) {
     return this.purchaseOrderService.getPurchaseOrderDetail(
       purchaseOrderId,
       query,
-      lang,
+      langId,
     );
   }
 

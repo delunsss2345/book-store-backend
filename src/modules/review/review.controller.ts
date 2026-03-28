@@ -1,4 +1,4 @@
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -43,8 +43,8 @@ export class ReviewController {
     getBookReviews(
         @Param('slug') slug: string,
         @Query() query: GetBookReviewsQueryDto,
-        @GetLanguage() lang: string,
+        @GetLanguageId() langId: number,
     ) {
-        return this.reviewService.getBookReviews(slug, query, lang);
+        return this.reviewService.getBookReviews(slug, query, langId);
     }
 }

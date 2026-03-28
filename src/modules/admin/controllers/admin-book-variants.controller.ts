@@ -1,5 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { AdminBookVariantsService } from '@/modules/admin/bookVariant/admin-book-variant.service';
 import {
@@ -24,8 +24,8 @@ export class AdminBookVariantController {
     @RequirePermissions(PermissionCode.ADMIN_READ)
     @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: AdminBookListResponseDto })
-    getBookVariants(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
-        return this.adminBookVariantService.getBookVariants(query, lang);
+    getBookVariants(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+        return this.adminBookVariantService.getBookVariants(query, langId);
     }
 
 }

@@ -14,13 +14,6 @@ const VALID_REVIEW_ORDER_STATUSES: OrderStatus[] = [
 export class ReviewRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
     findBookBySlug(slug: string, languageId: number) {
         return this.prisma.book.findFirst({
             where: {

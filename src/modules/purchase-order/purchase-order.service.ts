@@ -3,7 +3,6 @@ import {
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
 import { BookVariantService } from '@/modules/book-variant';
-import { LanguageService } from '@/modules/language/language.service';
 import { StockImportRepository } from '@/modules/stock-import';
 import {
   BadRequestException,
@@ -67,7 +66,6 @@ export type PurchaseOrderDetailItemResponse = {
 export class PurchaseOrderService {
   constructor(
     private readonly purchaseOrderRepository: PurchaseOrderRepository,
-    private readonly languageService: LanguageService,
     private readonly stockImportRepository: StockImportRepository,
     private readonly bookVariantService: BookVariantService,
   ) { }
@@ -122,13 +120,12 @@ export class PurchaseOrderService {
   async getPurchaseOrderDetail(
     purchaseOrderId: string,
     query: GetPurchaseOrderItemsQueryDto,
-    lang: string,
+    langId: number,
   ) {
     const { page, limit, offset } = getPaginationParams(
       query.page ?? 1,
       query.limit ?? 20,
     );
-    const language = await this.languageService.resolveLanguage(lang);
     const purchaseOrder =
       await this.purchaseOrderRepository.findPurchaseOrderById(purchaseOrderId);
 
@@ -140,7 +137,7 @@ export class PurchaseOrderService {
       this.purchaseOrderRepository.findCountPurchaseOrderItems(purchaseOrderId),
       this.purchaseOrderRepository.findPurchaseOrderItemsByPurchaseOrderId({
         purchaseOrderId,
-        languageId: language.id,
+        languageId: langId,
         limit,
         offset,
       }),

@@ -1,13 +1,14 @@
 import { SHIPPING_FEE } from "@/common";
 import { ORDER_EXPIRED_SECONDS } from "@/common/constants/expired-constant";
 import { PrismaService } from "@/database";
-import { LanguageService } from "@/modules/language/language.service";
+import { CartRepository } from "@/modules/cart/cart.repository";
+import { OrderItemRepository } from "@/modules/order-item/order-item.repository";
 import { CreateGuestOrdersAndPaymentDTO, CreateUserOrdersAndPaymentDTO } from "@/modules/order/dto/request/create-orders.dto";
 import { OrderRepository } from "@/modules/order/order.repository";
 import { generateContentHash } from "@/utils/generateContentHash.util";
 import { generateOrderCode } from "@/utils/generateOrderCode.util";
 import { generateSKU } from "@/utils/generateSku.util";
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { CartItem, OrderStatus, PaymentGateway, PaymentStatus, UserAddress } from "@prisma/client";
 import crypto from 'crypto';
 import { CatalogRepository } from "../catalog/catalog.repository";
@@ -17,9 +18,10 @@ export class OrderService {
     constructor(
         private readonly paymentService: PaymentService,
         private readonly catalogRepository: CatalogRepository,
-        private readonly languageService: LanguageService,
         private readonly orderRepository: OrderRepository,
-        private readonly prisma: PrismaService
+        private readonly prisma: PrismaService,
+        private readonly cartRepository: CartRepository,
+        private readonly orderItemRepository: OrderItemRepository
     ) { }
 
     /**
@@ -75,8 +77,9 @@ export class OrderService {
             const available = variant?.stock ?? 0 - (variant?.reserved ?? 0);
             if (!v) throw new ForbiddenException("Book variant not found");
 
-            if (!v.stock || available > (variantCardItem?.quantity ?? 0)) {
-                throw new ForbiddenException("Book variant out of stock");
+            if (!v.stock || available < (variantCardItem?.quantity ?? 0)) {
+                Logger.error(`Book variant ${v.id} out of stock. Available: ${available}, Required: ${variantCardItem?.quantity ?? 0}`);
+                throw new ForbiddenException(`Book ${v.book.translations?.[0]?.title || 'Unknown'} out of stock`);
             }
         });
 
@@ -119,20 +122,22 @@ export class OrderService {
                         lineTotal
                     }
                 });
+
             })
         );
+        await this.cartRepository.deleteByUserId(cart.userId)
 
         return subtotal;
     }
 
     /**
      * Tạo order cho người dùng khách
-     * @param guestSessionId id của phiên guest
-     * @param body thông tin về order
-     * @param lang mã ngôn ngữ
+    * @param guestSessionId id của phiên guest
+    * @param body thông tin về order
+     * @param langId id ngôn ngữ
      * 
     **/
-    async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, lang?: string) {
+    async createOrdersGuest(guestSessionId: string, body: CreateGuestOrdersAndPaymentDTO, langId: number) {
         return this.prisma.$transaction(async (tx) => {
             // tìm cart đầu tiên để thứ nhất vừa tính lại tiền 
             // vừa hash cart để chặn không cho order tạo lại nhiều lần nếu cart ko thay đổi 
@@ -165,19 +170,16 @@ export class OrderService {
             // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
             const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
 
-            const [language, existing] = await Promise.all([
-                this.languageService.resolveLanguage(lang),
-                tx.order.findFirst({
-                    where: { cartHash },
-                    include: {
-                        payments: {
-                            where: { status: { in: [PaymentStatus.PENDING, PaymentStatus.PAYMENT_OVERAGE, PaymentStatus.PAYMENT_SHORTFALL] } },
-                            orderBy: { createdAt: "desc" },
-                            take: 1,
-                        }
+            const existing = await tx.order.findFirst({
+                where: { cartHash },
+                include: {
+                    payments: {
+                        where: { status: { in: [PaymentStatus.PENDING, PaymentStatus.PAYMENT_OVERAGE, PaymentStatus.PAYMENT_SHORTFALL] } },
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
                     }
-                })
-            ])
+                }
+            });
 
             if (cartHash === existing?.cartHash) {
                 // Nếu bấm mà chưa tạo payment chỉ toàn kiểu tạo order (ko thanh toán) thì mình tiếng hành gửi lại cái mã mới mà không phải tạo lại order
@@ -232,7 +234,7 @@ export class OrderService {
                 },
             });
 
-            const subtotal = await this.processOrderItems(tx, cart, language.id, order.id);
+            const subtotal = await this.processOrderItems(tx, cart, langId, order.id);
 
             // 6) update totals
             const totalAmount = subtotal + SHIPPING_FEE;
@@ -264,7 +266,7 @@ export class OrderService {
         });
     }
 
-    async createOrdersUser(userId: bigint, body: CreateUserOrdersAndPaymentDTO, lang?: string) {
+    async createOrdersUser(userId: bigint, body: CreateUserOrdersAndPaymentDTO, langId: number) {
         return this.prisma.$transaction(async (tx) => {
             const cartId = BigInt(body.cartId);
             const cart = await tx.cart.findFirst({
@@ -295,19 +297,16 @@ export class OrderService {
             // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
             const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
 
-            const [language, existing] = await Promise.all([
-                this.languageService.resolveLanguage(lang),
-                tx.order.findFirst({
-                    where: { cartHash },
-                    include: {
-                        payments: {
-                            where: { status: PaymentStatus.PENDING },
-                            orderBy: { createdAt: "desc" },
-                            take: 1,
-                        }
+            const existing = await tx.order.findFirst({
+                where: { cartHash },
+                include: {
+                    payments: {
+                        where: { status: PaymentStatus.PENDING },
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
                     }
-                })
-            ]);
+                }
+            });
 
             if (cartHash === existing?.cartHash) {
                 return {
@@ -354,7 +353,7 @@ export class OrderService {
             });
 
 
-            const subtotal = await this.processOrderItems(tx, cart, language.id, order.id);
+            const subtotal = await this.processOrderItems(tx, cart, langId, order.id);
             const totalAmount = subtotal + SHIPPING_FEE;
 
             const updatedOrder = await tx.order.update({
@@ -384,14 +383,17 @@ export class OrderService {
         });
     }
 
-    async getOrderGuest(sessionGuestId: string, page: number, limit: number, lang: string) {
-        return this.orderRepository.findOrderBySessionGuestId(sessionGuestId, page, limit, lang);
+    async getOrderGuest(sessionGuestId: string, page: number, limit: number) {
+        return this.orderRepository.findOrderBySessionGuestId(sessionGuestId, page, limit);
     }
 
-    async getOrderUser(userId: bigint, page: number, limit: number, lang: string) {
-        return this.orderRepository.findOrderByUserId(userId, page, limit, lang);
+    async getOrderUser(userId: bigint, page: number, limit: number) {
+        return this.orderRepository.findOrderByUserId(userId, page, limit);
     }
 
+    async getOrderDetailUser(orderId: bigint, userId: bigint, langId: number) {
+        return this.orderItemRepository.findOrderItemsByOrderId(orderId, userId, langId);
+    }
     async cleanOrder(orderSecondMinutes: number) {
         const expiredOrders = await this.orderRepository.findOrderIsExpire(orderSecondMinutes);
         const variantMap = new Map<string, number>();

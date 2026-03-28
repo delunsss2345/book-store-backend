@@ -5,7 +5,6 @@ import {
     CatalogBookCardDto,
     CatalogRecommendRequestDto
 } from '@/modules/catalog/dto/response';
-import { LanguageService } from '@/modules/language/language.service';
 import { OrderItemRepository } from '@/modules/order-item/order-item.repository';
 import { OrderRepository } from '@/modules/order/order.repository';
 import { Injectable } from '@nestjs/common';
@@ -46,7 +45,6 @@ export class UserEventService {
         private readonly bookSnapshotRepository: BookSnapshotRepository,
         private readonly catalogRepository: CatalogRepository,
         private readonly catalogService: CatalogService,
-        private readonly languageService: LanguageService,
     ) { }
 
     findEventTypeByUser(userId: bigint) {
@@ -84,10 +82,10 @@ export class UserEventService {
     async getHyperRecommendHome(
         userId: bigint,
         query: CatalogHomeQueryDto,
-        lang: string,
+        langId: number,
     ): Promise<CatalogRecommendRequestDto> {
         const limit = query.limit ?? 12;
-        const recommend = await this.getRecommend(userId, lang, limit);
+        const recommend = await this.getRecommend(userId, langId, limit);
 
         return {
             recommend,
@@ -98,7 +96,7 @@ export class UserEventService {
     // Merge 2 luong: event tuong tac variant + event theo don hang.
     async getRecommend(
         userId: bigint,
-        lang?: string,
+        langId: number,
         limit = 12,
     ): Promise<CatalogBookCardDto[]> {
         const [scoreVariant, scoreOrder] = await Promise.all([
@@ -168,12 +166,10 @@ export class UserEventService {
         ].map((id) => BigInt(id));
         if (!mapToRecommend.length) return [];
 
-        const language = await this.languageService.resolveLanguage(lang);
-
         // Variant đề xuất (tìm ra books gốc)
         const variantRecommend = await this.catalogRepository.findBooksVariantByIds(
             mapToRecommend,
-            language.id,
+            langId,
             limit,
         );
 

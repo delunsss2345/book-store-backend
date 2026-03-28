@@ -1,6 +1,5 @@
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
-import { LanguageService } from '@/modules/language/language.service';
 import { WishlistItemService } from '@/modules/wishlist-item/wishlist-item.service';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -18,21 +17,19 @@ export class WishlistService {
         private readonly wishlistItemService: WishlistItemService,
         private readonly authRepository: AuthRepository,
         private readonly guestSessionService: GuestSessionService,
-        private readonly languageService: LanguageService,
     ) { }
 
-    async getWishlist(request: Request, lang?: string) {
-        const language = await this.languageService.resolveLanguage(lang);
+    async getWishlist(request: Request, langId: number) {
         // Chuyển sang luồng user bên dưới.
-        const wishlist = await this.resolveWishlistByActor(request, true, language.id);
+        const wishlist = await this.resolveWishlistByActor(request, true, langId);
         if (!wishlist) {
             throw new ForbiddenException();
         }
         return wishlist;
     }
 
-    async addWishItem(request: Request, body: AddWishItemRequestDto, lang?: string) {
-        const wishlist = await this.getWishlist(request, lang);
+    async addWishItem(request: Request, body: AddWishItemRequestDto, langId: number) {
+        const wishlist = await this.getWishlist(request, langId);
         const bookVariantId = BigInt(body.bookVariantId);
 
         const existed = await this.wishlistItemService.findByWishlistIdAndBookVariantId(
@@ -64,9 +61,8 @@ export class WishlistService {
         };
     }
 
-    async deleteWishItem(request: Request, itemId: bigint, lang?: string) {
-        const language = await this.languageService.resolveLanguage(lang);
-        const wishlist = await this.resolveWishlistByActor(request, false, language.id);
+    async deleteWishItem(request: Request, itemId: bigint, langId: number) {
+        const wishlist = await this.resolveWishlistByActor(request, false, langId);
         if (!wishlist) {
             throw new NotFoundException('Wishlist item not found');
         }
@@ -79,9 +75,8 @@ export class WishlistService {
         return { success: true };
     }
 
-    async deleteWishlist(request: Request, lang?: string) {
-        const language = await this.languageService.resolveLanguage(lang);
-        const wishlist = await this.resolveWishlistByActor(request, false, language.id);
+    async deleteWishlist(request: Request, langId: number) {
+        const wishlist = await this.resolveWishlistByActor(request, false, langId);
         if (!wishlist) {
             return { success: true };
         }

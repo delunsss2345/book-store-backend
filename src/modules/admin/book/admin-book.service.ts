@@ -414,19 +414,18 @@ export class AdminBookService {
 
   async getBooks(
     query: AdminBookListQueryDto,
-    lang: string,
+    langId: number,
   ): Promise<AdminBookListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const searchPhrase = query.searchPhrase?.trim() || undefined;
-    const language = await this.languageService.resolveLanguage(lang);
 
     const [total, rows] = await Promise.all([
-      this.adminBookRepository.countBooks(language.id, searchPhrase),
+      this.adminBookRepository.countBooks(langId, searchPhrase),
       this.adminBookRepository.findBooks(
         page,
         limit,
-        language.id,
+        langId,
         searchPhrase,
       ),
     ]);

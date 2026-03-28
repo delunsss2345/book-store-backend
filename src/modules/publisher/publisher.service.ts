@@ -1,6 +1,5 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { LanguageService } from '../language/language.service';
 import { CreatePublisherRequestDto } from './dto/request/create-publisher.request.dto';
 import { GetPublisherBooksQueryDto } from './dto/request/get-publisher-books.query.dto';
 import { GetPublishersQueryDto } from './dto/request/get-publishers.query.dto';
@@ -14,7 +13,6 @@ import { PublisherRepository } from './publisher.repository';
 export class PublisherService {
     constructor(
         private readonly publisherRepository: PublisherRepository,
-        private readonly languageService: LanguageService,
     ) { }
 
     async createPublisher(body: CreatePublisherRequestDto): Promise<PublisherItemResponseDto> {
@@ -45,7 +43,7 @@ export class PublisherService {
     async getPublisherBooks(
         publisherId: bigint,
         query: GetPublisherBooksQueryDto,
-        lang: string,
+        langId: number,
     ): Promise<PublisherBookListResponseDto> {
         const exists = await this.publisherRepository.existsById(publisherId);
         if (!exists) {
@@ -54,11 +52,10 @@ export class PublisherService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
-            this.publisherRepository.countBooksByPublisher(publisherId, language.id),
-            this.publisherRepository.findBooksByPublisher(publisherId, language.id, page, limit),
+            this.publisherRepository.countBooksByPublisher(publisherId, langId),
+            this.publisherRepository.findBooksByPublisher(publisherId, langId, page, limit),
         ]);
 
         const items: PublisherBookItemResponseDto[] = rows.map((book) => {

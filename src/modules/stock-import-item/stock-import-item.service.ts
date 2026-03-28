@@ -2,7 +2,6 @@ import {
   buildPaginatedResult,
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
-import { LanguageService } from '@/modules/language/language.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -20,18 +19,14 @@ type StockImportItemRow = Awaited<
 export class StockImportItemService {
   constructor(
     private readonly stockImportItemRepository: StockImportItemRepository,
-    private readonly languageService: LanguageService,
   ) {}
 
   async getStockImportItemsByStockImportId(
     stockImportId: string,
     query: GetStockImportItemsQueryDto,
-    lang: string,
+    langId: number,
   ): Promise<StockImportItemListResponseDto> {
-    const [stockImport, language] = await Promise.all([
-      this.stockImportItemRepository.findStockImportById(stockImportId),
-      this.languageService.resolveLanguage(lang),
-    ]);
+    const stockImport = await this.stockImportItemRepository.findStockImportById(stockImportId);
 
     if (!stockImport) {
       throw new NotFoundException('Stock import not found');
@@ -42,7 +37,7 @@ export class StockImportItemService {
       this.stockImportItemRepository.findCountStockImportItems(stockImportId),
       this.stockImportItemRepository.findStockImportItemsByStockImportId({
         stockImportId,
-        languageId: language.id,
+        languageId: langId,
         limit,
         offset,
       }),

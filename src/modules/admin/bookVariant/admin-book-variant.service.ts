@@ -1,6 +1,5 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { AdminBookVariantsRepository } from '@/modules/admin/bookVariant/admin-book-variant.repository';
-import { LanguageService } from '@/modules/language/language.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
     Inject,
@@ -19,26 +18,24 @@ const ADMIN_STATS_CACHE_TTL = 86_400_000;
 export class AdminBookVariantsService {
     constructor(
         private readonly adminBookVariantsRepository: AdminBookVariantsRepository,
-        private readonly languageService: LanguageService,
         @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     ) { }
 
 
     async getBookVariants(
         query: AdminBookListQueryDto,
-        lang: string,
+        langId: number,
     ) {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
         const searchPhrase = query.searchPhrase?.trim() || undefined;
-        const language = await this.languageService.resolveLanguage(lang);
 
         const [total, rows] = await Promise.all([
-            this.adminBookVariantsRepository.countBookVariants(language.id, searchPhrase),
+            this.adminBookVariantsRepository.countBookVariants(langId, searchPhrase),
             this.adminBookVariantsRepository.findBookVariants(
                 page,
                 limit,
-                language.id,
+                langId,
                 searchPhrase,
             ),
         ]);

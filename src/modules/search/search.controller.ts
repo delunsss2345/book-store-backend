@@ -1,4 +1,5 @@
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageCode } from '@/common/decorators/getLanguageCode.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
 import { SearchBookItemDto } from '@/modules/search/dto/response';
@@ -15,8 +16,8 @@ export class SearchController {
     @Public()
     @Get('')
     @ApiOkResponse({ type: SearchBookItemDto, isArray: true })
-    searchSemantic(@Query() query: SearchBooksQueryDto, @GetLanguage() lang: string) {
-        return this.searchService.searchBooks(query, lang);
+    searchSemantic(@Query() query: SearchBooksQueryDto, @GetLanguageId() langId: number) {
+        return this.searchService.searchBooks(query, langId);
     }
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')
@@ -28,7 +29,11 @@ export class SearchController {
 
     @Public()
     @Get('/isbn')
-    searchByIsbn(@GetLanguage() lang: string, @Query('isbn') isbn: string) {
-        return this.searchService.searchISBN(isbn, lang);
+    searchByIsbn(
+        @GetLanguageId() langId: number,
+        @GetLanguageCode() langCode: string,
+        @Query('isbn') isbn: string,
+    ) {
+        return this.searchService.searchISBN(isbn, langId, langCode);
     }
 }

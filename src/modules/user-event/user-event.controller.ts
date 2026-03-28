@@ -1,5 +1,5 @@
 import type { JwtPayload } from '@/common';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
 import { CatalogHomeResponseDto } from '@/modules/catalog/dto/response';
@@ -18,12 +18,12 @@ export class UserEventController {
     async listBooksByCategory(
         @GetUser() user: JwtPayload,
         @Query() query: CatalogHomeQueryDto,
-        @GetLanguage() lang: string,
+        @GetLanguageId() langId: number,
     ) {
         return this.userEventService.getHyperRecommendHome(
             BigInt(user.sub),
             query,
-            lang,
+            langId,
         );
     }
 

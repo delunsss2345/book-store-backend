@@ -16,13 +16,6 @@ export type CreateCategoryParams = {
 export class CategoryRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
     existsById(categoryId: bigint) {
         return this.prisma.category
             .findFirst({

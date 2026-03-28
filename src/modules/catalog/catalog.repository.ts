@@ -32,22 +32,6 @@ type FindBooksForListParams = {
 export class CatalogRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
-    findDefaultLanguage() {
-        return this.prisma.language.findFirst({
-            where: { isActive: true },
-            orderBy: { id: 'asc' },
-            select: { id: true, code: true },
-        });
-    }
-
     findActiveCategoriesByLanguage(languageId: number) {
         return this.prisma.category.findMany({
             where: {

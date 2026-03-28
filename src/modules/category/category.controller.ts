@@ -1,5 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -25,16 +25,16 @@ export class CategoryController {
     createCategory(
         @Body() body: CreateCategoryRequestDto,
         @GetUser() user: JwtPayload,
-        @GetLanguage() lang: string,
+        @GetLanguageId() langId: number,
     ) {
         const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
-        return this.categoryService.createCategory(body, actorUserId, lang);
+        return this.categoryService.createCategory(body, actorUserId, langId);
     }
 
     @Public()
     @Get()
     @ApiOkResponse({ type: CategoryListResponseDto })
-    getCategories(@Query() query: GetCategoriesQueryDto, @GetLanguage() lang: string) {
-        return this.categoryService.getCategories(query, lang);
+    getCategories(@Query() query: GetCategoriesQueryDto, @GetLanguageId() langId: number) {
+        return this.categoryService.getCategories(query, langId);
     }
 }

@@ -1,0 +1,138 @@
+enum Badge {
+  NEW
+  LIMITED
+  BESTSELLER
+  EDITION
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum HTTPMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  OPTIONS
+  HEAD
+}
+
+enum DevicePlatform {
+  WEB
+  ANDROID
+  IOS
+  DESKTOP
+  OTHER
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum VerificationType {
+  REGISTER
+  FORGOT_PASSWORD
+  CHANGE_EMAIL
+  CHANGE_PASSWORD
+}
+
+enum BookFormat {
+  HARDCOVER
+  PAPERBACK
+  EBOOK
+  AUDIOBOOK
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CONFIRMED
+  PACKING
+  SHIPPING
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PAYMENT_SHORTFALL
+  PAYMENT_OVERAGE
+  PARTIAL_REFUND
+}
+
+enum PaymentGateway {
+  COD
+  VNPAY
+  MOMO
+  STRIPE
+  PAYPAL
+  SEPAY
+  OTHER
+}
+
+enum EmailStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+enum InventoryReason {
+  PURCHASE
+  RESTOCK
+  ADJUSTMENT
+  RETURN
+}
+
+enum ConsentType {
+  ANALYTICS
+  MARKETING
+}
+
+enum EventType {
+  VIEW_BOOK
+  SEARCH
+  ADD_TO_CART
+  REMOVE_FROM_CART
+  CHECKOUT_START
+  PLACE_ORDER
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  LOGIN
+  LOGOUT
+}
+
+enum RoleCode {
+  GUEST
+  ADMIN
+  STAFF
+  CUSTOMER
+  WAREHOUSE
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

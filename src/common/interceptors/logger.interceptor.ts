@@ -7,7 +7,9 @@ export class LoggingInterceptor implements NestInterceptor {
         const request = context.switchToHttp().getRequest();
         console.log('Before...');
         Logger.log(`Request... ${request.method} ${request.url}`);
-
+        if (request.headers) {
+            Logger.log(`Request headers... ${JSON.stringify(request.headers)}`);
+        }
         if (request.body) {
             Logger.log(`Request body... ${JSON.stringify(request.body)}`);
         }

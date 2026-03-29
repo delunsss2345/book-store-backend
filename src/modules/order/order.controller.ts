@@ -46,15 +46,16 @@ export class OrderController {
     @ApiBearerAuth('access-token')
     getOrder(
         @Req() req: Request,
-        @Query() query: GetOrderDto,
         @GetUser() user: User,
         @Param('orderId') orderId: string,
         @GetLanguageId() langId: number,
     ) {
+        console.log(user);
+        console.log(orderId)
         const guestSessionId = req['guestSessionId'] as string;
-        if (guestSessionId) {
-            // return this.orderService.getOrderGuest(guestSessionId, query.page ?? 1, query.limit ?? 12, langId);
-        }
+        // if (guestSessionId) {
+        //     return this.orderService.getOrderGuest(guestSessionId, query.page ?? 1, query.limit ?? 12, langId);
+        // }
 
         return this.orderService.getOrderDetailUser(BigInt(orderId), BigInt(user.id), langId);
     }

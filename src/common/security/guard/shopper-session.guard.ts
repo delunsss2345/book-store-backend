@@ -17,7 +17,6 @@ export class ShopperSessionGuard implements CanActivate {
         const request = context.switchToHttp().getRequest<Request>();
         const response = context.switchToHttp().getResponse<Response>();
         const token = this.extractTokenFromHeader(request);
-
         // Guard dùng chung cho cart/wishlist: không có token thì chuyển sang guest session.
         if (!token) {
             await this.attachGuestSession(request, response, true);
@@ -25,7 +24,6 @@ export class ShopperSessionGuard implements CanActivate {
         }
 
         try {
-
             const payload = await this.jwtService.verifyAsync<{ sub?: string }>(token);
             const userId = this.parseUserId(payload?.sub);
             if (!userId) {

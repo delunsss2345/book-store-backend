@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { Index, Pinecone, PineconeRecord } from '@pinecone-database/pinecone';
 
-const BOOKS_NAMESPACE = '__default__';
+const BOOKS_NAMESPACE = 'book-store';
 const DEFAULT_BATCH_SIZE = 200;
 
 export type BookVariantPineconeMetadata = {
@@ -77,8 +77,6 @@ export class PineconeService {
             throw new InternalServerErrorException('Gemini embedding returned empty vector');
         }
 
-
-
         const topK = params.topK > 0 ? params.topK : 10;
 
         try {
@@ -103,7 +101,7 @@ export class PineconeService {
     async fullReindexBooks(batchSize = DEFAULT_BATCH_SIZE) {
         const startedAt = Date.now();
         const safeBatchSize = this.normalizeBatchSize(batchSize);
-
+        // Lấy tất cả variant của sách đang active để đồng bộ lên Pinecone. Cần có dữ liệu đầy đủ để đảm bảo embedding chính xác.
         const rows = await this.catalogRepository.findActiveBookFirstVariant();
 
         let indexed = 0;
@@ -145,6 +143,7 @@ export class PineconeService {
                     // Ép về number để filter số trong Pinecone chạy chính xác.
                     // Số lỗi thì bỏ qua +1 skipped
                     const numericPrice = Number(row.variants[0].price);
+
                     if (!Number.isFinite(numericPrice)) {
                         skipped += 1;
                         continue;

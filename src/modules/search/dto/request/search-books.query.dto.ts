@@ -1,36 +1,15 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { BasePaginationDto } from '@/common/pagination/request/base-pagination.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
-    IsInt,
     IsNotEmpty,
-    IsNumber,
-    IsOptional,
-    IsString,
-    Max,
-    Min
+    IsString
 } from 'class-validator';
 
-export class SearchBooksQueryDto {
+export class SearchBooksQueryDto extends BasePaginationDto {
     @ApiProperty({ example: 'sach lap trinh backend' })
     @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
     @IsString()
     @IsNotEmpty()
     q: string;
-
-    @ApiPropertyOptional({ example: 10, default: 10, minimum: 1, maximum: 50 })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    @Max(50)
-    limit?: number;
-
-
-    @ApiPropertyOptional({ example: 1, minimum: 1 })
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    @Min(0)
-    page?: number;
-
 }

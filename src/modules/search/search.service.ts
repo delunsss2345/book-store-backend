@@ -43,6 +43,7 @@ export class SearchService {
         const orderedBookIdStrings = Array.from(
             new Set(matches.map((match) => match.bookId)),
         );
+
         const orderedBookIds = orderedBookIdStrings.map((id) => BigInt(id));
 
         const rankByBookId = new Map(

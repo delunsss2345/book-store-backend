@@ -1,6 +1,7 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { AuditLogService } from '@/modules/audit-log/audit-log.service';
 import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
@@ -31,6 +32,7 @@ import {
   AdminBookSnapshotListResponseDto,
   AdminBookStatsResponseDto,
   AdminBookTranslationResponseDto,
+  AdminBookVariantItemResponseDto,
 } from '../dto/response';
 import {
   AdminBookRepository,
@@ -61,7 +63,14 @@ export class AdminBookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
+  async getDetail(bookId: bigint): Promise<AdminBookDetailResponseDto> {
+    const book = await this.adminBookRepository.findBookById(bookId);
+    if (!book || book.deletedAt) {
+      throw new NotFoundException('Book not found');
+    }
+    return this.toBookDetail(book);
 
+  }
   // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
     body: CreateAdminBookAllRequestDto,
@@ -612,6 +621,49 @@ export class AdminBookService {
       editionSnapshot: row.editionSnapshot ?? null,
       isbnSnapshot: row.isbnSnapshot ?? null,
       createdAt: row.createdAt,
+    };
+  }
+
+  private toBookDetail(book: any): AdminBookDetailResponseDto {
+    return {
+      id: String(book.id),
+      publisherId: book.publisherId != null ? String(book.publisherId) : null,
+      publicationYear: book.publicationYear ?? null,
+      pageCount: book.pageCount ?? null,
+      weightGrams: book.weightGrams ?? null,
+      coverImageUrl: book.coverImageUrl ?? null,
+      isActive: Boolean(book.isActive),
+      deletedAt: book.deletedAt ?? null,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt,
+
+      translation: Array.isArray(book.translation || book.translations)
+        ? (book.translation || book.translations).map(
+          (item: any): AdminBookTranslationResponseDto => ({
+            id: String(item.id),
+            languageId: Number(item.languageId),
+            title: item.title,
+            description: item.description ?? null,
+            slug: item.slug,
+          }),
+        )
+        : [],
+
+      variants: Array.isArray(book.variants)
+        ? book.variants.map(
+          (item: any): AdminBookVariantItemResponseDto => ({
+            id: String(item.id),
+            format: item.format,
+            edition: item.edition ?? null,
+            isbn: item.isbn ?? null,
+            costPrice: String(item.costPrice),
+            price: String(item.price),
+            currencyCode: item.currencyCode ?? null,
+            stock: item.stock ?? null,
+            isActive: Boolean(item.isActive),
+          }),
+        )
+        : [],
     };
   }
 

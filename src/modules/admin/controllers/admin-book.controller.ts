@@ -2,8 +2,10 @@ import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
+import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
   Body,
@@ -39,6 +41,18 @@ export class AdminBookController {
   @ApiOkResponse({ type: AdminBookStatsResponseDto })
   getStats() {
     return this.adminBookService.getStats();
+  }
+
+  @Public()
+  @Get(":bookId")
+  // @RequirePermissions(PermissionCode.ADMIN_READ_DETAIL)
+  // @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminBookDetailResponseDto })
+  getDetail(
+    @Param('bookId') bookId: string
+  ) {
+    const parsedBookId = parseBigIntRequired(bookId, 'bookId');
+    return this.adminBookService.getDetail(parsedBookId);
   }
 
 

@@ -77,6 +77,35 @@ const adminBookSelect = {
   },
 } satisfies Prisma.BookSelect;
 
+
+const adminBookDetailSelect = {
+  id: true,
+  publisherId: true,
+  publicationYear: true,
+  pageCount: true,
+  weightGrams: true,
+  coverImageUrl: true,
+  isActive: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  translations: true,
+  variants: {
+    select: {
+      id: true,
+      format: true,
+      edition: true,
+      isbn: true,
+      costPrice: true,
+      price: true,
+      currencyCode: true,
+      stock: true,
+      isActive: true,
+    },
+    orderBy: [{ id: 'asc' }],
+  },
+} satisfies Prisma.BookSelect;
+
 @Injectable()
 export class AdminBookRepository {
   constructor(private readonly prisma: PrismaService) { }
@@ -227,6 +256,17 @@ export class AdminBookRepository {
       select: adminBookSelect,
     });
   }
+
+
+  findBookDetailById(bookId: bigint, tx?: Prisma.TransactionClient) {
+    const db: DbClient = tx ?? this.prisma;
+
+    return db.book.findFirst({
+      where: { id: bookId },
+      select: adminBookDetailSelect,
+    });
+  }
+
 
   updateBook(
     bookId: bigint,

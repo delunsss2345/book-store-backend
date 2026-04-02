@@ -1,8 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AdminBookTranslationResponseDto } from './admin-book-translation.response.dto';
-import { AdminBookVariantItemResponseDto } from './admin-book-variant-item.response.dto';
+import { AdminBookTranslationResponseDto } from "@/modules/admin/dto/response/admin-book-translation.response.dto";
+import { AdminBookVariantItemResponseDto } from "@/modules/admin/dto/response/admin-book-variant-item.response.dto";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-export class AdminBookItemResponseDto {
+export class AdminBookDetailResponseDto {
     @ApiProperty({ example: '12' })
     id: string;
 
@@ -33,11 +33,9 @@ export class AdminBookItemResponseDto {
     @ApiProperty({ example: '2026-02-23T21:10:00.000Z' })
     updatedAt: Date;
 
-    @ApiPropertyOptional({ type: () => AdminBookTranslationResponseDto, nullable: true })
-    translation: AdminBookTranslationResponseDto | null;
+    @ApiPropertyOptional({ type: () => [AdminBookTranslationResponseDto], nullable: true })
+    translation: AdminBookTranslationResponseDto[];
 
     @ApiProperty({ type: () => [AdminBookVariantItemResponseDto] })
     variants: AdminBookVariantItemResponseDto[];
 }
-
-

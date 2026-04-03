@@ -1,28 +1,55 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+    ArrayMinSize,
+    IsArray,
+    IsBoolean,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    MaxLength,
+    Min,
+    ValidateNested,
+} from 'class-validator';
 
-export class UpdateAdminBookRequestDto {
-    @ApiPropertyOptional({ example: '1' })
+export class UpdateAdminBookTranslationRequestDto {
+    @ApiPropertyOptional({
+        example: 1,
+        description: 'Language ID, ví dụ: 1, 2',
+    })
+    @IsOptional()
+    @IsNumber()
+    languageId: number;
+
+    @ApiPropertyOptional({
+        example: 'Tự học suốt đời theo hệ thống',
+        maxLength: 255,
+    })
     @IsOptional()
     @IsString()
-    publisherId?: string;
+    @MaxLength(255)
+    title?: string;
 
-    @ApiPropertyOptional({ example: 2026 })
+    @ApiPropertyOptional({
+        example: 'Mô tả sách...',
+        maxLength: 5000,
+    })
     @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(0)
-    publicationYear?: number;
+    @IsString()
+    @MaxLength(5000)
+    description?: string;
+}
 
-    @ApiPropertyOptional({ example: 320 })
+export class UpdateAdminBookRequestDto {
+    @ApiPropertyOptional({ example: 260 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
     pageCount?: number;
 
-    @ApiPropertyOptional({ example: 420 })
+    @ApiPropertyOptional({ example: 689 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
@@ -40,6 +67,29 @@ export class UpdateAdminBookRequestDto {
 
     @ApiPropertyOptional({ example: true })
     @IsOptional()
+    @Type(() => Boolean)
     @IsBoolean()
     isActive?: boolean;
+
+    @ApiPropertyOptional({
+        type: [UpdateAdminBookTranslationRequestDto],
+        example: [
+            {
+                languageId: 1,
+                title: 'Tự học suốt đời theo hệ thống',
+                description: 'Mô tả tiếng Việt...',
+            },
+            {
+                languageId: 2,
+                title: 'Lifelong Self-Learning Systems',
+                description: 'English description...',
+            },
+        ],
+    })
+    @IsOptional()
+    @IsArray()
+    @ArrayMinSize(1)
+    @ValidateNested({ each: true })
+    @Type(() => UpdateAdminBookTranslationRequestDto)
+    translations?: UpdateAdminBookTranslationRequestDto[];
 }

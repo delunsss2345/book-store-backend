@@ -18,14 +18,14 @@ export type CreateAdminBookParams = {
   supplerId: bigint
 };
 
-export type UpdateAdminBookParams = {
-  publisherId?: bigint;
-  publicationYear?: number;
-  pageCount?: number;
-  weightGrams?: number;
-  coverImageUrl?: string;
-  isActive?: boolean;
+export type UpdateAdminBookTranslationParams = {
+  languageId: number;
+  title?: string;
+  description?: string;
 };
+
+export type UpdateAdminBookMain = { pageCount?: number; weightGrams?: number; coverImageUrl?: string; isActive?: boolean; };
+
 
 export type CreateAdminBookTranslationParams = {
   bookId: bigint;
@@ -270,7 +270,7 @@ export class AdminBookRepository {
 
   updateBook(
     bookId: bigint,
-    params: UpdateAdminBookParams,
+    params: UpdateAdminBookMain,
     actorUserId: bigint,
     tx?: Prisma.TransactionClient,
   ) {
@@ -279,34 +279,32 @@ export class AdminBookRepository {
       updatedBy: actorUserId,
     };
 
-    if (params.publisherId !== undefined) {
-      data.publisherId = params.publisherId;
-    }
-
-    if (params.publicationYear !== undefined) {
-      data.publicationYear = params.publicationYear;
-    }
-
-    if (params.pageCount !== undefined) {
-      data.pageCount = params.pageCount;
-    }
-
-    if (params.weightGrams !== undefined) {
-      data.weightGrams = params.weightGrams;
-    }
-
-    if (params.coverImageUrl !== undefined) {
-      data.coverImageUrl = params.coverImageUrl;
-    }
-
-    if (params.isActive !== undefined) {
-      data.isActive = params.isActive;
-    }
-
     return db.book.update({
       where: { id: bookId },
-      data,
+      data: { ...params, ...data },
       select: adminBookSelect,
+    });
+  }
+
+
+  updateTranslationBook(
+    bookId: bigint,
+    params: UpdateAdminBookTranslationParams,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: DbClient = tx ?? this.prisma;
+
+    return db.bookTranslation.update({
+      where: {
+        bookId_languageId: {
+          bookId,
+          languageId: params.languageId,
+        },
+      },
+      data: {
+        title: params.title,
+        description: params.description,
+      },
     });
   }
 

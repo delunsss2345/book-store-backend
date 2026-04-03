@@ -2,6 +2,7 @@ import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
+import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import { AuditLogService } from '@/modules/audit-log/audit-log.service';
 import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
@@ -296,79 +297,54 @@ export class AdminBookService {
     body: UpdateAdminBookRequestDto,
     actorUserId: bigint,
     ip?: string,
-  ): Promise<AdminBookItemResponseDto> {
-    const hasPayload = [
-      body.publisherId,
-      body.publicationYear,
-      body.pageCount,
-      body.weightGrams,
-      body.coverImageUrl,
-      body.isActive,
-    ].some((item) => item !== undefined);
-
-    if (!hasPayload) {
-      throw new BadRequestException('At least one field is required to update');
-    }
-
-    const publisherId = this.parsePublisherId(body.publisherId);
-
-    if (publisherId !== undefined) {
-      const publisher =
-        await this.adminBookRepository.findPublisherById(publisherId);
-      if (!publisher) {
-        throw new NotFoundException('Publisher not found');
-      }
-    }
-
+  ): Promise<AdminBookItemUpdateResponseDto> {
     return this.prisma.$transaction(async (tx) => {
       const before = await this.adminBookRepository.findBookById(bookId, tx);
       if (!before || before.deletedAt) {
         throw new NotFoundException('Book not found');
       }
 
-      let updated: Awaited<ReturnType<AdminBookRepository['updateBook']>>;
-      try {
-        updated = await this.adminBookRepository.updateBook(
-          bookId,
-          {
-            publisherId,
-            publicationYear: body.publicationYear,
-            pageCount: body.pageCount,
-            weightGrams: body.weightGrams,
-            coverImageUrl: body.coverImageUrl,
-            isActive: body.isActive,
-          },
-          actorUserId,
-          tx,
-        );
-      } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2025'
-        ) {
-          throw new NotFoundException('Book not found');
+      if (body.translations) {
+        for (const translation of body.translations) {
+          await this.adminBookRepository.updateTranslationBook(
+            bookId,
+            {
+              languageId: translation.languageId,
+              title: translation.title,
+              description: translation.description,
+            },
+            tx,
+          );
         }
-
-        throw error;
       }
 
-      const beforeMapped = this.toAdminBookItem(before);
-      const afterMapped = this.toAdminBookItem(updated);
+      const updatedBook = await this.adminBookRepository.updateBook(
+        bookId,
+        {
+          pageCount: body.pageCount,
+          weightGrams: body.weightGrams,
+          coverImageUrl: body.coverImageUrl,
+          isActive: body.isActive,
+        },
+        actorUserId,
+        tx,
+      );
+
 
       await this.auditLogService.createAuditLog(
         {
           actorUserId,
           action: 'ADMIN_BOOK_UPDATE',
           entityType: 'BOOK',
-          entityId: afterMapped.id,
-          before: beforeMapped as unknown as Prisma.InputJsonValue,
-          after: afterMapped as unknown as Prisma.InputJsonValue,
+          entityId: String(updatedBook.id),
+          before,
+          after: updatedBook as unknown as Prisma.InputJsonValue,
           ip,
         },
         tx,
       );
-
-      return afterMapped;
+      console.log(updatedBook);
+      return this.toMapperUpdateBook(updatedBook);
     });
   }
 
@@ -665,6 +641,40 @@ export class AdminBookService {
         )
         : [],
     };
+  }
+  private toMapperUpdateBook(updatedBook: any): AdminBookItemUpdateResponseDto {
+    const response: AdminBookItemUpdateResponseDto = {
+      id: updatedBook.id.toString(),
+      publisherId: updatedBook.publisherId?.toString() ?? null,
+      publicationYear: updatedBook.publicationYear,
+      pageCount: updatedBook.pageCount,
+      weightGrams: updatedBook.weightGrams,
+      coverImageUrl: updatedBook.coverImageUrl,
+      isActive: updatedBook.isActive,
+      deletedAt: updatedBook.deletedAt,
+      createdAt: updatedBook.createdAt,
+      updatedAt: updatedBook.updatedAt,
+      translations: updatedBook.translations.map((item) => ({
+        id: item.id.toString(),
+        languageId: item.languageId,
+        title: item.title,
+        description: item.description,
+        slug: item.slug,
+        code: item.code,
+      })),
+      variants: updatedBook.variants.map((item) => ({
+        id: item.id.toString(),
+        format: item.format,
+        edition: item.edition,
+        isbn: item.isbn,
+        costPrice: item.costPrice?.toString() ?? null,
+        price: item.price.toString(),
+        currencyCode: item.currencyCode,
+        stock: item.stock,
+        isActive: item.isActive,
+      })),
+    };
+    return response
   }
 
   private toDecimalText(

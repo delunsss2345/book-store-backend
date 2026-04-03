@@ -7,6 +7,7 @@ export class AdminBookTranslationResponseDto {
     @ApiProperty({ example: 2 })
     languageId: number;
 
+
     @ApiProperty({ example: 'Dữ liệu lớn cho backend hiện đại' })
     title: string;
 

@@ -43,11 +43,17 @@ export class UpdateAdminBookTranslationRequestDto {
 
 export class UpdateAdminBookVariantRequestDto {
     @ApiPropertyOptional({ example: 1, description: 'ID của biến thể' })
-    id: number;
-    @ApiPropertyOptional({ example: 1, description: 'Gía của biến thể' })
-    @IsOptional()
     @IsNumber()
-    price?: number;
+    id: number;
+
+    @ApiPropertyOptional({ example: 1, description: 'Gía gốc của biến thể' })
+    @Type(() => Number)
+    @IsNumber()
+    costPrice: number;
+
+    @ApiPropertyOptional({ example: 1, description: 'Gía của biến thể' })
+    @IsNumber()
+    price: number;
     @ApiPropertyOptional({ example: 1, description: 'Trạng thái của biến thể' })
     @IsOptional()
     @IsBoolean()
@@ -105,6 +111,7 @@ export class UpdateAdminBookRequestDto {
     @ValidateNested({ each: true })
     @Type(() => UpdateAdminBookTranslationRequestDto)
     translations?: UpdateAdminBookTranslationRequestDto[];
+
     @ApiPropertyOptional({
         type: [UpdateAdminBookVariantRequestDto],
         example: [

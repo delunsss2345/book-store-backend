@@ -1,4 +1,5 @@
 import { PrismaService } from '@/database';
+import { UpdateAdminBookVariantRequestDto } from '@/modules/admin/dto/request';
 import {
   CreateBookSpecDto,
   CreateBookVariantDto,
@@ -321,6 +322,22 @@ export class AdminBookRepository {
         description: params.description,
       },
     });
+  }
+
+  updateVariantById(bookId: bigint, variants: UpdateAdminBookVariantRequestDto[], tx?: Prisma.TransactionClient) {
+    const db: DbClient = tx ?? this.prisma;
+    return Promise.all(
+      variants.map((variant) => {
+        console.log('variant before update =', variant);
+        return db.bookVariant.update({
+          where: { id: variant.id },
+          data: {
+            price: variant.price,
+            isActive: variant.isActive,
+          },
+        });
+      }),
+    );
   }
 
   softDeleteBook(

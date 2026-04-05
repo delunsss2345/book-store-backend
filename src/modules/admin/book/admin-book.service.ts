@@ -69,7 +69,6 @@ export class AdminBookService {
     if (!book || book.deletedAt) {
       throw new NotFoundException('Book not found');
     }
-    console.log(book);
     return this.toBookDetail(book);
 
   }
@@ -317,6 +316,18 @@ export class AdminBookService {
             tx,
           );
         }
+      }
+      if (body.variants) {
+        for (const variant of body.variants) {
+          if (variant.price < variant.costPrice) {
+            throw new BadRequestException('Variant price cannot be less than cost price');
+          }
+        }
+        await this.adminBookRepository.updateVariantById(
+          bookId,
+          body.variants,
+          tx,
+        );
       }
 
       const updatedBook = await this.adminBookRepository.updateBook(

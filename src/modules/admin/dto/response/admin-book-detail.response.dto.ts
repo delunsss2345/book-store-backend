@@ -9,6 +9,12 @@ export class AdminBookDetailResponseDto {
     @ApiPropertyOptional({ example: '3' })
     publisherId: string | null;
 
+    @ApiPropertyOptional({ example: 'Name' })
+    publisherName: string | null;
+
+    @ApiPropertyOptional({ example: 'Name' })
+    authorName: number | null;
+
     @ApiPropertyOptional({ example: 2026 })
     publicationYear: number | null;
 

@@ -105,8 +105,6 @@ export class UpdateAdminBookRequestDto {
     @ValidateNested({ each: true })
     @Type(() => UpdateAdminBookTranslationRequestDto)
     translations?: UpdateAdminBookTranslationRequestDto[];
-
-
     @ApiPropertyOptional({
         type: [UpdateAdminBookVariantRequestDto],
         example: [

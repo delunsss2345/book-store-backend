@@ -69,6 +69,7 @@ export class AdminBookService {
     if (!book || book.deletedAt) {
       throw new NotFoundException('Book not found');
     }
+    console.log(book);
     return this.toBookDetail(book);
 
   }
@@ -624,7 +625,8 @@ export class AdminBookService {
           }),
         )
         : [],
-
+      authorName: book.authors && book.authors.length > 0 ? book.authors[0].author.defaultName : null,
+      publisherName: book.publisher ? book.publisher?.defaultName : null,
       variants: Array.isArray(book.variants)
         ? book.variants.map(
           (item: any): AdminBookVariantItemResponseDto => ({

@@ -61,6 +61,22 @@ const adminBookSelect = {
     },
     orderBy: [{ languageId: 'asc' }],
   },
+  publisher: {
+    select: {
+      id: true,
+      defaultName: true,
+    },
+  },
+  authors: {
+    select: {
+      author: {
+        select: {
+          id: true,
+          defaultName: true,
+        }
+      }
+    }
+  },
   variants: {
     select: {
       id: true,
@@ -250,7 +266,6 @@ export class AdminBookRepository {
 
   findBookById(bookId: bigint, tx?: Prisma.TransactionClient) {
     const db: DbClient = tx ?? this.prisma;
-
     return db.book.findFirst({
       where: { id: bookId },
       select: adminBookSelect,

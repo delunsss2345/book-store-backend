@@ -16,6 +16,13 @@ export class AdminOrderItemResponseDto {
     @ApiPropertyOptional({ example: 'guest@example.com' })
     guestEmail: string | null;
 
+    @ApiPropertyOptional()
+    user: {
+        email: string | null;
+        firstName: string | null;
+        lastName: string | null;
+    } | null;
+
     @ApiPropertyOptional({ example: 'PENDING_PAYMENT' })
     status: string | null;
 

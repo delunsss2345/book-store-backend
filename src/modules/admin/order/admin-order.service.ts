@@ -2,19 +2,19 @@ import { AdminOrderMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AdminOrderRepository } from './admin-order.repository';
 import { AdminOrderListQueryDto } from '../dto/request';
 import {
   AdminOrderDetailResponseDto,
   AdminOrderItemResponseDto,
   AdminOrderListResponseDto,
 } from '../dto/response';
+import { AdminOrderRepository } from './admin-order.repository';
 
 type OrderRow = Awaited<ReturnType<AdminOrderRepository['findOrders']>>[number];
 
 @Injectable()
 export class AdminOrderService {
-  constructor(private readonly adminOrderRepository: AdminOrderRepository) {}
+  constructor(private readonly adminOrderRepository: AdminOrderRepository) { }
 
   async getOrders(
     query: AdminOrderListQueryDto,
@@ -42,7 +42,6 @@ export class AdminOrderService {
     }
 
     return {
-      ...this.toOrderItem(row),
       items: row.items.map((item) => ({
         id: item.id.toString(),
         bookVariantSnapshotId: item.bookVariantSnapshotId.toString(),
@@ -77,6 +76,7 @@ export class AdminOrderService {
       paymentStatus: row.paymentStatus ? String(row.paymentStatus) : null,
       subtotal: this.toDecimalText(row.subtotal),
       discountAmount: this.toDecimalText(row.discountAmount),
+      user: row?.user ?? null,
       shippingFee: this.toDecimalText(row.shippingFee),
       totalAmount: this.toDecimalText(row.totalAmount),
       currencyCode: row.currencyCode ?? null,

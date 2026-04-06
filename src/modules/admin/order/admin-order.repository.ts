@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AdminOrderRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   countOrders() {
     return this.prisma.order.count();
@@ -19,6 +19,13 @@ export class AdminOrderRepository {
         orderCode: true,
         userId: true,
         guestSessionId: true,
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
         guestEmail: true,
         status: true,
         paymentStatus: true,
@@ -47,6 +54,13 @@ export class AdminOrderRepository {
         guestSessionId: true,
         guestEmail: true,
         status: true,
+        user: {
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
         paymentStatus: true,
         subtotal: true,
         discountAmount: true,

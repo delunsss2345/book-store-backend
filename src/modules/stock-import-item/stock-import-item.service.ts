@@ -1,3 +1,4 @@
+import { StockImportItemMessage } from '@/common';
 import {
   buildPaginatedResult,
   getPaginationParams,
@@ -26,13 +27,19 @@ export class StockImportItemService {
     query: GetStockImportItemsQueryDto,
     langId: number,
   ): Promise<StockImportItemListResponseDto> {
-    const stockImport = await this.stockImportItemRepository.findStockImportById(stockImportId);
+    const stockImport =
+      await this.stockImportItemRepository.findStockImportById(stockImportId);
 
     if (!stockImport) {
-      throw new NotFoundException('Stock import not found');
+      throw new NotFoundException(
+        StockImportItemMessage.STOCK_IMPORT_NOT_FOUND,
+      );
     }
 
-    const { page, limit, offset } = getPaginationParams(query.page, query.limit);
+    const { page, limit, offset } = getPaginationParams(
+      query.page,
+      query.limit,
+    );
     const [total, items] = await Promise.all([
       this.stockImportItemRepository.findCountStockImportItems(stockImportId),
       this.stockImportItemRepository.findStockImportItemsByStockImportId({

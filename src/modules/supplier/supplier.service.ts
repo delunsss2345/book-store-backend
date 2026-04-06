@@ -1,3 +1,4 @@
+import { SupplierMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSupplierRequestDto } from './dto/request/create-supplier.request.dto';
@@ -15,7 +16,7 @@ type SupplierDetailRow = Awaited<
 
 @Injectable()
 export class SupplierService {
-  constructor(private readonly supplierRepository: SupplierRepository) { }
+  constructor(private readonly supplierRepository: SupplierRepository) {}
 
   async getSuppliers(
     query: GetSuppliersQueryDto,
@@ -39,7 +40,10 @@ export class SupplierService {
   async createSupplier(
     body: CreateSupplierRequestDto,
   ): Promise<SupplierItemResponseDto> {
-    const created = await this.supplierRepository.createSupplier(body.name, body.code);
+    const created = await this.supplierRepository.createSupplier(
+      body.name,
+      body.code,
+    );
     return this.toSupplierItem(created);
   }
 
@@ -49,7 +53,7 @@ export class SupplierService {
     const supplier = await this.supplierRepository.findSupplierById(supplierId);
 
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException(SupplierMessage.SUPPLIER_NOT_FOUND);
     }
 
     const updated = await this.supplierRepository.updateSupplierActive(

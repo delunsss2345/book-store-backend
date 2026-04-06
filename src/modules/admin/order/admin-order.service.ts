@@ -1,3 +1,4 @@
+import { AdminOrderMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -37,7 +38,7 @@ export class AdminOrderService {
   async getOrderDetail(orderId: bigint): Promise<AdminOrderDetailResponseDto> {
     const row = await this.adminOrderRepository.findOrderDetailById(orderId);
     if (!row) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException(AdminOrderMessage.ORDER_NOT_FOUND);
     }
 
     return {

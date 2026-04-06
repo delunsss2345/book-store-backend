@@ -1,3 +1,4 @@
+import { AdminBookMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
@@ -24,7 +25,7 @@ import {
   AdminBookListQueryDto,
   AdminBookSnapshotListQueryDto,
   CreateAdminBookTranslationRequestDto,
-  UpdateAdminBookRequestDto
+  UpdateAdminBookRequestDto,
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
@@ -62,15 +63,14 @@ export class AdminBookService {
     private readonly prisma: PrismaService,
     private readonly supplierRepository: SupplierRepository,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) { }
+  ) {}
 
   async getDetail(bookId: bigint): Promise<AdminBookDetailResponseDto> {
     const book = await this.adminBookRepository.findBookById(bookId);
     if (!book || book.deletedAt) {
-      throw new NotFoundException('Book not found');
+      throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
     }
     return this.toBookDetail(book);
-
   }
   // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
@@ -81,24 +81,23 @@ export class AdminBookService {
     // Kiem tra publisher
     const normalizedPublisherName = body.publisherName?.trim();
     if (!normalizedPublisherName) {
-      throw new BadRequestException('publisherName is required');
+      throw new BadRequestException(AdminBookMessage.PUBLISHER_NAME_REQUIRED);
     }
 
     const [publisher, supplier] = await Promise.all([
       this.publisherService.createPublisher({
         defaultName: normalizedPublisherName,
       }),
-      this.supplierRepository.findSupplierById(body.supplierId)
+      this.supplierRepository.findSupplierById(body.supplierId),
     ]);
     const publisherId = this.parsePublisherId(publisher.id);
 
     if (!publisherId) {
-      throw new BadRequestException('Invalid publisher id');
+      throw new BadRequestException(AdminBookMessage.INVALID_PUBLISHER_ID);
     }
 
     if (!supplier) {
-      throw new BadRequestException('Invalid supplier');
-
+      throw new BadRequestException(AdminBookMessage.INVALID_SUPPLIER);
     }
     const normalizedAuthorMap = new Map<
       string,
@@ -237,7 +236,7 @@ export class AdminBookService {
     return this.prisma.$transaction(async (tx) => {
       const book = await this.adminBookRepository.findBookById(bookId, tx);
       if (!book || book.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
       const existed =
@@ -249,7 +248,7 @@ export class AdminBookService {
 
       if (existed) {
         throw new ConflictException(
-          'Book translation already exists in this language',
+          AdminBookMessage.BOOK_TRANSLATION_ALREADY_EXISTS_IN_THIS_LANGUAGE,
         );
       }
 
@@ -301,7 +300,7 @@ export class AdminBookService {
     return this.prisma.$transaction(async (tx) => {
       const before = await this.adminBookRepository.findBookById(bookId, tx);
       if (!before || before.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
       if (body.translations) {
@@ -320,7 +319,9 @@ export class AdminBookService {
       if (body.variants) {
         for (const variant of body.variants) {
           if (variant.price < variant.costPrice) {
-            throw new BadRequestException('Variant price cannot be less than cost price');
+            throw new BadRequestException(
+              AdminBookMessage.VARIANT_PRICE_CANNOT_BE_LESS_THAN_COST_PRICE,
+            );
           }
         }
         await this.adminBookRepository.updateVariantById(
@@ -341,7 +342,6 @@ export class AdminBookService {
         actorUserId,
         tx,
       );
-
 
       await this.auditLogService.createAuditLog(
         {
@@ -368,7 +368,7 @@ export class AdminBookService {
     return this.prisma.$transaction(async (tx) => {
       const before = await this.adminBookRepository.findBookById(bookId, tx);
       if (!before || before.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
       let updated: Awaited<ReturnType<AdminBookRepository['softDeleteBook']>>;
@@ -383,7 +383,7 @@ export class AdminBookService {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2025'
         ) {
-          throw new NotFoundException('Book not found');
+          throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
         }
 
         throw error;
@@ -419,12 +419,7 @@ export class AdminBookService {
 
     const [total, rows] = await Promise.all([
       this.adminBookRepository.countBooks(langId, searchPhrase),
-      this.adminBookRepository.findBooks(
-        page,
-        limit,
-        langId,
-        searchPhrase,
-      ),
+      this.adminBookRepository.findBooks(page, limit, langId, searchPhrase),
     ]);
 
     return buildPaginatedResult(
@@ -435,12 +430,10 @@ export class AdminBookService {
     );
   }
 
-
   async getStats(): Promise<AdminBookStatsResponseDto> {
-    const cached =
-      await this.cacheManager.get<AdminBookStatsResponseDto>(
-        ADMIN_STATS_CACHE_KEY,
-      );
+    const cached = await this.cacheManager.get<AdminBookStatsResponseDto>(
+      ADMIN_STATS_CACHE_KEY,
+    );
     if (cached) {
       return cached;
     }
@@ -537,12 +530,12 @@ export class AdminBookService {
       updatedAt: row.updatedAt,
       translation: translation
         ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
+            id: translation.id.toString(),
+            languageId: translation.languageId,
+            title: translation.title,
+            description: translation.description ?? null,
+            slug: translation.slug ?? '',
+          }
         : null,
       variants: row.variants.map((variant) => ({
         id: variant.id.toString(),
@@ -574,12 +567,12 @@ export class AdminBookService {
       updatedAt: row.updatedAt,
       translation: translation
         ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
+            id: translation.id.toString(),
+            languageId: translation.languageId,
+            title: translation.title,
+            description: translation.description ?? null,
+            slug: translation.slug ?? '',
+          }
         : null,
       variants: row.variants.map((variant) => ({
         id: variant.id.toString(),
@@ -627,31 +620,34 @@ export class AdminBookService {
 
       translation: Array.isArray(book.translation || book.translations)
         ? (book.translation || book.translations).map(
-          (item: any): AdminBookTranslationResponseDto => ({
-            id: String(item.id),
-            languageId: Number(item.languageId),
-            title: item.title,
-            description: item.description ?? null,
-            slug: item.slug,
-          }),
-        )
+            (item: any): AdminBookTranslationResponseDto => ({
+              id: String(item.id),
+              languageId: Number(item.languageId),
+              title: item.title,
+              description: item.description ?? null,
+              slug: item.slug,
+            }),
+          )
         : [],
-      authorName: book.authors && book.authors.length > 0 ? book.authors[0].author.defaultName : null,
+      authorName:
+        book.authors && book.authors.length > 0
+          ? book.authors[0].author.defaultName
+          : null,
       publisherName: book.publisher ? book.publisher?.defaultName : null,
       variants: Array.isArray(book.variants)
         ? book.variants.map(
-          (item: any): AdminBookVariantItemResponseDto => ({
-            id: String(item.id),
-            format: item.format,
-            edition: item.edition ?? null,
-            isbn: item.isbn ?? null,
-            costPrice: String(item.costPrice),
-            price: String(item.price),
-            currencyCode: item.currencyCode ?? null,
-            stock: item.stock ?? null,
-            isActive: Boolean(item.isActive),
-          }),
-        )
+            (item: any): AdminBookVariantItemResponseDto => ({
+              id: String(item.id),
+              format: item.format,
+              edition: item.edition ?? null,
+              isbn: item.isbn ?? null,
+              costPrice: String(item.costPrice),
+              price: String(item.price),
+              currencyCode: item.currencyCode ?? null,
+              stock: item.stock ?? null,
+              isActive: Boolean(item.isActive),
+            }),
+          )
         : [],
     };
   }
@@ -687,7 +683,7 @@ export class AdminBookService {
         isActive: item.isActive,
       })),
     };
-    return response
+    return response;
   }
 
   private toDecimalText(

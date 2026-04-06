@@ -1,10 +1,11 @@
+import { PurchaseOrderMessage } from '@/common';
 import { PrismaService } from '@/database';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import {
   CreatePurchaseOrderItemRequestDto,
   CreatePurchaseOrderRequestDto,
-  GetPurchaseOrdersQueryDto
+  GetPurchaseOrdersQueryDto,
 } from './dto';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
@@ -56,7 +57,7 @@ const purchaseOrderDetailSelect = {
 
 @Injectable()
 export class PurchaseOrderRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   withTransaction<T>(
     callback: (tx: Prisma.TransactionClient) => Promise<T>,
@@ -77,7 +78,7 @@ export class PurchaseOrderRepository {
     });
 
     if (!supplier) {
-      throw new BadRequestException('Invalid supplier');
+      throw new BadRequestException(PurchaseOrderMessage.INVALID_SUPPLIER);
     }
 
     return db.purchaseOrder.create({
@@ -118,7 +119,7 @@ export class PurchaseOrderRepository {
         taxAmount: true,
         createdAt: true,
         updatedAt: true,
-        supplier: true
+        supplier: true,
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
@@ -213,7 +214,9 @@ export class PurchaseOrderRepository {
     }
 
     const db = this.getDb(tx);
-    const bookVariantIds = [...new Set(items.map((item) => BigInt(item.bookVariantId)))];
+    const bookVariantIds = [
+      ...new Set(items.map((item) => BigInt(item.bookVariantId))),
+    ];
     const existingBookVariants = await db.bookVariant.findMany({
       where: {
         id: {
@@ -232,7 +235,7 @@ export class PurchaseOrderRepository {
 
     if (missingIds.length > 0) {
       throw new BadRequestException(
-        `Invalid bookVariantId: ${missingIds.join(', ')}`,
+        PurchaseOrderMessage.INVALID_BOOK_VARIANT_IDS(missingIds),
       );
     }
 

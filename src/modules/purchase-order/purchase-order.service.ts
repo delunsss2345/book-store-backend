@@ -1,3 +1,4 @@
+import { PurchaseOrderMessage } from '@/common';
 import {
   buildPaginatedResult,
   getPaginationParams,
@@ -14,7 +15,7 @@ import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
   GetPurchaseOrderItemsQueryDto,
-  GetPurchaseOrdersQueryDto
+  GetPurchaseOrdersQueryDto,
 } from './dto';
 import { PurchaseOrderRepository } from './purchase-order.repository';
 
@@ -68,7 +69,7 @@ export class PurchaseOrderService {
     private readonly purchaseOrderRepository: PurchaseOrderRepository,
     private readonly stockImportRepository: StockImportRepository,
     private readonly bookVariantService: BookVariantService,
-  ) { }
+  ) {}
 
   async createPurchaseOrder(
     createdById: bigint,
@@ -97,7 +98,9 @@ export class PurchaseOrderService {
     );
 
     if (!createdOrder) {
-      throw new Error('Created purchase order could not be loaded');
+      throw new Error(
+        PurchaseOrderMessage.CREATED_PURCHASE_ORDER_COULD_NOT_BE_LOADED,
+      );
     }
 
     return this.toPurchaseOrderCreateResponse(createdOrder);
@@ -114,7 +117,7 @@ export class PurchaseOrderService {
       }),
     ]);
 
-    return buildPaginatedResult(items, total, page, limit)
+    return buildPaginatedResult(items, total, page, limit);
   }
 
   async getPurchaseOrderDetail(
@@ -130,7 +133,9 @@ export class PurchaseOrderService {
       await this.purchaseOrderRepository.findPurchaseOrderById(purchaseOrderId);
 
     if (!purchaseOrder) {
-      throw new NotFoundException('Purchase order not found');
+      throw new NotFoundException(
+        PurchaseOrderMessage.PURCHASE_ORDER_NOT_FOUND,
+      );
     }
 
     const [total, items] = await Promise.all([
@@ -161,7 +166,7 @@ export class PurchaseOrderService {
       body.status !== PurchaseOrderStatus.REJECTED
     ) {
       throw new BadRequestException(
-        'Purchase order status must be APPROVED or REJECTED',
+        PurchaseOrderMessage.STATUS_MUST_BE_APPROVED_OR_REJECTED,
       );
     }
 
@@ -175,18 +180,20 @@ export class PurchaseOrderService {
           );
 
         if (!purchaseOrder) {
-          throw new NotFoundException('Purchase order not found');
+          throw new NotFoundException(
+            PurchaseOrderMessage.PURCHASE_ORDER_NOT_FOUND,
+          );
         }
 
         if (purchaseOrder.status !== PurchaseOrderStatus.PENDING) {
           throw new BadRequestException(
-            'Purchase order has already been processed',
+            PurchaseOrderMessage.PURCHASE_ORDER_HAS_ALREADY_BEEN_PROCESSED,
           );
         }
 
         if (!purchaseOrder.items.length) {
           throw new BadRequestException(
-            'Purchase order must have at least one item',
+            PurchaseOrderMessage.PURCHASE_ORDER_MUST_HAVE_AT_LEAST_ONE_ITEM,
           );
         }
 
@@ -243,7 +250,9 @@ export class PurchaseOrderService {
     );
 
     if (!updatedOrder) {
-      throw new Error('Updated purchase order could not be loaded');
+      throw new Error(
+        PurchaseOrderMessage.UPDATED_PURCHASE_ORDER_COULD_NOT_BE_LOADED,
+      );
     }
 
     return this.toPurchaseOrderCreateResponse(updatedOrder);

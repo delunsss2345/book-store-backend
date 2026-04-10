@@ -56,3 +56,5 @@ jobs:
 
       - name: Check container logs
         run : docker logs app 
+
+  

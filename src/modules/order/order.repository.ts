@@ -120,7 +120,22 @@ export class OrderRepository {
             take: limit,
             skip: (page - 1) * limit,
             where: { userId: userId },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                orderCode: true,
+                totalAmount: true,
+                userId: true,
+                addressId: true,
+                status: true,
+                paymentStatus: true,
+                subtotal: true,
+                shippingFee: true,
+                expiredAt: true,
+                discountAmount: true,
+                currencyCode: true,
+                createdAt: true,
+            }
         })
 
     }

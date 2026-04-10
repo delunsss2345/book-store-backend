@@ -30,7 +30,7 @@ jobs:
       - name: Wait for app
         run: |
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:3301 ; then
+            if curl -fsS http://127.0.0.1:3301/api/v1/health ; then
               exit 0
             fi
             sleep 3

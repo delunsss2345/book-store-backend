@@ -6,12 +6,15 @@ on:
 
 jobs:
   compose-test:
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: testing
     steps:
       - name: Checkout code
-        run: action/checkout@v6
+        uses: actions/checkout@v5
 
       - name: Create env testing
         run: |

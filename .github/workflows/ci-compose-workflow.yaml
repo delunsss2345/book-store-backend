@@ -1,4 +1,5 @@
 name: CI Compose Test
+
 on:
   workflow_dispatch:
   push:
@@ -6,25 +7,25 @@ on:
 
 jobs:
   compose-test:
-    permissions:
-      contents: read
-      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: testing
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Create env testing
         run: |
-          echo ${{ secrets.TESTING_ENV }} > .env.testing.local
+          cat > .env.testing.local <<'EOF'
+          ${{ secrets.TESTING_ENV }}
+          EOF
 
       - name: Start compose
-        run: docker compose --env-file .env.testing.local -f docker-compose.dev up -d --build
+        run: docker compose --env-file .env.testing.local -f docker-compose.dev.yml up -d --build
 
       - name: Show compose
-        run: docker compose ps
+        run: docker compose -f docker-compose.dev.yml ps
 
       - name: Wait for app
         run: |
@@ -34,13 +35,13 @@ jobs:
             fi
             sleep 3
           done
-          docker compose logs
+          docker compose -f docker-compose.dev.yml logs
           exit 1
 
       - name: Logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: docker compose -f docker-compose.dev.yml logs --no-color
 
       - name: Shut down
         if: always()
-        run: docker compose -f docker-compose.dev down
+        run: docker compose -f docker-compose.dev.yml down -v

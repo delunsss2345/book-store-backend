@@ -49,3 +49,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run container
+        run: |
+          docker run -d --name ${{ steps.meta.outputs.tags }} -p 3301:3301
+
+      - name: Check container logs
+        run : docker logs app 

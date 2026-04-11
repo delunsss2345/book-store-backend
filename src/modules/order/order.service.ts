@@ -50,6 +50,7 @@ export class OrderService {
       .map((item) => `${item.bookVariantId}:${item.quantity}`)
       .join('|');
 
+
     return crypto
       .createHash('md5')
       .update(content + cartId.toString())
@@ -142,6 +143,13 @@ export class OrderService {
             lineTotal,
           },
         });
+        await tx.bookVariant.update({
+          where: { id: bookVariant.id },
+          data: {
+            stock: { decrement: item.quantity },
+            reserved: { increment: item.quantity },
+          },
+        });
       }),
     );
     await this.cartRepository.deleteByUserId(cart.userId);
@@ -194,7 +202,7 @@ export class OrderService {
 
       // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
       const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-
+      console.log(cartHash);
       const existing = await tx.order.findFirst({
         where: { cartHash },
         include: {
@@ -344,7 +352,7 @@ export class OrderService {
 
       // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
       const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-
+      console.log(cartHash);
       const existing = await tx.order.findFirst({
         where: { cartHash },
         include: {

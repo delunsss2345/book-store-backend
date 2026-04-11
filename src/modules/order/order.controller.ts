@@ -26,7 +26,7 @@ import type { Request } from 'express';
 @Controller('orders')
 @UseGuards(ShopperSessionGuard)
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService) { }
 
   @Post('/guest/checkout')
   @Public()
@@ -72,12 +72,10 @@ export class OrderController {
     @Param('orderId') orderId: string,
     @GetLanguageId() langId: number,
   ) {
-    console.log(user);
-    console.log(orderId);
     const guestSessionId = req['guestSessionId'] as string;
-    // if (guestSessionId) {
-    //     return this.orderService.getOrderGuest(guestSessionId, query.page ?? 1, query.limit ?? 12, langId);
-    // }
+    if (guestSessionId) {
+      return this.orderService.getOrderDetailGuest(BigInt(orderId), guestSessionId, langId);
+    }
 
     return this.orderService.getOrderDetailUser(
       BigInt(orderId),

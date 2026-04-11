@@ -1,5 +1,4 @@
-import { OrderMessage } from '@/common';
-import { SHIPPING_FEE } from '@/common';
+import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaService } from '@/database';
 import { CartRepository } from '@/modules/cart/cart.repository';
@@ -32,7 +31,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly cartRepository: CartRepository,
     private readonly orderItemRepository: OrderItemRepository,
-  ) {}
+  ) { }
 
   /**
    * Generates a hash string for the given cart items and cartId.
@@ -415,6 +414,7 @@ export class OrderService {
       });
 
       if (body.paymentGateway === PaymentGateway.COD) {
+        console.log('Đã tạo order với phương thức COD');
         return {
           orderId: order.id,
           subtotal: updatedOrder.subtotal,
@@ -422,6 +422,7 @@ export class OrderService {
           orderCode: order.orderCode,
         };
       }
+      console.log('Đã tạo order, chuẩn bị tạo transaction');
       // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout)
       // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền
       // 8) gọi gateway tạo transaction
@@ -447,6 +448,10 @@ export class OrderService {
       page,
       limit,
     );
+  }
+
+  async getOrderDetailGuest(orderId: bigint, sessionGuestId: string, langId: number) {
+    return this.orderItemRepository.findOrderDetailBySessionGuestId(orderId, sessionGuestId, langId);
   }
 
   async getOrderUser(userId: bigint, page: number, limit: number) {

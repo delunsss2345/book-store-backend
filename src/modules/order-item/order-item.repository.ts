@@ -130,5 +130,44 @@ export class OrderItemRepository {
             orderBy: { createdAt: 'desc' }
         });
     }
+    findOrderDetailBySessionGuestId(orderId: bigint, sessionGuestId: string, langId: number) {
+        return this.prisma.orderItem.findMany({
+            where: {
+                orderId,
+                order: {
+                    guestSessionId: sessionGuestId
+                }
+            },
+            select: {
+                quantity: true,
+                bookVariantSnapshotId: true,
+                bookVariantSnapshot: {
+                    select: {
+                        priceSnapshot: true,
+                        bookVariantId: true,
+                        bookVariant: {
+                            select: {
+                                book: {
+                                    select: {
+                                        coverImageUrl: true,
+                                        id: true,
+                                        translations: {
+                                            where: { languageId: langId },
+                                            select: {
+                                                title: true,
+                                                slug: true
+                                            },
+                                            take: 1
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
 }
 

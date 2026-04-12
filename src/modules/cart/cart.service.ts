@@ -8,6 +8,7 @@ import {
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   NotImplementedException,
 } from '@nestjs/common';
@@ -63,11 +64,12 @@ export class CartService {
 
       if (existedItem) {
         // Kiểm tra xem số lượng mới có vượt quá tồn kho không, nếu có thì chỉ cập nhật đến mức tồn kho.
-        const newQuantity = existedItem.quantity + quantity;
-        const stockAvailable = await this.cartItemService.getStockByBookVariantId(bookVariantId);
-        if (!stockAvailable) throw new NotFoundException("Đã hết hàng");
-        const adjustedQuantity = stockAvailable.available < newQuantity ? stockAvailable.available : newQuantity;
+        const adjustedQuantity = await this.resolveAdjustedQuantity(guestSessionId, undefined, existedItem.id, bookVariantId, existedItem.quantity, quantity);
+        Logger.debug("Quantity", quantity)
 
+        if (!adjustedQuantity) return {
+          success: true
+        }
         const updatedItem = await this.cartItemService.updateQuantityById(
           existedItem.id,
           adjustedQuantity,
@@ -116,12 +118,7 @@ export class CartService {
       );
 
       if (existedItem) {
-
-        const newQuantity = existedItem.quantity + quantity;
-        const stockAvailable = await this.cartItemService.getStockByBookVariantId(bookVariantId);
-        if (!stockAvailable) throw new NotFoundException("Đã hết hàng");
-        const adjustedQuantity = stockAvailable.available < newQuantity ? stockAvailable.available : newQuantity;
-
+        const adjustedQuantity = await this.resolveAdjustedQuantity(undefined, userId, existedItem.id, bookVariantId, existedItem.quantity, quantity);
         const updatedItem = await this.cartItemService.updateQuantityById(
           existedItem.id,
           adjustedQuantity,
@@ -154,6 +151,7 @@ export class CartService {
 
     throw new ForbiddenException('Guest session or user is required');
   }
+
   async updateCartItemDelta(
     guestSessionId: string | null,
     user: JwtPayload | null,
@@ -171,23 +169,35 @@ export class CartService {
       }
 
       const quantity = await this.resolveAdjustedQuantity(
+        guestSessionId,
+        undefined,
+        item.id,
         item.bookVariantId,
         item.quantity,
         body.quantity,
       );
-
-      const updatedItem = await this.cartItemService.updateQuantityById(
-        item.id,
-        quantity,
-      );
-
-      return {
-        cartItem: {
-          itemKey: updatedItem.id.toString(),
-          bookVariantId: Number(updatedItem.bookVariantId),
-          quantity: updatedItem.quantity,
-        },
-      };
+      if (!quantity) {
+        return {
+          cartItem: {
+            itemKey: item.id.toString(),
+            bookVariantId: Number(item.bookVariantId),
+            quantity,
+            remove: true
+          },
+        }
+      } else {
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          item.id,
+          quantity,
+        );
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
     }
 
     if (user) {
@@ -208,23 +218,35 @@ export class CartService {
       }
 
       const quantity = await this.resolveAdjustedQuantity(
+        undefined,
+        userId,
+        item.id,
         item.bookVariantId,
         item.quantity,
         body.quantity,
       );
-
-      const updatedItem = await this.cartItemService.updateQuantityById(
-        item.id,
-        quantity,
-      );
-
-      return {
-        cartItem: {
-          itemKey: updatedItem.id.toString(),
-          bookVariantId: Number(updatedItem.bookVariantId),
-          quantity: updatedItem.quantity,
-        },
-      };
+      if (!quantity) {
+        return {
+          cartItem: {
+            itemKey: item.id.toString(),
+            bookVariantId: Number(item.bookVariantId),
+            quantity,
+            remove: true
+          },
+        }
+      } else {
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          item.id,
+          quantity,
+        );
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
     }
 
     throw new ForbiddenException('Guest session or user is required');
@@ -295,22 +317,34 @@ export class CartService {
     );
   }
 
+  // Điều chỉnh giá 
   private async resolveAdjustedQuantity(
+    guestSessionId: string | undefined,
+    userId: bigint | undefined,
+    itemId: bigint,
     bookVariantId: bigint,
     currentQuantity: number,
     delta: number,
   ): Promise<number> {
+    // giá lúc tăng
     const desiredQuantity = Math.max(0, currentQuantity + delta);
+    if (!desiredQuantity) {
+      if (guestSessionId) {
+        await this.cartItemService.deleteByIdAndGuestSessionId(itemId, guestSessionId);
+      }
+      else if (userId) {
+        await this.cartItemService.deleteByIdAndUserId(itemId, userId);
+      }
+    }
+    // tồn kho
     const stock =
       await this.cartItemService.getStockByBookVariantId(bookVariantId);
-
-    if (stock === null || stock === undefined) {
-      return desiredQuantity;
-    }
+    if (!stock) throw new NotFoundException("Sản phẩm đã hết hàng");
 
     const normalizedStock = Math.max(0, stock?.available ?? 0);
+    if (!normalizedStock) throw new NotFoundException("Sản phẩm đã hết hàng");
+
     return Math.min(desiredQuantity, normalizedStock);
   }
-
 
 }

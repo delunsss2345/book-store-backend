@@ -1,12 +1,27 @@
-import { JwtPayload } from '@/common';
+import type { JwtPayload } from '@/common';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
+import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
-import { AddCartItemRequestDto, UpdateCartItemDeltaRequestDto } from '@/modules/cart/dto/request';
+import {
+    AddCartItemRequestDto,
+    UpdateCartItemDeltaRequestDto,
+} from '@/modules/cart/dto/request';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { CartService } from './cart.service';
+
 @Public()
 @UseGuards(ShopperSessionGuard)
 @Controller('cart')
@@ -14,43 +29,82 @@ export class CartController {
     constructor(private readonly cartService: CartService) { }
 
     @Get()
-    getCart(@Req() req: Request, @GetLanguageId() langId: number) {
-        const guestSessionId = req['guestSessionId'] as string;
-        const user = req['user'] ;
+    getCart(
+        @Req() req: Request,
+        @GetLanguageId() langId: number,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
         if (guestSessionId) {
             return this.cartService.getCartGuest(guestSessionId, langId);
         }
-        return this.cartService.getCartUser(BigInt(user.id), langId);
+
+        if (user) {
+            return this.cartService.getCartUser(BigInt(user.sub), langId);
+        }
+
+        throw new Error('Guest session or user is required');
     }
 
     @Post('items')
-    addCartItem(@Req() request: Request, @Body() body: AddCartItemRequestDto) {
-        return this.cartService.addCartItem(request, body);
+    addCartItem(
+        @Req() req: Request,
+        @GetUser() user: JwtPayload | null,
+        @Body() body: AddCartItemRequestDto,
+    ) {
+        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
+
+        return this.cartService.addCartItem(guestSessionId, user, body);
     }
 
     @Patch('items/:itemKey/delta')
     updateCartItemDelta(
-        @Req() request: Request,
+        @Req() req: Request,
+        @GetUser() user: JwtPayload | null,
         @Param('itemKey') itemKey: string,
         @Body() body: UpdateCartItemDeltaRequestDto,
     ) {
+        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
         const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
-        return this.cartService.updateCartItemDelta(request, parsedItemId, body);
+
+        return this.cartService.updateCartItemDelta(
+            guestSessionId,
+            user,
+            parsedItemId,
+            body,
+        );
     }
 
     @Delete('items/:itemKey')
-    removeCartItem(@Req() request: Request, @Param('itemKey') itemKey: string) {
+    removeCartItem(
+        @Req() req: Request,
+        @GetUser() user: JwtPayload | null,
+        @Param('itemKey') itemKey: string,
+    ) {
+        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
         const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
-        return this.cartService.removeCartItem(request, parsedItemId);
+
+        return this.cartService.removeCartItem(parsedItemId, guestSessionId, user);
     }
 
     @Delete()
-    clearCart(@Req() request: Request) {
-        return this.cartService.clearCart(request);
+    clearCart(
+        @Req() req: Request,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
+
+        return this.cartService.clearCart(guestSessionId, user);
     }
 
-    @Post('merge')
-    mergeCart(@Body() body: unknown) {
-        return this.cartService.mergeCart(body);
-    }
+    // @Post('merge')
+    // mergeCart(
+    //     @Req() req: Request,
+    //     @GetUser() user: JwtPayload | null,
+    //     @Body() body: unknown,
+    // ) {
+    //     const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
+
+    //     return this.cartService.mergeCart(guestSessionId, user);
+    // }
 }

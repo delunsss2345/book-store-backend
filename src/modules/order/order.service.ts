@@ -87,7 +87,8 @@ export class OrderService {
     bookVariants.forEach((v) => {
       const variantCardItem = mapBookVariant.get(v.id.toString());
       const variant = variantMap.get(v.id.toString());
-      const available = variant?.stock ?? 0 - (variant?.reserved ?? 0);
+      const available = variant ? variant.stock! - variant.reserved! : 0;
+
       if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
 
       if (!v.stock || available < (variantCardItem?.quantity ?? 0)) {
@@ -146,7 +147,6 @@ export class OrderService {
         await tx.bookVariant.update({
           where: { id: bookVariant.id },
           data: {
-            stock: { decrement: item.quantity },
             reserved: { increment: item.quantity },
           },
         });
@@ -290,6 +290,7 @@ export class OrderService {
       });
 
       if (body.paymentGateway === PaymentGateway.COD) {
+
         return {
           orderId: order.id,
           subtotal: updatedOrder.subtotal,

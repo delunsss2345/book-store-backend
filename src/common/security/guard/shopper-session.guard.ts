@@ -19,7 +19,7 @@ export class ShopperSessionGuard implements CanActivate {
         const token = this.extractTokenFromHeader(request);
         // Guard dùng chung cho cart/wishlist: không có token thì chuyển sang guest session.
         if (!token) {
-            await this.attachGuestSession(request, response, true);
+            await this.attachGuestSession(request, response);
             return true;
         }
 
@@ -27,22 +27,21 @@ export class ShopperSessionGuard implements CanActivate {
             const payload = await this.jwtService.verifyAsync<{ sub?: string }>(token);
             const userId = this.parseUserId(payload?.sub);
             if (!userId) {
-                await this.attachGuestSession(request, response, true);
+                await this.attachGuestSession(request, response);
                 return true;
             }
 
             const user = await this.authRepository.findUserById(userId);
 
             if (!user) {
-                await this.attachGuestSession(request, response, true);
+                await this.attachGuestSession(request, response);
                 return true;
             }
 
             request['user'] = user
-            request['authError'] = false;
             return true;
         } catch {
-            await this.attachGuestSession(request, response, true);
+            await this.attachGuestSession(request, response);
             return true;
         }
     }
@@ -82,14 +81,13 @@ export class ShopperSessionGuard implements CanActivate {
         return createHash('sha256').update(rawUserAgent).digest('hex');
     }
 
-    private async attachGuestSession(request: Request, response: Response, authError: boolean): Promise<void> {
+    private async attachGuestSession(request: Request, response: Response): Promise<void> {
         const sessionId = request.cookies?.guestSessionId;
         if (sessionId) {
             const guestSession = await this.guestSessionService.updateLastSeenGuestSessionById(sessionId);
             if (guestSession) {
                 request['guestSession'] = guestSession;
                 request['guestSessionId'] = guestSession.id;
-                request['authError'] = authError;
                 this.setGuestSessionCookie(response, guestSession.id);
                 return;
             }
@@ -105,7 +103,6 @@ export class ShopperSessionGuard implements CanActivate {
         request['guestSession'] = guestSession;
         request['guestSessionId'] = guestSession.id;
         this.setGuestSessionCookie(response, guestSession.id);
-        request['authError'] = authError;
     }
 
     private setGuestSessionCookie(response: Response, guestSessionId: string) {

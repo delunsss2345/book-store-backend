@@ -40,10 +40,8 @@ type CategoryRow = Awaited<
 type BookDetailByIdRow = NonNullable<
   Awaited<ReturnType<CatalogRepository['findBookDetailById']>>
 >;
-type BookDetailBySlugRow = NonNullable<
-  Awaited<ReturnType<CatalogRepository['findBookDetailBySlug']>>
->;
-type BookDetailRow = BookDetailByIdRow | BookDetailBySlugRow;
+
+
 type BookListRow = Awaited<
   ReturnType<CatalogRepository['findBooksForList']>
 >[number];
@@ -53,7 +51,7 @@ export class CatalogService {
   constructor(
     private readonly repo: CatalogRepository,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {}
+  ) { }
 
   // Lấy giớ hạn không lấy phân trang
   async getCatalogHome(
@@ -382,7 +380,7 @@ export class CatalogService {
   }
 
   private toBookDetail(
-    book: BookDetailRow,
+    book: BookDetailByIdRow,
     slugFallback?: string,
     recommend?: CatalogBookCardDto[],
   ): CatalogBookDetailDto {
@@ -409,7 +407,7 @@ export class CatalogService {
     };
   }
 
-  private toBookCategories(book: BookDetailRow): CatalogCategoryDto[] {
+  private toBookCategories(book: BookDetailByIdRow): CatalogCategoryDto[] {
     return (book.categories ?? []).map((x) => {
       const c = x.category;
       const ct = c.categoryTranslation?.[0];
@@ -423,7 +421,7 @@ export class CatalogService {
     });
   }
 
-  private toBookVariants(book: BookDetailRow): CatalogBookVariantDto[] {
+  private toBookVariants(book: BookDetailByIdRow): CatalogBookVariantDto[] {
     return (book.variants ?? []).map((v) => ({
       id: v.id.toString(),
       format: v.format,
@@ -431,11 +429,11 @@ export class CatalogService {
       isbn: v.isbn ?? null,
       price: v.price?.toString?.() ?? String(v.price),
       currencyCode: v.currencyCode ?? null,
-      stock: v.stock ?? null,
+      available: v.available ?? null,
     }));
   }
 
-  private toBookSpecs(book: BookDetailRow): CatalogBookSpecDto {
+  private toBookSpecs(book: BookDetailByIdRow): CatalogBookSpecDto {
     const specs = book.specs;
     if (!specs) {
       return {};
@@ -449,7 +447,7 @@ export class CatalogService {
     };
   }
 
-  private toBookBadges(book: BookDetailRow): Badge[] {
+  private toBookBadges(book: BookDetailByIdRow): Badge[] {
     return (book.bookBadge ?? []).map((badge) => badge.code);
   }
 

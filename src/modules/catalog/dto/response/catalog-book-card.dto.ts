@@ -111,5 +111,5 @@ export class CatalogBookVariantDto {
     currencyCode?: string | null;
 
     @ApiPropertyOptional({ example: 80 })
-    stock?: number | null;
+    available?: number | null;
 }

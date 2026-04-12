@@ -76,12 +76,12 @@ export class CartItemRepository {
             .then((result) => result.count);
     }
 
-    getStockByBookVariantId(bookVariantId: bigint): Promise<number | null> {
-        return this.prisma.bookVariant
-            .findUnique({
-                where: { id: bookVariantId },
-                select: { stock: true },
-            })
-            .then((variant) => variant?.stock ?? null);
+    async getStockByBookVariantId(
+        bookVariantId: bigint
+    ): Promise<{ available: number } | null> {
+        return this.prisma.bookVariant.findUnique({
+            where: { id: bookVariantId },
+            select: { available: true },
+        });
     }
 }

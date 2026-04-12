@@ -1,6 +1,5 @@
 import { WishlistMessage } from '@/common';
 import { AuthRepository } from '@/modules/auth/auth.repository';
-import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
 import { WishlistItemService } from '@/modules/wishlist-item/wishlist-item.service';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
 import {
@@ -8,12 +7,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { WishlistRepository } from './wishlist.repository';
-
-type RequestUser = {
-  id?: bigint | string;
-};
 
 @Injectable()
 export class WishlistService {
@@ -21,12 +15,19 @@ export class WishlistService {
     private readonly wishlistRepository: WishlistRepository,
     private readonly wishlistItemService: WishlistItemService,
     private readonly authRepository: AuthRepository,
-    private readonly guestSessionService: GuestSessionService,
   ) {}
 
-  async getWishlist(request: Request, langId: number) {
-    // Chuyển sang luồng user bên dưới.
-    const wishlist = await this.resolveWishlistByActor(request, true, langId);
+  async getWishlist(
+    guestSessionId: string | null,
+    userId: bigint | null,
+    langId: number,
+  ) {
+    const wishlist = await this.resolveWishlistByActor(
+      guestSessionId,
+      userId,
+      true,
+      langId,
+    );
     if (!wishlist) {
       throw new ForbiddenException();
     }
@@ -34,11 +35,12 @@ export class WishlistService {
   }
 
   async addWishItem(
-    request: Request,
+    guestSessionId: string | null,
+    userId: bigint | null,
     body: AddWishItemRequestDto,
     langId: number,
   ) {
-    const wishlist = await this.getWishlist(request, langId);
+    const wishlist = await this.getWishlist(guestSessionId, userId, langId);
     const bookVariantId = BigInt(body.bookVariantId);
 
     const existed =
@@ -72,8 +74,18 @@ export class WishlistService {
     };
   }
 
-  async deleteWishItem(request: Request, itemId: bigint, langId: number) {
-    const wishlist = await this.resolveWishlistByActor(request, false, langId);
+  async deleteWishItem(
+    guestSessionId: string | null,
+    userId: bigint | null,
+    itemId: bigint,
+    langId: number,
+  ) {
+    const wishlist = await this.resolveWishlistByActor(
+      guestSessionId,
+      userId,
+      false,
+      langId,
+    );
     if (!wishlist) {
       throw new NotFoundException(WishlistMessage.WISHLIST_ITEM_NOT_FOUND);
     }
@@ -89,8 +101,17 @@ export class WishlistService {
     return { success: true };
   }
 
-  async deleteWishlist(request: Request, langId: number) {
-    const wishlist = await this.resolveWishlistByActor(request, false, langId);
+  async deleteWishlist(
+    guestSessionId: string | null,
+    userId: bigint | null,
+    langId: number,
+  ) {
+    const wishlist = await this.resolveWishlistByActor(
+      guestSessionId,
+      userId,
+      false,
+      langId,
+    );
     if (!wishlist) {
       return { success: true };
     }
@@ -100,77 +121,43 @@ export class WishlistService {
   }
 
   private async resolveWishlistByActor(
-    request: Request,
+    guestSessionId: string | null,
+    userId: bigint | null,
     createIfMissing: boolean,
     languageId: number,
   ) {
-    const actor = this.resolveActor(request);
-    if (actor.guestSessionId) {
-      // Ưu tiên guest session; nếu cookie cũ/hết hiệu lực thì chuyển sang luồng user bên dưới.
-      const guestSession =
-        await this.guestSessionService.updateLastSeenGuestSessionById(
-          actor.guestSessionId,
-        );
-
-      if (guestSession) {
-        const existing = await this.wishlistRepository.findByGuestSessionId(
-          guestSession.id,
-          languageId,
-        );
-        if (existing || !createIfMissing) {
-          return existing;
-        }
-
-        return this.wishlistRepository.createByGuestSessionId(
-          guestSession.id,
-          languageId,
-        );
+    if (userId) {
+      const user = await this.authRepository.findUserById(userId);
+      if (!user) {
+        throw new ForbiddenException();
       }
+
+      const existing = await this.wishlistRepository.findByUserId(
+        user.id,
+        languageId,
+      );
+      if (existing || !createIfMissing) {
+        return existing;
+      }
+
+      return this.wishlistRepository.createByUserId(user.id, languageId);
     }
 
-    if (!actor.userId) {
-      throw new ForbiddenException();
+    if (guestSessionId) {
+      const existing = await this.wishlistRepository.findByGuestSessionId(
+        guestSessionId,
+        languageId,
+      );
+      if (existing || !createIfMissing) {
+        return existing;
+      }
+
+      return this.wishlistRepository.createByGuestSessionId(
+        guestSessionId,
+        languageId,
+      );
     }
 
-    const user = await this.authRepository.findUserById(actor.userId);
-    if (!user) {
-      throw new ForbiddenException();
-    }
-
-    const existing = await this.wishlistRepository.findByUserId(
-      user.id,
-      languageId,
-    );
-    if (existing || !createIfMissing) {
-      return existing;
-    }
-    return this.wishlistRepository.createByUserId(user.id, languageId);
-  }
-
-  private resolveActor(request: Request): {
-    guestSessionId: string | null;
-    userId: bigint | null;
-  } {
-    // Với wishlist: nếu có guestSessionId trong cookie thì ưu tiên guest trước user đã đăng nhập.
-    const guestSessionId =
-      (request.cookies?.guestSessionId as string | undefined) ??
-      (request['guestSessionId'] as string | undefined) ??
-      null;
-    const requestUser = request['user'] as RequestUser | undefined;
-    return {
-      guestSessionId,
-      userId: this.parseUserId(requestUser?.id),
-    };
-  }
-
-  private parseUserId(value: bigint | string | undefined): bigint | null {
-    if (typeof value === 'bigint') return value;
-    if (!value) return null;
-
-    try {
-      return BigInt(value);
-    } catch {
-      return null;
-    }
+    throw new ForbiddenException();
   }
 }

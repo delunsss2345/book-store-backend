@@ -1,34 +1,55 @@
 import { AdminOrderMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { AdminOrderListQueryDto } from '../dto/request';
+import { AdminOrderRepository } from './admin-order.repository';
 import {
   AdminOrderDetailResponseDto,
-  AdminOrderItemResponseDto,
-  AdminOrderListResponseDto,
+  AdminGuestOrderListResponseDto,
+  AdminUserOrderListResponseDto,
 } from '../dto/response';
-import { AdminOrderRepository } from './admin-order.repository';
-
-type OrderRow = Awaited<ReturnType<AdminOrderRepository['findOrders']>>[number];
+import {
+  toOrderDetailResponse,
+  toOrderItemGuest,
+  toOrderItemUser,
+} from './mapper';
 
 @Injectable()
 export class AdminOrderService {
-  constructor(private readonly adminOrderRepository: AdminOrderRepository) { }
+  constructor(private readonly adminOrderRepository: AdminOrderRepository) {}
 
-  async getOrders(
+  async getGuestOrders(
     query: AdminOrderListQueryDto,
-  ): Promise<AdminOrderListResponseDto> {
+  ): Promise<AdminGuestOrderListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
     const [total, rows] = await Promise.all([
-      this.adminOrderRepository.countOrders(),
-      this.adminOrderRepository.findOrders(page, limit),
+      this.adminOrderRepository.countGuestOrders(),
+      this.adminOrderRepository.findGuestOrders(page, limit),
     ]);
 
     return buildPaginatedResult(
-      rows.map((row) => this.toOrderItem(row)),
+      rows.map((row) => toOrderItemGuest(row)),
+      total,
+      page,
+      limit,
+    );
+  }
+
+  async getUserOrders(
+    query: AdminOrderListQueryDto,
+  ): Promise<AdminUserOrderListResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const [total, rows] = await Promise.all([
+      this.adminOrderRepository.countUserOrders(),
+      this.adminOrderRepository.findUserOrders(page, limit),
+    ]);
+
+    return buildPaginatedResult(
+      rows.map((row) => toOrderItemUser(row)),
       total,
       page,
       limit,
@@ -41,59 +62,6 @@ export class AdminOrderService {
       throw new NotFoundException(AdminOrderMessage.ORDER_NOT_FOUND);
     }
 
-    return {
-      items: row.items.map((item) => ({
-        id: item.id.toString(),
-        bookVariantSnapshotId: item.bookVariantSnapshotId.toString(),
-        quantity: item.quantity,
-        unitPrice: this.toDecimalText(item.unitPrice) as string,
-        lineTotal: this.toDecimalText(item.lineTotal) as string,
-        createdAt: item.createdAt,
-        titleSnapshot: item.bookVariantSnapshot.titleSnapshot ?? null,
-        coverImageUrlSnapshot:
-          item.bookVariantSnapshot.coverImageUrlSnapshot ?? null,
-        skuSnapshot: item.bookVariantSnapshot.skuSnapshot,
-        priceSnapshot: this.toDecimalText(
-          item.bookVariantSnapshot.priceSnapshot,
-        ) as string,
-        currencyCodeSnapshot:
-          item.bookVariantSnapshot.currencyCodeSnapshot ?? null,
-        formatSnapshot: String(item.bookVariantSnapshot.formatSnapshot),
-        editionSnapshot: item.bookVariantSnapshot.editionSnapshot ?? null,
-        isbnSnapshot: item.bookVariantSnapshot.isbnSnapshot ?? null,
-      })),
-    };
-  }
-
-  private toOrderItem(row: OrderRow): AdminOrderItemResponseDto {
-    return {
-      id: row.id.toString(),
-      orderCode: row.orderCode,
-      userId: row.userId ? row.userId.toString() : null,
-      guestSessionId: row.guestSessionId ?? null,
-      guestEmail: row.guestEmail ?? null,
-      status: row.status ? String(row.status) : null,
-      paymentStatus: row.paymentStatus ? String(row.paymentStatus) : null,
-      subtotal: this.toDecimalText(row.subtotal),
-      discountAmount: this.toDecimalText(row.discountAmount),
-      user: row?.user ?? null,
-      shippingFee: this.toDecimalText(row.shippingFee),
-      totalAmount: this.toDecimalText(row.totalAmount),
-      currencyCode: row.currencyCode ?? null,
-      placedAt: row.placedAt ?? null,
-      createdAt: row.createdAt,
-      expiredAt: row.expiredAt,
-      updatedAt: row.updatedAt,
-    };
-  }
-
-  private toDecimalText(
-    value: Prisma.Decimal | number | null | undefined,
-  ): string | null {
-    if (value === null || value === undefined) {
-      return null;
-    }
-
-    return Number(value).toFixed(2);
+    return toOrderDetailResponse(row);
   }
 }

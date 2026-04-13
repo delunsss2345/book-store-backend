@@ -9,7 +9,7 @@ import {
 
 @Injectable()
 export class UserAddressRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   getUserAddressByUserId(userId: bigint): Promise<UserAddress[]> {
     return this.prisma.userAddress.findMany({
@@ -37,6 +37,7 @@ export class UserAddressRepository {
         userId,
         phoneNumber: body.phoneNumber,
         addressDetail: body.addressDetail,
+        recipientName: body.recipientName,
         ward: body.ward,
         district: body.district,
         city: body.city,

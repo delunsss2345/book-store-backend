@@ -3,19 +3,30 @@ import { RequirePermissions } from '@/common/security/decorators/requirePermissi
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AdminOrderListQueryDto } from '../dto/request';
-import { AdminOrderListResponseDto } from '../dto/response';
+import {
+  AdminGuestOrderListResponseDto,
+  AdminUserOrderListResponseDto,
+} from '../dto/response';
 import { AdminOrderService } from '../order/admin-order.service';
 
 @ApiTags('admin')
 @Controller('admin/orders')
 export class AdminOrderController {
-  constructor(private readonly adminOrderService: AdminOrderService) { }
+  constructor(private readonly adminOrderService: AdminOrderService) {}
 
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminOrderListResponseDto })
-  getOrders(@Query() query: AdminOrderListQueryDto) {
-    return this.adminOrderService.getOrders(query);
+  @ApiOkResponse({ type: AdminGuestOrderListResponseDto })
+  getGuestOrders(@Query() query: AdminOrderListQueryDto) {
+    return this.adminOrderService.getGuestOrders(query);
+  }
+
+  @Get('/user')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminUserOrderListResponseDto })
+  getUserOrders(@Query() query: AdminOrderListQueryDto) {
+    return this.adminOrderService.getUserOrders(query);
   }
 }

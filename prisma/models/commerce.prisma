@@ -33,6 +33,7 @@ model Order {
   totalAmount    Decimal?       @map("total_amount") @db.Decimal(12, 2)
   currencyCode   String?        @map("currency_code") @db.VarChar(3)
   idempotencyKey String?        @unique @map("idempotency_key") @db.VarChar(100)
+  note           String?        @db.Text
   placedAt       DateTime?      @map("placed_at")
   createdAt      DateTime       @default(now()) @map("created_at")
   expiredAt      DateTime       @map("expired_at")

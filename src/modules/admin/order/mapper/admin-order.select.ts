@@ -66,6 +66,11 @@ export const orderDetailSelect = Prisma.validator<Prisma.OrderSelect>()({
   },
 });
 
+export const orderStatusCheckSelect = Prisma.validator<Prisma.OrderSelect>()({
+  id: true,
+  status: true,
+});
+
 export type GuestOrderListRow = Prisma.OrderGetPayload<{
   select: typeof guestOrderListSelect;
 }>;
@@ -76,4 +81,8 @@ export type UserOrderListRow = Prisma.OrderGetPayload<{
 
 export type OrderDetailRow = Prisma.OrderGetPayload<{
   select: typeof orderDetailSelect;
+}>;
+
+export type OrderStatusCheckRow = Prisma.OrderGetPayload<{
+  select: typeof orderStatusCheckSelect;
 }>;

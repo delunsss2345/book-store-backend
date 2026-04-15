@@ -1,7 +1,12 @@
 import { AdminOrderMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { AdminOrderListQueryDto } from '../dto/request';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { OrderStatus } from '@prisma/client';
+import { AdminOrderListQueryDto, AdminOrderStatusDto } from '../dto/request';
 import { AdminOrderRepository } from './admin-order.repository';
 import {
   AdminOrderDetailResponseDto,
@@ -63,5 +68,32 @@ export class AdminOrderService {
     }
 
     return toOrderDetailResponse(row);
+  }
+
+  async updateOrderStatus(
+    orderId: bigint,
+    body: AdminOrderStatusDto,
+  ): Promise<{ message: string }> {
+    const order = await this.adminOrderRepository.findOrderStatusById(orderId);
+
+    if (!order) {
+      throw new NotFoundException(AdminOrderMessage.ORDER_NOT_FOUND);
+    }
+
+    if (order.status !== OrderStatus.PENDING_PAYMENT) {
+      throw new BadRequestException(
+        AdminOrderMessage.ORDER_STATUS_UPDATE_ONLY_PENDING_PAYMENT,
+      );
+    }
+
+    await this.adminOrderRepository.updateOrderStatus(
+      orderId,
+      body.status,
+      body.note ?? null,
+    );
+
+    return {
+      message: AdminOrderMessage.ORDER_STATUS_UPDATED_SUCCESSFULLY,
+    };
   }
 }

@@ -1,8 +1,10 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
+import { OrderStatus } from '@prisma/client';
 import {
   guestOrderListSelect,
   orderDetailSelect,
+  orderStatusCheckSelect,
   userOrderListSelect,
 } from './mapper';
 
@@ -60,6 +62,30 @@ export class AdminOrderRepository {
         id: orderId,
       },
       select: orderDetailSelect,
+    });
+  }
+
+  findOrderStatusById(orderId: bigint) {
+    return this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: orderStatusCheckSelect,
+    });
+  }
+
+  updateOrderStatus(orderId: bigint, status: OrderStatus, note: string | null) {
+    return this.prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status,
+        note,
+      },
+      select: {
+        id: true,
+      },
     });
   }
 }

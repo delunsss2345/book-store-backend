@@ -1,4 +1,6 @@
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { Public } from '@/common/security/decorators/public.decorator';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -11,7 +13,7 @@ export class AdminOrderDetailController {
   constructor(private readonly adminOrderService: AdminOrderService) { }
 
   @Get(':orderId')
-  // @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.ADMIN_READ)
   @Public()
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminOrderDetailResponseDto })

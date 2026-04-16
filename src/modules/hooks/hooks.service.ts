@@ -27,21 +27,22 @@ export class HooksService {
   async handleSepayWebhook(body: SePayHooksDto) {
     // Chống trùng lặp
     Logger.debug('Received webhook event', body);
+
     const providerEventId = this.extractProviderEventId(body);
     if (!providerEventId) {
       throw new BadRequestException(HooksMessage.MISSING_WEBHOOK_EVENT_ID);
     }
+
     // Check đã tồn tại web hook này chưa
     const existedWebhook =
       await this.hooksRepository.findWebhookByProviderEventId(providerEventId);
-
     Logger.debug('Received webhook event existedWebhook', existedWebhook);
+
 
     // Nếu tồn tại thì dùng, chưa thì lưu web hooks mới
     const webhookInbox =
       existedWebhook ??
       (await this.hooksRepository.saveSepayWebhook(providerEventId, body));
-
     Logger.debug('Received webhook event webhookInbox', webhookInbox);
 
     if (webhookInbox.status === JobStatus.DONE) {
@@ -53,7 +54,6 @@ export class HooksService {
         message: 'Webhook already processed',
       };
     }
-
     const attempts = (webhookInbox.attempts ?? 0) + 1;
     // Check mã định danh orderCode ở trong webhooks check chắn chắn tất cả trường hợp có thể có
     // khi tất cả đều không có thì là failed

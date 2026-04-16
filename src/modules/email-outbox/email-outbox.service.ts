@@ -1,3 +1,4 @@
+import { CreateOrderEmailRequestDto } from '@/modules/email-outbox/dto/request/create-order-email.request';
 import { Injectable } from '@nestjs/common';
 import { EmailStatus } from '@prisma/client';
 import { CreateOtpRegisterEmailRequestDto } from './dto/request/create-otp-register-email.request.dto';
@@ -24,7 +25,9 @@ export class EmailOutboxService {
     createOutboxForgotPasswordEmail(params: CreateOtpRegisterEmailRequestDto) {
         return this.emailOutboxRepository.createOtpForgotPasswordEmail(params);
     }
-
+    createOutboxOrderEmail(params: CreateOrderEmailRequestDto) {
+        return this.emailOutboxRepository.createOrderMail(params);
+    }
 
     findByIdEmailBox(id: bigint) {
         return this.emailOutboxRepository.findByIdEmailPending(id)

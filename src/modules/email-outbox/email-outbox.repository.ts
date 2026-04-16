@@ -1,14 +1,32 @@
 import { PrismaService } from '@/database';
+import { CreateOrderEmailRequestDto } from '@/modules/email-outbox/dto/request/create-order-email.request';
 import { Injectable } from '@nestjs/common';
 import { EmailStatus } from '@prisma/client';
 import { CreateOtpRegisterEmailRequestDto } from './dto/request/create-otp-register-email.request.dto';
 
 export const OTP_REGISTER_TEMPLATE_KEY = 'OTP_REGISTER';
 export const OTP_FORGOT_PASSWORD_TEMPLATE_KEY = 'OTP_FORGOT_PASSWORD';
+export const ORDER_EMAIL = 'ORDER_EMAIL';
 
 @Injectable()
 export class EmailOutboxRepository {
     constructor(private readonly prisma: PrismaService) { }
+
+    createOrderMail(params: CreateOrderEmailRequestDto) {
+        const { toEmail, orderCode, orderStatus, orderId } = params;
+        return this.prisma.emailOutbox.create({
+            data: {
+                toEmail,
+                templateKey: ORDER_EMAIL,
+                status: EmailStatus.PENDING,
+                payload: {
+                    orderCode,
+                    orderStatus,
+                    orderId,
+                },
+            },
+        });
+    }
 
     createOtpRegisterEmail(params: CreateOtpRegisterEmailRequestDto) {
         const { toEmail } = params;

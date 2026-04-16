@@ -10,4 +10,5 @@ export enum VerifyCodePath {
   CHANGE_EMAIL = 'change-email',
 }
 
+
 export const SHIPPING_FEE = 20000;

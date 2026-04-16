@@ -16,11 +16,11 @@ export class MailService implements OnModuleInit {
         await this.transporter.verify();
     }
 
-    sendVerifyEmail(to: string, html: string) {
+    sendVerifyEmail(to: string, html: string, subject = 'Verify your email') {
         return this.transporter.sendMail({
             from: this.config.get<string>('MAIL_FROM'),
             to,
-            subject: 'Verify your email',
+            subject,
             html,
         });
     }

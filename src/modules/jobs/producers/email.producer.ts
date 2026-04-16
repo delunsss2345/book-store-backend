@@ -18,4 +18,17 @@ export class EmailProducer {
             },
         );
     }
+
+    async enqueueOrderEmail(outboxId: bigint) {
+        await this.emailQueue.add(
+            'send-order-email',
+            { outboxId },
+            {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 3000 },
+                removeOnComplete: true,
+                jobId: `order-email-${outboxId}`,
+            },
+        );
+    }
 }

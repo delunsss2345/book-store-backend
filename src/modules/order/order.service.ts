@@ -2,6 +2,8 @@ import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaService } from '@/database';
 import { CartRepository } from '@/modules/cart/cart.repository';
+import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
+import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { OrderItemRepository } from '@/modules/order-item/order-item.repository';
 import {
   CreateGuestOrdersAndPaymentDTO,
@@ -17,7 +19,7 @@ import {
   OrderStatus,
   PaymentGateway,
   PaymentStatus,
-  UserAddress,
+  UserAddress
 } from '@prisma/client';
 import crypto from 'crypto';
 import { CatalogRepository } from '../catalog/catalog.repository';
@@ -31,6 +33,8 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly cartRepository: CartRepository,
     private readonly orderItemRepository: OrderItemRepository,
+    private readonly emailProducer: EmailProducer,
+    private readonly emailOutbox: EmailOutboxService,
   ) { }
 
   /**
@@ -290,7 +294,15 @@ export class OrderService {
       });
 
       if (body.paymentGateway === PaymentGateway.COD) {
-
+        if (body.guestEmail) {
+          const outbox = await this.emailOutbox.createOutboxOrderEmail({
+            orderId: order.id,
+            orderCode: order.orderCode,
+            orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
+            toEmail: body.guestEmail,
+          });
+          await this.emailProducer.enqueueOrderEmail(outbox.id);
+        }
         return {
           orderId: order.id,
           subtotal: updatedOrder.subtotal,
@@ -306,6 +318,7 @@ export class OrderService {
         gateway: body.paymentGateway,
         amount: totalAmount,
       });
+
 
       return {
         orderId: order.id,

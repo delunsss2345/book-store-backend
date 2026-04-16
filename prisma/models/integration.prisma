@@ -11,7 +11,7 @@ model EmailOutbox {
   lastError   String?      @map("last_error") @db.Text
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-
+  payload     Json?        @map("payload")
   @@index([status, scheduledAt])
   @@map("email_outbox")
 }

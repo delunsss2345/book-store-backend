@@ -1,15 +1,9 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { bookVariantInventorySelect } from './select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
-
-const bookVariantInventorySelect = {
-  id: true,
-  stock: true,
-  costPrice: true,
-  price: true,
-} satisfies Prisma.BookVariantSelect;
 
 @Injectable()
 export class BookVariantRepository {

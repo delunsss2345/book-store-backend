@@ -1,10 +1,11 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
+import { adminUserListSelect } from './select';
 
 @Injectable()
 export class AdminUserRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   countUsers() {
     return this.prisma.user.count({
@@ -43,34 +44,7 @@ export class AdminUserRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        status: true,
-        isEmailVerified: true,
-        lastLoginAt: true,
-        createdAt: true,
-        userRoles: {
-          where: {
-            deletedAt: null,
-            role: {
-              deletedAt: null,
-              isActive: true,
-            },
-          },
-          select: {
-            role: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
+      select: adminUserListSelect,
     });
   }
 
@@ -114,34 +88,7 @@ export class AdminUserRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        status: true,
-        isEmailVerified: true,
-        lastLoginAt: true,
-        createdAt: true,
-        userRoles: {
-          where: {
-            deletedAt: null,
-            role: {
-              deletedAt: null,
-              isActive: true,
-            },
-          },
-          select: {
-            role: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
+      select: adminUserListSelect,
     });
   }
 }

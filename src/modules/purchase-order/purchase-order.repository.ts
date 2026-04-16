@@ -7,53 +7,15 @@ import {
   CreatePurchaseOrderRequestDto,
   GetPurchaseOrdersQueryDto,
 } from './dto';
+import {
+  buildPurchaseOrderItemWithBookVariantSelect,
+  purchaseOrderDetailSelect,
+  purchaseOrderItemSelect,
+  purchaseOrderListSelect,
+  purchaseOrderSummarySelect,
+} from './select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
-
-const purchaseOrderItemSelect = {
-  id: true,
-  purchaseOrderId: true,
-  bookVariantId: true,
-  quantity: true,
-  unitPrice: true,
-  totalPrice: true,
-  createdAt: true,
-  updatedAt: true,
-};
-
-const purchaseOrderItemWithBookVariantSelect = {
-  ...purchaseOrderItemSelect,
-  bookVariant: {
-    select: {
-      format: true,
-      book: {
-        select: {
-          translations: {
-            select: {
-              title: true,
-            },
-          },
-        },
-      },
-    },
-  },
-};
-
-const purchaseOrderDetailSelect = {
-  id: true,
-  supplierId: true,
-  code: true,
-  status: true,
-  note: true,
-  totalAmount: true,
-  taxAmount: true,
-  createdAt: true,
-  updatedAt: true,
-  items: {
-    select: purchaseOrderItemSelect,
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  },
-};
 
 @Injectable()
 export class PurchaseOrderRepository {
@@ -91,17 +53,7 @@ export class PurchaseOrderRepository {
         totalAmount: body.totalAmount,
         taxAmount: body.taxAmount,
       },
-      select: {
-        id: true,
-        supplierId: true,
-        code: true,
-        status: true,
-        note: true,
-        totalAmount: true,
-        taxAmount: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: purchaseOrderSummarySelect,
     });
   }
 
@@ -109,18 +61,7 @@ export class PurchaseOrderRepository {
     return this.prisma.purchaseOrder.findMany({
       take: query.limit ?? 20,
       skip: ((query.page ?? 1) - 1) * (query.limit ?? 0),
-      select: {
-        id: true,
-        supplierId: true,
-        code: true,
-        status: true,
-        note: true,
-        totalAmount: true,
-        taxAmount: true,
-        createdAt: true,
-        updatedAt: true,
-        supplier: true,
-      },
+      select: purchaseOrderListSelect,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
   }
@@ -163,25 +104,7 @@ export class PurchaseOrderRepository {
       where: { purchaseOrderId },
       take: limit,
       skip: offset,
-      select: {
-        ...purchaseOrderItemWithBookVariantSelect,
-        bookVariant: {
-          select: {
-            format: true,
-            book: {
-              select: {
-                translations: {
-                  where: { languageId },
-                  take: 1,
-                  select: {
-                    title: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      select: buildPurchaseOrderItemWithBookVariantSelect(languageId),
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
   }

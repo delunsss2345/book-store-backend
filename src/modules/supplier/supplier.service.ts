@@ -5,14 +5,8 @@ import { CreateSupplierRequestDto } from './dto/request/create-supplier.request.
 import { GetSuppliersQueryDto } from './dto/request/get-suppliers.query.dto';
 import { SupplierItemResponseDto } from './dto/response/supplier-item.response.dto';
 import { SupplierListResponseDto } from './dto/response/supplier-list.response.dto';
+import { toSupplierItem } from './mapper';
 import { SupplierRepository } from './supplier.repository';
-
-type SupplierRow = Awaited<
-  ReturnType<SupplierRepository['findSuppliers']>
->[number];
-type SupplierDetailRow = Awaited<
-  ReturnType<SupplierRepository['findSupplierById']>
->;
 
 @Injectable()
 export class SupplierService {
@@ -30,7 +24,7 @@ export class SupplierService {
     ]);
 
     return buildPaginatedResult(
-      rows.map((row) => this.toSupplierItem(row)),
+      rows.map((row) => toSupplierItem(row)),
       total,
       page,
       limit,
@@ -44,7 +38,7 @@ export class SupplierService {
       body.name,
       body.code,
     );
-    return this.toSupplierItem(created);
+    return toSupplierItem(created);
   }
 
   async toggleSupplierActive(
@@ -61,18 +55,6 @@ export class SupplierService {
       !supplier.isActive,
     );
 
-    return this.toSupplierItem(updated);
-  }
-
-  private toSupplierItem(
-    row: SupplierRow | NonNullable<SupplierDetailRow>,
-  ): SupplierItemResponseDto {
-    return {
-      id: row.id.toString(),
-      name: row.name,
-      isActive: row.isActive,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return toSupplierItem(updated);
   }
 }

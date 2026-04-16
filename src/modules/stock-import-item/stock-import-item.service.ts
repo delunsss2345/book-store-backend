@@ -4,17 +4,12 @@ import {
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import {
   GetStockImportItemsQueryDto,
-  StockImportItemDetailResponseDto,
   StockImportItemListResponseDto,
 } from './dto';
+import { toStockImportItemDetail } from './mapper';
 import { StockImportItemRepository } from './stock-import-item.repository';
-
-type StockImportItemRow = Awaited<
-  ReturnType<StockImportItemRepository['findStockImportItemsByStockImportId']>
->[number];
 
 @Injectable()
 export class StockImportItemService {
@@ -51,28 +46,10 @@ export class StockImportItemService {
     ]);
 
     return buildPaginatedResult(
-      items.map((item) => this.toStockImportItemDetail(item)),
+      items.map((item) => toStockImportItemDetail(item)),
       total,
       page,
       limit,
     );
-  }
-
-  private toStockImportItemDetail(
-    row: StockImportItemRow,
-  ): StockImportItemDetailResponseDto {
-    return {
-      id: row.id,
-      stockImportId: row.stockImportId,
-      bookVariantId: row.bookVariantId.toString(),
-      quantity: row.quantity,
-      importPrice: this.toDecimalNumber(row.importPrice),
-      title: row.variant.book.translations[0]?.title ?? null,
-      format: String(row.variant.format),
-    };
-  }
-
-  private toDecimalNumber(value: Prisma.Decimal | number) {
-    return value instanceof Prisma.Decimal ? value.toNumber() : Number(value);
   }
 }

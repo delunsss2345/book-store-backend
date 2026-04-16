@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { RolePermission } from '@prisma/client';
 import { RolePermissionResponseDto } from './dto/response';
+import { toRolePermissionResponse } from './mapper';
 import { RolePermissionRepository } from './role-permission.repository';
 
 export type CreateRolePermissionParams = {
@@ -51,7 +52,7 @@ export class RolePermissionService {
       params.permissionId,
     );
 
-    return this.toResponse(created);
+    return toRolePermissionResponse(created);
   }
 
   async getByRoleId(roleId: bigint) {
@@ -65,15 +66,6 @@ export class RolePermissionService {
   ): Promise<RolePermissionResponseDto[]> {
     const rows =
       await this.rolePermissionRepository.findByPermissionId(permissionId);
-    return rows.map((row) => this.toResponse(row));
-  }
-
-  private toResponse(row: RolePermission): RolePermissionResponseDto {
-    return {
-      roleId: row.roleId.toString(),
-      permissionId: row.permissionId.toString(),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return rows.map((row) => toRolePermissionResponse(row));
   }
 }

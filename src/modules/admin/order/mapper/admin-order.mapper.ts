@@ -7,11 +7,7 @@ import {
 } from '@/modules/admin/dto/response';
 import { UserAddressResponseDto } from '@/modules/admin/dto/response/admin-user-address.response.dto';
 import { Prisma } from '@prisma/client';
-import {
-  GuestOrderListRow,
-  OrderDetailRow,
-  UserOrderListRow,
-} from './admin-order.select';
+import { GuestOrderListRow, OrderDetailRow, UserOrderListRow } from '../select';
 
 type SharedOrderListRow = GuestOrderListRow | UserOrderListRow;
 

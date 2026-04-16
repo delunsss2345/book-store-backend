@@ -2,15 +2,12 @@ import { CategoryMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { toCategoryItem, toCreatedCategoryItem } from './mapper';
 import { CategoryRepository } from './category.repository';
 import { CreateCategoryRequestDto } from './dto/request/create-category.request.dto';
 import { GetCategoriesQueryDto } from './dto/request/get-categories.query.dto';
 import { CategoryItemResponseDto } from './dto/response/category-item.response.dto';
 import { CategoryListResponseDto } from './dto/response/category-list.response.dto';
-
-type CategoryRow = Awaited<
-  ReturnType<CategoryRepository['findActiveCategoriesByLanguage']>
->[number];
 
 @Injectable()
 export class CategoryService {
@@ -44,14 +41,7 @@ export class CategoryService {
       actorUserId,
     });
 
-    return {
-      id: created.id.toString(),
-      parentId: created.parentId ? created.parentId.toString() : null,
-      name: created.translation.name,
-      slug: created.translation.slug ?? null,
-      isActive: created.isActive,
-      sortOrder: created.sortOrder,
-    };
+    return toCreatedCategoryItem(created);
   }
 
   async getCategories(
@@ -70,20 +60,7 @@ export class CategoryService {
       ),
     ]);
 
-    const items = rows.map((row) => this.toCategoryItem(row));
+    const items = rows.map((row) => toCategoryItem(row));
     return buildPaginatedResult(items, total, page, limit);
-  }
-
-  private toCategoryItem(row: CategoryRow): CategoryItemResponseDto {
-    const translation = row.categoryTranslation[0];
-
-    return {
-      id: row.id.toString(),
-      parentId: row.parentId ? row.parentId.toString() : null,
-      name: translation?.name ?? '',
-      slug: translation?.slug ?? null,
-      isActive: row.isActive,
-      sortOrder: row.sortOrder,
-    };
   }
 }

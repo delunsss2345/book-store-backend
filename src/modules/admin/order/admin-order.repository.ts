@@ -6,7 +6,7 @@ import {
   orderDetailSelect,
   orderStatusCheckSelect,
   userOrderListSelect,
-} from './mapper';
+} from './select';
 
 @Injectable()
 export class AdminOrderRepository {

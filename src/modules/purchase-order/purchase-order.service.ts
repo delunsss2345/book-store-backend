@@ -10,58 +10,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, PurchaseOrderStatus } from '@prisma/client';
+import { PurchaseOrderStatus } from '@prisma/client';
 import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
   GetPurchaseOrderItemsQueryDto,
   GetPurchaseOrdersQueryDto,
 } from './dto';
+import {
+  PurchaseOrderCreateResponse,
+  PurchaseOrderDetailItemResponse,
+  toDecimalNumber,
+  toPurchaseOrderCreateResponse,
+  toPurchaseOrderDetailItem,
+} from './mapper';
 import { PurchaseOrderRepository } from './purchase-order.repository';
-
-type PurchaseOrderDetailRow = NonNullable<
-  Awaited<ReturnType<PurchaseOrderRepository['findPurchaseOrderById']>>
->;
-
-type PurchaseOrderItemRow = PurchaseOrderDetailRow['items'][number];
-type PurchaseOrderDetailItemRow = Awaited<
-  ReturnType<PurchaseOrderRepository['findPurchaseOrderItemsByPurchaseOrderId']>
->[number];
-
-export type PurchaseOrderCreateResponse = {
-  id: string;
-  supplierId: string;
-  code: string;
-  status: string;
-  note: string | null;
-  totalAmount: number;
-  taxAmount: number;
-  createdAt: Date;
-  updatedAt: Date;
-  items: {
-    id: string;
-    purchaseOrderId: string;
-    bookVariantId: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    createdAt: Date;
-    updatedAt: Date;
-  }[];
-};
-
-export type PurchaseOrderDetailItemResponse = {
-  id: string;
-  purchaseOrderId: string;
-  bookVariantId: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  createdAt: Date;
-  updatedAt: Date;
-  title: string | null;
-  format: string;
-};
 
 @Injectable()
 export class PurchaseOrderService {
@@ -103,7 +66,7 @@ export class PurchaseOrderService {
       );
     }
 
-    return this.toPurchaseOrderCreateResponse(createdOrder);
+    return toPurchaseOrderCreateResponse(createdOrder);
   }
 
   async getPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
@@ -149,7 +112,7 @@ export class PurchaseOrderService {
     ]);
 
     return buildPaginatedResult(
-      items.map((item) => this.toPurchaseOrderDetailItem(item)),
+      items.map((item) => toPurchaseOrderDetailItem(item)),
       total,
       page,
       limit,
@@ -213,8 +176,8 @@ export class PurchaseOrderService {
                 supplierId: purchaseOrder.supplierId,
                 createdById: approvedById,
                 note: purchaseOrder.note ?? null,
-                totalAmount: this.toDecimalNumber(purchaseOrder.totalAmount),
-                taxAmount: this.toDecimalNumber(purchaseOrder.taxAmount),
+                totalAmount: toDecimalNumber(purchaseOrder.totalAmount),
+                taxAmount: toDecimalNumber(purchaseOrder.taxAmount),
               },
               tx,
             );
@@ -224,7 +187,7 @@ export class PurchaseOrderService {
             purchaseOrder.items.map((item) => ({
               bookVariantId: item.bookVariantId,
               quantity: item.quantity,
-              importPrice: this.toDecimalNumber(item.unitPrice),
+              importPrice: toDecimalNumber(item.unitPrice),
             })),
             tx,
           );
@@ -235,7 +198,7 @@ export class PurchaseOrderService {
               {
                 bookVariantId: item.bookVariantId,
                 quantity: item.quantity,
-                costPrice: this.toDecimalNumber(item.unitPrice),
+                costPrice: toDecimalNumber(item.unitPrice),
               },
               tx,
             );
@@ -255,59 +218,6 @@ export class PurchaseOrderService {
       );
     }
 
-    return this.toPurchaseOrderCreateResponse(updatedOrder);
-  }
-
-  private toPurchaseOrderCreateResponse(
-    row: PurchaseOrderDetailRow,
-  ): PurchaseOrderCreateResponse {
-    return {
-      id: row.id,
-      supplierId: row.supplierId.toString(),
-      code: row.code,
-      status: row.status,
-      note: row.note ?? null,
-      totalAmount: this.toDecimalNumber(row.totalAmount),
-      taxAmount: this.toDecimalNumber(row.taxAmount),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      items: row.items.map((item) => this.toPurchaseOrderItem(item)),
-    };
-  }
-
-  private toPurchaseOrderItem(
-    row: PurchaseOrderItemRow,
-  ): PurchaseOrderCreateResponse['items'][number] {
-    return {
-      id: row.id,
-      purchaseOrderId: row.purchaseOrderId,
-      bookVariantId: row.bookVariantId.toString(),
-      quantity: row.quantity,
-      unitPrice: this.toDecimalNumber(row.unitPrice),
-      totalPrice: this.toDecimalNumber(row.totalPrice),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
-  }
-
-  private toPurchaseOrderDetailItem(
-    row: PurchaseOrderDetailItemRow,
-  ): PurchaseOrderDetailItemResponse {
-    return {
-      id: row.id,
-      purchaseOrderId: row.purchaseOrderId,
-      bookVariantId: row.bookVariantId.toString(),
-      quantity: row.quantity,
-      unitPrice: this.toDecimalNumber(row.unitPrice),
-      totalPrice: this.toDecimalNumber(row.totalPrice),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      title: row.bookVariant.book.translations[0]?.title ?? null,
-      format: String(row.bookVariant.format),
-    };
-  }
-
-  private toDecimalNumber(value: Prisma.Decimal | number): number {
-    return value instanceof Prisma.Decimal ? value.toNumber() : Number(value);
+    return toPurchaseOrderCreateResponse(updatedOrder);
   }
 }

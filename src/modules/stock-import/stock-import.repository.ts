@@ -2,27 +2,13 @@ import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { GetStockImportsQueryDto } from './dto';
+import { stockImportListSelect } from './select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
-const stockImportListSelect = {
-  id: true,
-  purchaseOrderId: true,
-  supplierId: true,
-  note: true,
-  totalAmount: true,
-  taxAmount: true,
-  createdAt: true,
-  supplier: {
-    select: {
-      name: true,
-    },
-  },
-} satisfies Prisma.StockImportSelect;
-
 @Injectable()
 export class StockImportRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   createStockImportFromPurchaseOrder(
     params: {
@@ -81,11 +67,7 @@ export class StockImportRepository {
     return this.prisma.stockImport.count();
   }
 
-  findStockImports(query: {
-    page: number;
-    limit: number;
-    offset: number;
-  }) {
+  findStockImports(query: { page: number; limit: number; offset: number }) {
     return this.prisma.stockImport.findMany({
       take: query.limit,
       skip: query.offset,

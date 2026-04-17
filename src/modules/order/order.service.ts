@@ -243,10 +243,13 @@ export class OrderService {
         }
         return {
           id: existing.id,
-          subtotal: existing.subtotal,
+          payment: this.paymentService.createTransactionUrl({
+            orderId: existing.id,
+            gateway: PaymentGateway.SEPAY,
+            amount: Number(existing.totalAmount),
+          }),
           orderCode: existing.orderCode,
-          payment: existing.payments[0].paymentUrl,
-          totalAmount: existing.payments[0].amount,
+       
         };
       }
 
@@ -283,6 +286,7 @@ export class OrderService {
 
       // 6) update totals
       const totalAmount = subtotal + SHIPPING_FEE;
+
       const updatedOrder = await tx.order.update({
         where: { id: order.id },
         data: {
@@ -292,7 +296,7 @@ export class OrderService {
           shippingFee: SHIPPING_FEE,
         },
       });
-
+      
       if (body.paymentGateway === PaymentGateway.COD) {
         if (body.guestEmail) {
           const outbox = await this.emailOutbox.createOutboxOrderEmail({

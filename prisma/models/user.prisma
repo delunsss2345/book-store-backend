@@ -175,3 +175,5 @@ model GuestSession {
 
   @@map("guest_sessions")
 }
+
+

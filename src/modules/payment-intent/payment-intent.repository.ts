@@ -6,8 +6,10 @@ import { PrismaService } from '@/database';
 export type CreatePaymentIntentParams = {
   orderId: bigint;
   gateway: PaymentGateway;
+  orderCode: string;
   status?: PaymentStatus;
   expiredAt: Date;
+  tokenUrl: string;
 };
 
 @Injectable()
@@ -21,7 +23,9 @@ export class PaymentIntentRepository {
       data: {
         orderId: params.orderId,
         gateway: params.gateway,
+        orderCode: params.orderCode,
         status: params.status ?? PaymentStatus.PENDING,
+        tokenUrl: params.tokenUrl,
         expiredAt: params.expiredAt,
       },
     });
@@ -37,6 +41,16 @@ export class PaymentIntentRepository {
         order: {
           status: OrderStatus.PENDING_PAYMENT,
         },
+      },
+    });
+  }
+  findByTokenUrl(tokenUrl: string) {
+    return this.prisma.paymentIntent.findUnique({
+      where: {
+        tokenUrl,
+      },
+      include: {
+        order: true,
       },
     });
   }

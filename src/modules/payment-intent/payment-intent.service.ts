@@ -1,3 +1,4 @@
+import { PaymentIntentWithTotalAmountResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
 import { Injectable } from '@nestjs/common';
 import { PaymentStatus } from '@prisma/client';
 import { CreatePaymentIntentRequestDto } from './dto/request';
@@ -8,6 +9,7 @@ import {
 import {
   toDeleteExpiredPaymentIntentResponse,
   toPaymentIntentResponse,
+  toPaymentIntentWithTotalAmountResponse,
 } from './mapper';
 import { PaymentIntentRepository } from './payment-intent.repository';
 
@@ -25,8 +27,10 @@ export class PaymentIntentService {
     const paymentIntent =
       await this.paymentIntentRepository.create({
         orderId: dto.orderId,
+        orderCode: dto.orderCode,
         gateway: dto.gateway,
         status: dto.status ?? PaymentStatus.PENDING,
+        tokenUrl: dto.tokenUrl,
         expiredAt: dto.expiredAt ?? this.getDefaultExpiredAt(),
       });
 
@@ -46,5 +50,13 @@ export class PaymentIntentService {
 
   private getDefaultExpiredAt(): Date {
     return new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS);
+  }
+
+  async findByTokenUrl(tokenUrl: string): Promise<PaymentIntentWithTotalAmountResponseDto | null> {
+    const paymentIntent = await this.paymentIntentRepository.findByTokenUrl(tokenUrl);
+    if (!paymentIntent) {
+      return null;
+    }
+    return toPaymentIntentWithTotalAmountResponse(paymentIntent);
   }
 }

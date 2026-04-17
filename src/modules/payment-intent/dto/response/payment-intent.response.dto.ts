@@ -19,11 +19,12 @@ export class PaymentIntentResponseDto {
   status: PaymentStatus | null;
 
   @ApiProperty()
-  expiredAt: Date;
+  tokenUrl: string;
 
-  @ApiProperty()
-  createdAt: Date;
+  // @ApiProperty()
+  // expiredAt: Date;
 
-  @ApiProperty()
-  updatedAt: Date;
+  // @ApiProperty()
+  // createdAt: Date;
+
 }

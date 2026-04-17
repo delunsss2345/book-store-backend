@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { PaymentGateway, PaymentStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePaymentIntentRequestDto {
   @ApiProperty({
@@ -19,6 +19,15 @@ export class CreatePaymentIntentRequestDto {
   @IsEnum(PaymentGateway)
   gateway: PaymentGateway;
 
+  @ApiProperty({
+    type: String,
+    description: 'Ma don hang',
+    example: 'ORD-2024-001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  orderCode: string;
+
   @ApiPropertyOptional({
     enum: PaymentStatus,
     example: PaymentStatus.PENDING,
@@ -26,6 +35,15 @@ export class CreatePaymentIntentRequestDto {
   @IsOptional()
   @IsEnum(PaymentStatus)
   status?: PaymentStatus;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Mã hash của URL thanh toán trả về từ cổng thanh toán',
+    example: 'sdadadwqweqwe123123123123',
+  })
+  @IsOptional()
+  @IsString()
+  tokenUrl: string;
 
   @ApiPropertyOptional({
     type: Date,

@@ -174,9 +174,10 @@ model PaymentTransaction {
 model PaymentIntent {
   id             String  @id @default(cuid())
   orderId        BigInt  @map("order_id")
-
+  orderCode      String  @map("order_code") @db.VarChar(50)
   gateway        PaymentGateway
   status         PaymentStatus?
+  tokenUrl       String @map("token_url") @unique @db.VarChar(200) // Dùng để lưu URL trả về token thanh toán từ cổng thanh toán
 
   expiredAt DateTime  @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")

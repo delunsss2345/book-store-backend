@@ -10,6 +10,7 @@ import {
   CreateUserOrdersAndPaymentDTO,
 } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderRepository } from '@/modules/order/order.repository';
+import { PaymentIntentService } from '@/modules/payment-intent';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { generateSKU } from '@/utils/generateSku.util';
@@ -35,6 +36,7 @@ export class OrderService {
     private readonly orderItemRepository: OrderItemRepository,
     private readonly emailProducer: EmailProducer,
     private readonly emailOutbox: EmailOutboxService,
+    private readonly paymentIntent: PaymentIntentService
   ) { }
 
   /**
@@ -249,7 +251,7 @@ export class OrderService {
             amount: Number(existing.totalAmount),
           }),
           orderCode: existing.orderCode,
-       
+
         };
       }
 
@@ -296,7 +298,7 @@ export class OrderService {
           shippingFee: SHIPPING_FEE,
         },
       });
-      
+
       if (body.paymentGateway === PaymentGateway.COD) {
         if (body.guestEmail) {
           const outbox = await this.emailOutbox.createOutboxOrderEmail({
@@ -323,14 +325,13 @@ export class OrderService {
         amount: totalAmount,
       });
 
-
-      return {
+      return this.paymentIntent.createPaymentIntent({
         orderId: order.id,
-        subtotal: updatedOrder.subtotal,
-        totalAmount: updatedOrder.totalAmount,
-        paymentUrl: (gatewayResp as any)?.paymentUrl,
+        gateway: body.paymentGateway,
         orderCode: order.orderCode,
-      };
+        tokenUrl: gatewayResp.result.token,
+        status: PaymentStatus.PENDING,
+      });
     });
   }
 

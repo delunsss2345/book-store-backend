@@ -1,5 +1,6 @@
 import { AppModule } from '@/app.module';
 import { PaymentMessage } from '@/common';
+import { PaymentIntentService } from '@/modules/payment-intent';
 import { CreatePaymentTransactionDto } from '@/modules/payment/dto/request/create-payment.dto';
 import { CreateTransactionDto } from '@/modules/payment/dto/response/create-transaction.dto';
 import { CreateUrlPaymentResponseDTO } from '@/modules/payment/dto/response/create-url-payment.dto';
@@ -8,13 +9,14 @@ import { PaymentGateway } from '@prisma/client';
 import * as crypto from 'crypto';
 @Injectable()
 export class PaymentService {
+
   private readonly logger = new Logger(PaymentService.name);
   private readonly bank = AppModule.CONFIGURATION.PAYMENT_CONFIG.BANK_ID;
   private readonly stk = AppModule.CONFIGURATION.PAYMENT_CONFIG.ACCOUNT_NO;
   private readonly template =
     AppModule.CONFIGURATION.PAYMENT_CONFIG.TEMPLATE_OR;
 
-  constructor() { }
+  constructor(private readonly paymentIntentService: PaymentIntentService) { }
 
   createTransactionUrl(dto: CreatePaymentTransactionDto): CreateTransactionDto {
     const { orderId, gateway, amount } = dto;
@@ -53,5 +55,15 @@ export class PaymentService {
       token,
       url
     }
+  }
+
+
+  async getImageUrl(token: string): Promise<string> {
+    const res = await this.paymentIntentService.findByTokenUrl(token);
+    if (!res) {
+      throw new BadRequestException('Token không hợp lệ');
+    }
+    const url = `https://qr.sepay.vn/img?bank=${this.bank}&acc=${this.stk}&template=${this.template}&amount=${res.totalAmount}`;
+    return url;
   }
 }

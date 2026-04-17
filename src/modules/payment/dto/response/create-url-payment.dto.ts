@@ -1,4 +1,13 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export class CreateUrlPaymentResponseDTO {
-    url: string
-    token: string
+    @ApiProperty({
+        example: 'https://payment.com/redirect',
+    })
+    url: string;
+
+    @ApiProperty({
+        example: 'abc123token',
+    })
+    token: string;
 }

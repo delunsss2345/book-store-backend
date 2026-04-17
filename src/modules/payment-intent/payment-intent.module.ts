@@ -6,4 +6,4 @@ import { PaymentIntentService } from './payment-intent.service';
   providers: [PaymentIntentService, PaymentIntentRepository],
   exports: [PaymentIntentService, PaymentIntentRepository],
 })
-export class PaymentIntentModule {}
+export class PaymentIntentModule { }

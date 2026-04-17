@@ -1,3 +1,4 @@
+import { PaymentIntentWithTotalAmountResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
 import {
   DeleteExpiredPaymentIntentResponseDto,
   PaymentIntentResponseDto,
@@ -11,9 +12,7 @@ export function toPaymentIntentResponse(
     orderId: paymentIntent.orderId.toString(),
     gateway: paymentIntent.gateway,
     status: paymentIntent.status,
-    expiredAt: paymentIntent.expiredAt,
-    createdAt: paymentIntent.createdAt,
-    updatedAt: paymentIntent.updatedAt,
+    tokenUrl: paymentIntent.tokenUrl,
   };
 }
 
@@ -24,5 +23,18 @@ export function toDeleteExpiredPaymentIntentResponse(
   return {
     deletedCount: result.count,
     cutoffAt,
+  };
+}
+
+export function toPaymentIntentWithTotalAmountResponse(
+  paymentIntent: any,
+): PaymentIntentWithTotalAmountResponseDto {
+  return {
+    id: paymentIntent.id,
+    orderId: paymentIntent.orderId.toString(),
+    gateway: paymentIntent.gateway,
+    status: paymentIntent.status,
+    totalAmount: paymentIntent.totalAmount,
+    tokenUrl: paymentIntent.tokenUrl,
   };
 }

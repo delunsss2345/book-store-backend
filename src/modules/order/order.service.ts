@@ -320,13 +320,13 @@ export class OrderService {
       // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền
       // 8) gọi gateway tạo transaction
       const gatewayResp = this.paymentService.createTransactionUrl({
-        orderId: order.id,
+        orderId: updatedOrder.id,
         gateway: body.paymentGateway,
         amount: totalAmount,
       });
 
       return this.paymentIntent.createPaymentIntent({
-        orderId: order.id,
+        orderId: updatedOrder.id,
         gateway: body.paymentGateway,
         orderCode: order.orderCode,
         tokenUrl: gatewayResp.result.token,

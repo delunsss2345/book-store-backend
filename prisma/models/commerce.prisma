@@ -178,7 +178,7 @@ model PaymentIntent {
   gateway        PaymentGateway
   status         PaymentStatus?
   tokenUrl       String @map("token_url") @unique @db.VarChar(200) // Dùng để lưu URL trả về token thanh toán từ cổng thanh toán
-
+  paymentUrl      String? @map("payment_url") @db.VarChar(200) // URL để redirect người dùng đến trang thanh toán của cổng thanh toán
   expiredAt DateTime  @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

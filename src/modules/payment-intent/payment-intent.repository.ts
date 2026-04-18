@@ -8,6 +8,7 @@ export type CreatePaymentIntentParams = {
   gateway: PaymentGateway;
   orderCode: string;
   status?: PaymentStatus;
+  paymentUrl: string;
   expiredAt: Date;
   tokenUrl: string;
 };
@@ -16,13 +17,28 @@ export type CreatePaymentIntentParams = {
 export class PaymentIntentRepository {
   constructor(private readonly prisma: PrismaService) { }
 
+  findByOrderCode(orderCode: string) {
+    return this.prisma.paymentIntent.findFirst({
+      where: {
+        orderCode,
+      },
+      include: {
+        order: true,
+      },
+    });
+  }
+
   create(
     params: CreatePaymentIntentParams,
+    tx?: Prisma.TransactionClient,
   ) {
-    return this.prisma.paymentIntent.create({
+    const db = tx ?? this.prisma;
+
+    return db.paymentIntent.create({
       data: {
         orderId: params.orderId,
         gateway: params.gateway,
+        paymentUrl: params.paymentUrl,
         orderCode: params.orderCode,
         status: params.status ?? PaymentStatus.PENDING,
         tokenUrl: params.tokenUrl,
@@ -44,6 +60,18 @@ export class PaymentIntentRepository {
       },
     });
   }
+
+  updateStatus(orderId: bigint, status: PaymentStatus) {
+    return this.prisma.paymentIntent.updateMany({
+      where: {
+        orderId,
+      },
+      data: {
+        status,
+      },
+    });
+  }
+
   findByTokenUrl(tokenUrl: string) {
     return this.prisma.paymentIntent.findUnique({
       where: {

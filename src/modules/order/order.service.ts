@@ -316,6 +316,8 @@ export class OrderService {
           orderCode: order.orderCode,
         };
       }
+      Logger.log(`Đã tạo order: ${JSON.stringify(updatedOrder)}`);
+
       // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout)
       // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền
       // 8) gọi gateway tạo transaction
@@ -325,13 +327,16 @@ export class OrderService {
         amount: totalAmount,
       });
 
+      Logger.log(`Đã tạo gatewayResp: ${JSON.stringify(gatewayResp)}`);
+
       return this.paymentIntent.createPaymentIntent({
         orderId: updatedOrder.id,
         gateway: body.paymentGateway,
         orderCode: order.orderCode,
         tokenUrl: gatewayResp.result.token,
+        paymentUrl : gatewayResp.result.url,
         status: PaymentStatus.PENDING,
-      });
+      }, tx);
     });
   }
 

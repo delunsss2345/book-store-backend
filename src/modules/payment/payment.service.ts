@@ -1,6 +1,7 @@
 import { AppModule } from '@/app.module';
 import { PaymentMessage } from '@/common';
 import { PaymentIntentService } from '@/modules/payment-intent';
+import { PaymentIntentWithUrlResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
 import { CreatePaymentTransactionDto } from '@/modules/payment/dto/request/create-payment.dto';
 import { CreateTransactionDto } from '@/modules/payment/dto/response/create-transaction.dto';
 import { CreateUrlPaymentResponseDTO } from '@/modules/payment/dto/response/create-url-payment.dto';
@@ -49,7 +50,7 @@ export class PaymentService {
 
   generateQrUrl(amount: number): CreateUrlPaymentResponseDTO {
     const url = `https://qr.sepay.vn/img?bank=${this.bank}&acc=${this.stk}&template=${this.template}&amount=${amount}`;
-    const token = crypto.createHash('sha256').update(url).digest('hex');
+    const token = crypto.randomBytes(32).toString('hex');
 
     return {
       token,
@@ -58,12 +59,7 @@ export class PaymentService {
   }
 
 
-  async getImageUrl(token: string): Promise<string> {
-    const res = await this.paymentIntentService.findByTokenUrl(token);
-    if (!res) {
-      throw new BadRequestException('Token không hợp lệ');
-    }
-    const url = `https://qr.sepay.vn/img?bank=${this.bank}&acc=${this.stk}&template=${this.template}&amount=${res.totalAmount}`;
-    return url;
+  async getPaymentIntent(token: string): Promise<PaymentIntentWithUrlResponseDto | null> {
+    return this.paymentIntentService.findByTokenUrl(token);
   }
 }

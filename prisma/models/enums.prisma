@@ -60,6 +60,7 @@ enum OrderStatus {
   RETURN_REQUESTED
   RETURNED
   REFUNDED
+  NOT_FOUND_ORDER_CODE
 }
 
 enum PaymentStatus {
@@ -70,6 +71,8 @@ enum PaymentStatus {
   PAYMENT_SHORTFALL
   PAYMENT_OVERAGE
   PARTIAL_REFUND
+  EXPIRED
+  NOT_FOUND_ORDER_CODE
 }
 
 enum PaymentGateway {

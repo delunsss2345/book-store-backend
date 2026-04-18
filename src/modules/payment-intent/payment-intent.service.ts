@@ -1,6 +1,7 @@
-import { PaymentIntentWithTotalAmountResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
+import { AppModule } from '@/app.module';
+import { PaymentIntentWithUrlResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, Prisma } from '@prisma/client';
 import { CreatePaymentIntentRequestDto } from './dto/request';
 import {
   DeleteExpiredPaymentIntentResponseDto,
@@ -8,8 +9,8 @@ import {
 } from './dto/response';
 import {
   toDeleteExpiredPaymentIntentResponse,
+  toPaymentIntentAccountBankResponse,
   toPaymentIntentResponse,
-  toPaymentIntentWithTotalAmountResponse,
 } from './mapper';
 import { PaymentIntentRepository } from './payment-intent.repository';
 
@@ -17,22 +18,29 @@ const PAYMENT_INTENT_EXPIRES_IN_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class PaymentIntentService {
+  private readonly bank = AppModule.CONFIGURATION.PAYMENT_CONFIG.BANK_ID;
+  private readonly stk = AppModule.CONFIGURATION.PAYMENT_CONFIG.ACCOUNT_NO;
+  private readonly nameAccount =
+    AppModule.CONFIGURATION.PAYMENT_CONFIG.NAME_RECEIVER;
   constructor(
     private readonly paymentIntentRepository: PaymentIntentRepository,
+
   ) { }
 
   async createPaymentIntent(
     dto: CreatePaymentIntentRequestDto,
+    tx?: Prisma.TransactionClient,
   ): Promise<PaymentIntentResponseDto> {
     const paymentIntent =
       await this.paymentIntentRepository.create({
         orderId: dto.orderId,
         orderCode: dto.orderCode,
         gateway: dto.gateway,
+        paymentUrl: dto.paymentUrl,
         status: dto.status ?? PaymentStatus.PENDING,
         tokenUrl: dto.tokenUrl,
         expiredAt: dto.expiredAt ?? this.getDefaultExpiredAt(),
-      });
+      }, tx);
 
     return toPaymentIntentResponse(paymentIntent);
   }
@@ -52,11 +60,33 @@ export class PaymentIntentService {
     return new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS);
   }
 
-  async findByTokenUrl(tokenUrl: string): Promise<PaymentIntentWithTotalAmountResponseDto | null> {
+  async markPaymentIntentAsExpire(orderId: bigint) {
+    await this.paymentIntentRepository.updateStatus(
+      orderId,
+      PaymentStatus.EXPIRED,
+    );
+  }
+
+  async markPaymentIntentAsNotFound(orderId: bigint) {
+    await this.paymentIntentRepository.updateStatus(
+      orderId,
+      PaymentStatus.NOT_FOUND_ORDER_CODE,
+    );
+  }
+
+  async findByTokenUrl(tokenUrl: string): Promise<PaymentIntentWithUrlResponseDto | null> {
     const paymentIntent = await this.paymentIntentRepository.findByTokenUrl(tokenUrl);
     if (!paymentIntent) {
       return null;
     }
-    return toPaymentIntentWithTotalAmountResponse(paymentIntent);
+    return toPaymentIntentAccountBankResponse(paymentIntent, this.bank, this.stk, this.nameAccount);
+  }
+
+  async findByOrderCode(orderCode: string) {
+    const paymentIntent = await this.paymentIntentRepository.findByOrderCode(orderCode);
+    if (!paymentIntent) {
+      return null;
+    }
+    return paymentIntent;
   }
 }

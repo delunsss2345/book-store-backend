@@ -38,6 +38,14 @@ export class CreatePaymentIntentRequestDto {
 
   @ApiPropertyOptional({
     type: String,
+    description: 'URL để redirect người dùng đến trang thanh toán của cổng thanh toán',
+    example: 'https://payment-gateway.com/pay/123456',
+  })
+  @IsString()
+  paymentUrl: string;
+
+  @ApiPropertyOptional({
+    type: String,
     description: 'Mã hash của URL thanh toán trả về từ cổng thanh toán',
     example: 'sdadadwqweqwe123123123123',
   })

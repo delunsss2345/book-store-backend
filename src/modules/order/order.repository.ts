@@ -50,6 +50,13 @@ export class OrderRepository {
 
     }
 
+    async updateStatusByOrderId(orderId: bigint, status: OrderStatus) {
+        return this.prisma.order.update({
+            where: { id: orderId },
+            data: { status }
+        })
+    }
+
     async findOrderItemWWithParentVariantByOrderId(orderId: bigint) {
         return this.prisma.order.findFirst({
             where: { id: orderId },

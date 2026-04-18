@@ -1,4 +1,4 @@
-import { PaymentIntentWithTotalAmountResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
+import { PaymentIntentWithUrlResponseDto } from '@/modules/payment-intent/dto/response/payment-intent-url.response.dto';
 import {
   DeleteExpiredPaymentIntentResponseDto,
   PaymentIntentResponseDto,
@@ -26,15 +26,23 @@ export function toDeleteExpiredPaymentIntentResponse(
   };
 }
 
-export function toPaymentIntentWithTotalAmountResponse(
+export function toPaymentIntentAccountBankResponse(
   paymentIntent: any,
-): PaymentIntentWithTotalAmountResponseDto {
+  bankName = 'MB Bank',
+  stk = '17979220797979',
+  nameAccount = 'Phạm Thanh Huy',
+): PaymentIntentWithUrlResponseDto {
   return {
     id: paymentIntent.id,
     orderId: paymentIntent.orderId.toString(),
     gateway: paymentIntent.gateway,
+    orderCode: paymentIntent.orderCode,
     status: paymentIntent.status,
-    totalAmount: paymentIntent.totalAmount,
+    paymentUrl: paymentIntent.paymentUrl,
     tokenUrl: paymentIntent.tokenUrl,
+    totalAmount: paymentIntent.order.totalAmount,
+    bankName,
+    stk,
+    nameAccount
   };
 }

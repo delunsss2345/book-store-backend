@@ -2,6 +2,7 @@ import { HooksMessage } from '@/common';
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { OrderRepository } from '@/modules/order/order.repository';
+import { PaymentIntentService } from '@/modules/payment-intent';
 import { PaymentRepository } from '@/modules/payment/payment.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
@@ -22,7 +23,66 @@ export class HooksService {
     private readonly paymentRepository: PaymentRepository,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly orderRepository: OrderRepository,
-  ) {}
+    private readonly paymentIntent: PaymentIntentService,
+  ) { }
+
+  private handlePaymentIntentExpired = async (normalizedOrderCode: string, webHookId: bigint, orderId: bigint) => {
+    Logger.debug('Payment intent is expired for order code', normalizedOrderCode);
+    await Promise.all([
+      this.paymentIntent.markPaymentIntentAsExpire(orderId),
+      this.hooksRepository.updateWebhookStatus(
+        webHookId,
+        JobStatus.FAILED,
+        0,
+        HooksMessage.PAYMENT_INTENT_EXPIRED,
+      ),
+    ]);
+
+    return {
+      ok: false,
+      providerEventId: null,
+      normalizedOrderCode,
+      webhookInboxId: webHookId.toString(),
+      orderId: orderId.toString(),
+      message: HooksMessage.PAYMENT_INTENT_EXPIRED,
+    };
+  }
+
+
+  private handlePaymentIntentNotFoundOrderCode = async (normalizedOrderCode: string, webHookId: bigint) => {
+    Logger.debug('Payment intent is not found for order code', normalizedOrderCode);
+    await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.FAILED,
+      0,
+      HooksMessage.PAYMENT_INTENT_NOT_FOUND,
+    );
+
+    return {
+      ok: false,
+      providerEventId: null,
+      normalizedOrderCode,
+      webhookInboxId: webHookId.toString(),
+      message: HooksMessage.PAYMENT_INTENT_NOT_FOUND,
+    };
+  }
+
+  private handleAlreadyProcessedPaymentIntent = async (normalizedOrderCode: string, webHookId: bigint, attempts: number, providerEventId) => {
+    Logger.debug('Payment intent already marked as success, skipping', normalizedOrderCode);
+    await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.DONE,
+      attempts,
+      HooksMessage.WEBHOOK_ALREADY_PROCESSED_FOR_SUCCESS_PAYMENT_INTENT,
+    );
+    return {
+      ok: true,
+      duplicate: true,
+      providerEventId,
+      webhookInboxId: webHookId,
+      message: 'Webhook already processed for successful payment intent',
+    };
+  }
 
   async handleSepayWebhook(body: SePayHooksDto) {
     // Chống trùng lặp
@@ -33,22 +93,16 @@ export class HooksService {
       throw new BadRequestException(HooksMessage.MISSING_WEBHOOK_EVENT_ID);
     }
 
-    // Check đã tồn tại web hook này chưa
-    const existedWebhook =
-      await this.hooksRepository.findWebhookByProviderEventId(providerEventId);
-    Logger.debug('Received webhook event existedWebhook', existedWebhook);
-
-
     // Nếu tồn tại thì dùng, chưa thì lưu web hooks mới
-    const webhookInbox =
-      existedWebhook ??
-      (await this.hooksRepository.saveSepayWebhook(providerEventId, body));
+    const webhookInbox = await this.hooksRepository.saveSepayWebhook(
+      providerEventId,
+      body,
+    );
     Logger.debug('Received webhook event webhookInbox', webhookInbox);
 
     if (webhookInbox.status === JobStatus.DONE) {
       return {
         ok: true,
-        duplicate: true,
         providerEventId,
         webhookInboxId: webhookInbox.id.toString(),
         message: 'Webhook already processed',
@@ -57,6 +111,7 @@ export class HooksService {
     const attempts = (webhookInbox.attempts ?? 0) + 1;
     // Check mã định danh orderCode ở trong webhooks check chắn chắn tất cả trường hợp có thể có
     // khi tất cả đều không có thì là failed
+
     const normalizedOrderCode = this.extractNormalizedOrderCode(body);
 
     if (!normalizedOrderCode) {
@@ -72,11 +127,24 @@ export class HooksService {
       );
     }
 
+    const paymentIntent = await this.paymentIntent.findByOrderCode(normalizedOrderCode);
+    if (paymentIntent?.expiredAt && paymentIntent.expiredAt < new Date()) {
+      return this.handlePaymentIntentExpired(normalizedOrderCode, webhookInbox.id, paymentIntent.orderId);
+    }
+
+    if (paymentIntent) {
+      Logger.debug('Found payment intent for order code', normalizedOrderCode);
+      if (paymentIntent.status === PaymentStatus.SUCCESS) {
+        return this.handleAlreadyProcessedPaymentIntent(normalizedOrderCode, webhookInbox.id, attempts, providerEventId);
+      }
+    } else {
+
+      Logger.debug('No payment intent found for order code', normalizedOrderCode);
+      return this.handlePaymentIntentNotFoundOrderCode(normalizedOrderCode, webhookInbox.id);
+    }
+
     // Tạo tìm order cũ đó xem có không
-    const order =
-      await this.hooksRepository.findOrderByNormalizedOrderCode(
-        normalizedOrderCode,
-      );
+    const order = paymentIntent?.order;
 
     // Nếu không JOB FAILED
     if (!order) {
@@ -87,9 +155,6 @@ export class HooksService {
         `Không tìm thấy đơn hàng với mã: ${normalizedOrderCode}`,
       );
 
-      throw new BadRequestException(HooksMessage.ORDER_NOT_FOUND);
-    }
-    if (!order?.subtotal) {
       throw new BadRequestException(HooksMessage.ORDER_NOT_FOUND);
     }
 
@@ -164,7 +229,6 @@ export class HooksService {
     );
     return {
       ok: true,
-      duplicate: Boolean(existedWebhook),
       providerEventId,
       normalizedOrderCode,
       webhookInboxId: doneWebhook.id.toString(),

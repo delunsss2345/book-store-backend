@@ -1,6 +1,6 @@
 import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable } from '@nestjs/common';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
@@ -57,8 +57,12 @@ export class OrderRepository {
         })
     }
 
-    async findOrderItemWWithParentVariantByOrderId(orderId: bigint) {
-        return this.prisma.order.findFirst({
+    async findOrderItemWWithParentVariantByOrderId(
+        orderId: bigint,
+        tx?: PrismaClientTransaction,
+    ) {
+        const db = tx ?? this.prisma;
+        return db.order.findFirst({
             where: { id: orderId },
             select: {
                 id: true,
@@ -205,10 +209,14 @@ export class OrderRepository {
         })
     }
 
-    updateOrderDone(variantMap: Map<string, number>, orderId: bigint) {
-        return this.prisma.$transaction(async (tx) => {
+    updateOrderDone(
+        variantMap: Map<string, number>,
+        orderId: bigint,
+        tx?: PrismaClientTransaction,
+    ) {
+        const updateOrderAndVariant = async (db: PrismaClientTransaction) => {
             for (const [key, value] of variantMap) {
-                await tx.bookVariant.updateMany({
+                await db.bookVariant.updateMany({
                     where: { id: BigInt(key) },
                     data: {
                         stock: { decrement: value },
@@ -216,7 +224,7 @@ export class OrderRepository {
                     }
                 })
             }
-            await tx.order.update({
+            await db.order.update({
                 where:
                     { id: orderId }
                 ,
@@ -224,6 +232,14 @@ export class OrderRepository {
                     status: OrderStatus.PAID
                 }
             })
+        };
+
+        if (tx) {
+            return updateOrderAndVariant(tx);
+        }
+
+        return this.prisma.$transaction(async (prismaTx) => {
+            return updateOrderAndVariant(prismaTx);
         })
     }
 }

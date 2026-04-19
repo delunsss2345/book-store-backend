@@ -1,5 +1,6 @@
 import { HooksMessage } from '@/common';
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
+import { PrismaService } from '@/database';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { OrderRepository } from '@/modules/order/order.repository';
 import { PaymentIntentService } from '@/modules/payment-intent';
@@ -24,6 +25,7 @@ export class HooksService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly orderRepository: OrderRepository,
     private readonly paymentIntent: PaymentIntentService,
+    private readonly prismaService: PrismaService,
   ) { }
 
   private handlePaymentIntentExpired = async (normalizedOrderCode: string, webHookId: bigint, orderId: bigint) => {
@@ -82,6 +84,51 @@ export class HooksService {
       webhookInboxId: webHookId,
       message: 'Webhook already processed for successful payment intent',
     };
+  }
+
+  private handleSepayWebhookMarkDone = (orderId: bigint, webHookId: bigint, attempts: number, providerEventId: string, body: SePayHooksDto) => {
+    return this.prismaService.$transaction(async (tx) => {
+      const [paidOrder, doneWebhook] = await Promise.all([
+        this.hooksRepository.markOrderAndPaymentSuccess(
+          orderId,
+          providerEventId,
+          body,
+          tx,
+        ),
+        this.hooksRepository.updateWebhookStatus(
+          webHookId,
+          JobStatus.DONE,
+          attempts,
+          undefined,
+          tx,
+        ),
+      ]);
+
+      // Lấy ra các order item
+      const orders =
+        await this.orderRepository.findOrderItemWWithParentVariantByOrderId(
+          paidOrder.id,
+          tx,
+        );
+      // Chuyển thành bookVariantId, và quantity
+      const variantMapWithQuantity = new Map<string, number>(
+        orders?.items.map((item) => [
+          item.bookVariantSnapshot.bookVariant.id.toString(),
+          item.quantity,
+        ]),
+      );
+
+      // Update trừ số quantity trong order vào variant
+      await this.orderRepository.updateOrderDone(
+        variantMapWithQuantity,
+        paidOrder.id,
+        tx,
+      );
+
+      return {
+        paidOrder, doneWebhook
+      };
+    })
   }
 
   async handleSepayWebhook(body: SePayHooksDto) {
@@ -196,37 +243,8 @@ export class HooksService {
         );
       }
     }
-    const [paidOrder, doneWebhook] = await Promise.all([
-      this.hooksRepository.markOrderAndPaymentSuccess(
-        order.id,
-        providerEventId,
-        body,
-      ),
-      this.hooksRepository.updateWebhookStatus(
-        webhookInbox.id,
-        JobStatus.DONE,
-        attempts,
-      ),
-    ]);
-
-    // Lấy ra các order item
-    const orders =
-      await this.orderRepository.findOrderItemWWithParentVariantByOrderId(
-        paidOrder.id,
-      );
-    // Chuyển thành bookVariantId, và quantity
-    const variantMapWithQuantity = new Map<string, number>(
-      orders?.items.map((item) => [
-        item.bookVariantSnapshot.bookVariant.id.toString(),
-        item.quantity,
-      ]),
-    );
-
-    // Update trừ số quantity trong order vào variant
-    await this.orderRepository.updateOrderDone(
-      variantMapWithQuantity,
-      paidOrder.id,
-    );
+    
+    const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(order.id, webhookInbox.id, attempts, providerEventId, body);
     return {
       ok: true,
       providerEventId,
@@ -249,6 +267,7 @@ export class HooksService {
     const cachedOrder = await this.cacheManager.get(
       `order:status:${normalizedOrderCode}`,
     );
+
     if (cachedOrder) return cachedOrder;
 
     if (!order) {

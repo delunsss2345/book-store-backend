@@ -1,4 +1,4 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import {
     JobStatus,
@@ -73,8 +73,15 @@ export class HooksRepository {
         });
     }
 
-    updateWebhookStatus(webhookId: bigint, status: JobStatus, attempts: number, lastError?: string) {
-        return this.prisma.webhookInbox.update({
+    updateWebhookStatus(
+        webhookId: bigint,
+        status: JobStatus,
+        attempts: number,
+        lastError?: string,
+        tx?: PrismaClientTransaction,
+    ) {
+        const db = tx ?? this.prisma;
+        return db.webhookInbox.update({
             where: { id: webhookId },
             data: {
                 status,
@@ -118,9 +125,16 @@ export class HooksRepository {
     }
 
     // Đảm bảo nhất quán 
-    markOrderAndPaymentSuccess(orderId: bigint, providerEventId: string, payload: unknown) {
-        return this.prisma.$transaction(async (tx) => {
-            const order = await tx.order.update({
+    markOrderAndPaymentSuccess(
+        orderId: bigint,
+        providerEventId: string,
+        payload: unknown,
+        tx?: PrismaClientTransaction,
+    ) {
+        const updateOrderAndPayment = async (
+            db: PrismaClientTransaction,
+        ) => {
+            const order = await db.order.update({
                 where: { id: orderId },
                 data: {
                     status: OrderStatus.PAID,
@@ -134,7 +148,7 @@ export class HooksRepository {
                 },
             });
 
-            await tx.paymentTransaction.updateMany({
+            await db.paymentTransaction.updateMany({
                 where: { orderId },
                 data: {
                     status: PaymentStatus.SUCCESS,
@@ -144,6 +158,14 @@ export class HooksRepository {
             });
 
             return order;
+        };
+
+        if (tx) {
+            return updateOrderAndPayment(tx);
+        }
+
+        return this.prisma.$transaction(async (prismaTx) => {
+            return updateOrderAndPayment(prismaTx);
         });
     }
     // Đảm bảo nhất quán 

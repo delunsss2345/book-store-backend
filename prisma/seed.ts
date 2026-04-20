@@ -353,6 +353,12 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/admin/*',
       description: 'Read admin resources',
     },
+    {
+      code: PermissionCode.UPLOAD_MANAGE,
+      method: 'POST',
+      pathPattern: '/api/v1/uploads/*',
+      description: 'Upload files and confirm book assets',
+    },
 
     {
       code: PermissionCode.AUTH_REGISTER,

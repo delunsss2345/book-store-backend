@@ -14,7 +14,7 @@ import {
 } from './mapper';
 import { PaymentIntentRepository } from './payment-intent.repository';
 
-const PAYMENT_INTENT_EXPIRES_IN_MS = 5 * 60 * 1000;
+const PAYMENT_INTENT_EXPIRES_IN_MS = 0.5 * 60 * 1000;
 
 @Injectable()
 export class PaymentIntentService {

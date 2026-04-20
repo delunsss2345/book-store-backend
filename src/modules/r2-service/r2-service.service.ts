@@ -31,7 +31,7 @@ export class R2ServiceService {
       Key: key,
       ContentType: contentType,
     })
-    const url = await getSignedUrl(this.s3, command, { expiresIn: 60 }); // 5 phút
+    const url = await getSignedUrl(this.s3, command, { expiresIn: 60 }); // 1 phút
     return {
       url,
       key,

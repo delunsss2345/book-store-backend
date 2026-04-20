@@ -15,4 +15,6 @@ export class PaymentIntentWithUrlResponseDto extends PaymentIntentResponseDto {
     nameAccount: string
     @ApiProperty()
     orderCode: string
+    @ApiProperty()
+    expiredAt: Date
 }

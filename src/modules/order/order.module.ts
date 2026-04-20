@@ -7,6 +7,7 @@ import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
 import { JobsModule } from '@/modules/jobs/jobs.module';
 import { OrderAddressModule } from '@/modules/order-address/order-address.module';
 import { OrderItemModule } from '@/modules/order-item/order-item.module';
+import { OrderCleanupJob } from '@/modules/order/order.cleanup.job';
 import { PaymentIntentModule } from '@/modules/payment-intent';
 import { Module } from '@nestjs/common';
 import { AuthRepository } from '../auth/auth.repository';
@@ -19,7 +20,7 @@ import { OrderService } from './order.service';
 @Module({
     imports: [PaymentModule, PaymentIntentModule, JwtProvider, GuestSessionModule, OrderItemModule, OrderAddressModule, CartModule, CatalogModule, BookSnapShotModule, EmailOutboxModule, JobsModule],
     controllers: [OrderController],
-    providers: [OrderRepository, OrderService, ShopperSessionGuard, AuthRepository],
+    providers: [OrderCleanupJob, OrderRepository, OrderService, ShopperSessionGuard, AuthRepository],
     exports: [OrderRepository, OrderService],
 })
 export class OrderModule { }

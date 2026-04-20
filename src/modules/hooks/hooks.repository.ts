@@ -145,6 +145,7 @@ export class HooksRepository {
                     orderCode: true,
                     status: true,
                     paymentStatus: true,
+                    updatedAt: true,
                 },
             });
 

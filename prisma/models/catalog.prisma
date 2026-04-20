@@ -148,7 +148,7 @@ model Book {
   bookBadge    BookBadge[]
   publisher    Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
   reviews      Review[]
-
+  bookVariantAssets BookVariantAsset[]
   @@map("books")
 }
 
@@ -205,7 +205,6 @@ model BookVariant {
 
   // Relations
   book                 Book                  @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  assets               BookVariantAsset[]
   wishlistItems        WishlistItem[]
   cartItems            CartItem[]
   inventoryMovements   InventoryMovement[]
@@ -246,13 +245,13 @@ model BookVariantSnapshot {
 
 model BookVariantAsset {
   id            BigInt  @id @default(autoincrement())
-  bookVariantId BigInt  @map("book_variant_id")
+  bookId BigInt  @map("book_id")
   url           String  @db.VarChar(1000)
   assetType     String? @map("asset_type") @db.VarChar(50)
   sortOrder     Int?    @map("sort_order")
 
   // Relations
-  variant BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@map("book_variant_assets")
 }

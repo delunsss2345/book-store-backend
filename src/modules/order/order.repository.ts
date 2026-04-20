@@ -171,6 +171,8 @@ export class OrderRepository {
         return this.prisma.order.findMany({
             where: {
                 expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
+                status: OrderStatus.CANCELLED,
+
             },
             select: {
                 items: {

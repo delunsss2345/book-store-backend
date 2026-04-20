@@ -30,6 +30,7 @@ export enum PermissionCode {
   ADMIN_READ_DETAIL = 'admin:read-detail',
   ADMIN_CREATE_BOOK_ALL = 'admin:create-book-all',
   ADMIN_READ = 'admin:read',
+  UPLOAD_MANAGE = 'upload:manage',
 
   AUTH_REGISTER = 'auth:register',
   AUTH_LOGIN = 'auth:login',

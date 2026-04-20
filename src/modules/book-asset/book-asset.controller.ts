@@ -1,24 +1,36 @@
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import {
   Body,
   Controller,
+  Param,
   Post,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { ConfirmBookAssetRequestDto } from './dto/request/confirm-book-asset.request.dto';
 import { imageFileFilter } from '@/utils/upload.util';
 import { UploadBookAssetRequestDto } from './dto/request/upload-book-asset.request.dto';
+import { ConfirmBookAssetResponseDto } from './dto/response/confirm-book-asset.response.dto';
 import { BookAssetService } from './book-asset.service';
-import { Public } from '@/common/security/decorators/public.decorator';
 
 @ApiTags('admin')
-@Controller('admin/book-assets')
+@Controller(['admin/book-assets', 'upload/book-asset'])
+@RequirePermissions(PermissionCode.UPLOAD_MANAGE)
+@ApiBearerAuth('access-token')
 export class BookAssetController {
   constructor(private readonly bookAssetService: BookAssetService) {}
 
-  @Public()
   @Post('upload')
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadBookAssetRequestDto })
@@ -34,5 +46,17 @@ export class BookAssetController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.bookAssetService.uploadBookAsset({ ...body, file });
+  }
+
+  @Post([':bookId/cofirm', ':bookId/confirm'])
+  @ApiOkResponse({ type: ConfirmBookAssetResponseDto })
+  confirmBookAsset(
+    @Param('bookId') bookId: string,
+    @Body() body: ConfirmBookAssetRequestDto,
+  ) {
+    return this.bookAssetService.confirmBookAsset(
+      parseBigIntRequired(bookId, 'bookId'),
+      body,
+    );
   }
 }

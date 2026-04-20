@@ -41,6 +41,7 @@ export function toPaymentIntentAccountBankResponse(
     paymentUrl: paymentIntent.paymentUrl,
     tokenUrl: paymentIntent.tokenUrl,
     totalAmount: paymentIntent.order.totalAmount,
+    expiredAt: paymentIntent.expiredAt,
     bankName,
     stk,
     nameAccount

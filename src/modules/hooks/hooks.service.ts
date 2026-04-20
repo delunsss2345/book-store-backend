@@ -158,7 +158,6 @@ export class HooksService {
     const attempts = (webhookInbox.attempts ?? 0) + 1;
     // Check mã định danh orderCode ở trong webhooks check chắn chắn tất cả trường hợp có thể có
     // khi tất cả đều không có thì là failed
-
     const normalizedOrderCode = this.extractNormalizedOrderCode(body);
 
     if (!normalizedOrderCode) {
@@ -243,8 +242,24 @@ export class HooksService {
         );
       }
     }
-    
+
     const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(order.id, webhookInbox.id, attempts, providerEventId, body);
+
+    const cachedOrder = await this.cacheManager.get(
+      `order:status:${normalizedOrderCode}`,
+    );
+
+    if (cachedOrder) {
+      await this.cacheManager.set(`order:status:${normalizedOrderCode}`, {
+        id: paidOrder.id.toString(),
+        orderCode: paidOrder.orderCode,
+        status: paidOrder.status,
+        paymentStatus: paidOrder.paymentStatus,
+        updatedAt: paidOrder.updatedAt,
+      }, ORDER_STATUS_TTL);
+    }
+
+
     return {
       ok: true,
       providerEventId,
@@ -283,7 +298,13 @@ export class HooksService {
 
     await this.cacheManager.set(
       `order:status:${normalizedOrderCode}`,
-      order,
+      {
+        id: order.id.toString(),
+        orderCode: order.orderCode,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        updatedAt: order.updatedAt,
+      },
       ORDER_STATUS_TTL,
     );
 

@@ -123,7 +123,7 @@ export class HooksService {
       providerEventId,
       content,
       webhookInboxId: webHookId.toString(),
-      message: 'Webhook already processed for successful payment intent',
+      message: HooksMessage.PAYMENT_INTENT_ALREADY_SUCCESS,
     };
   };
 
@@ -144,7 +144,7 @@ export class HooksService {
       webHookId,
       JobStatus.DONE,
       attempts,
-      'Webhook không có nội dung chuyển khoản, đã lưu giao dịch để đối soát',
+      HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT_RECORDED,
     );
 
     return {
@@ -152,7 +152,7 @@ export class HooksService {
       ignored: true,
       providerEventId,
       webhookInboxId: doneWebhook.id.toString(),
-      message: 'Webhook không có nội dung chuyển khoản',
+      message: HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT,
     };
   };
 
@@ -224,7 +224,7 @@ export class HooksService {
         ok: true,
         providerEventId,
         webhookInboxId: webhookInbox.id.toString(),
-        message: 'Webhook already processed',
+        message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
       };
     }
 
@@ -336,7 +336,7 @@ export class HooksService {
         webhookInbox.id,
         JobStatus.FAILED,
         attempts,
-        `Thanh toán không khớp số tiền đơn hàng: ${order.orderCode}`,
+        HooksMessage.PAYMENT_AMOUNT_MISMATCH(order.orderCode),
       );
 
       return {

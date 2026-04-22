@@ -36,7 +36,10 @@ export class PaymentService {
 
     try {
       this.logger.log(
-        `Đang tạo giao dịch cho đơn hàng: ${orderId} qua ${gateway}`,
+        PaymentMessage.CREATE_TRANSACTION_START(
+          orderId.toString(),
+          gateway.toString(),
+        ),
       );
       let result = {} as CreateUrlPaymentResponseDTO;
       switch (gateway) {
@@ -52,10 +55,10 @@ export class PaymentService {
       return {
         result,
         orderId: orderId.toString(),
-        message: 'Khởi tạo giao dịch thành công',
+        message: PaymentMessage.CREATE_TRANSACTION_SUCCESS,
       };
     } catch (error) {
-      this.logger.error(`Lỗi tạo giao dịch: ${error}`);
+      this.logger.error(`${PaymentMessage.CREATE_TRANSACTION_ERROR}: ${error}`);
       throw error;
     }
   }

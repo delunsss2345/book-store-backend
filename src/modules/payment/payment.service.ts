@@ -19,6 +19,18 @@ export class PaymentService {
 
   constructor(private readonly paymentIntentService: PaymentIntentService) { }
 
+  private generateContentOrder(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let random = '';
+
+    while (random.length < 8) {
+      const byte = crypto.randomBytes(1)[0];
+      random += chars[byte % chars.length];
+    }
+
+    return `taschen ${random}`;
+  }
+
   createTransactionUrl(dto: CreatePaymentTransactionDto): CreateTransactionDto {
     const { orderId, gateway, amount } = dto;
 
@@ -49,12 +61,21 @@ export class PaymentService {
   }
 
   generateQrUrl(amount: number): CreateUrlPaymentResponseDTO {
-    const url = `https://qr.sepay.vn/img?bank=${this.bank}&acc=${this.stk}&template=${this.template}&amount=${amount}`;
+    const content = this.generateContentOrder();
+    const query = new URLSearchParams({
+      bank: this.bank,
+      acc: this.stk,
+      template: this.template,
+      amount: amount.toString(),
+      des: content,
+    });
+    const url = `https://qr.sepay.vn/img?${query.toString()}`;
     const token = crypto.randomBytes(32).toString('hex');
 
     return {
       token,
-      url
+      url,
+      content,
     }
   }
 

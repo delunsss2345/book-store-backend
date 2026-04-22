@@ -54,6 +54,15 @@ export class CreatePaymentIntentRequestDto {
   tokenUrl: string;
 
   @ApiPropertyOptional({
+    type: String,
+    description: 'Nội dung chuyển khoản để đối soát webhook',
+    example: 'taschen A1b2C3d4',
+  })
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @ApiPropertyOptional({
     type: Date,
     description: 'Thoi gian het han cua payment intent',
     example: '2026-04-17T12:00:00.000Z',

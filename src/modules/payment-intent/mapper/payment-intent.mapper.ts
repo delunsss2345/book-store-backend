@@ -13,6 +13,7 @@ export function toPaymentIntentResponse(
     gateway: paymentIntent.gateway,
     status: paymentIntent.status,
     tokenUrl: paymentIntent.tokenUrl,
+    content: paymentIntent.content ?? null,
   };
 }
 
@@ -40,6 +41,7 @@ export function toPaymentIntentAccountBankResponse(
     status: paymentIntent.status,
     paymentUrl: paymentIntent.paymentUrl,
     tokenUrl: paymentIntent.tokenUrl,
+    content: paymentIntent.content ?? null,
     totalAmount: paymentIntent.order.totalAmount,
     expiredAt: paymentIntent.expiredAt,
     bankName,

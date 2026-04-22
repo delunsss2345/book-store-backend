@@ -7,6 +7,7 @@ export type CreatePaymentIntentParams = {
   orderId: bigint;
   gateway: PaymentGateway;
   orderCode: string;
+  content?: string;
   status?: PaymentStatus;
   paymentUrl: string;
   expiredAt: Date;
@@ -28,6 +29,17 @@ export class PaymentIntentRepository {
     });
   }
 
+  findByContent(content: string) {
+    return this.prisma.paymentIntent.findFirst({
+      where: {
+        content,
+      },
+      include: {
+        order: true,
+      },
+    });
+  }
+
   create(
     params: CreatePaymentIntentParams,
     tx?: Prisma.TransactionClient,
@@ -40,6 +52,7 @@ export class PaymentIntentRepository {
         gateway: params.gateway,
         paymentUrl: params.paymentUrl,
         orderCode: params.orderCode,
+        content: params.content,
         status: params.status ?? PaymentStatus.PENDING,
         tokenUrl: params.tokenUrl,
         expiredAt: params.expiredAt,

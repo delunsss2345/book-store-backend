@@ -13,9 +13,14 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, PaymentGateway, PaymentStatus } from '@prisma/client';
+import { JobStatus, PaymentStatus } from '@prisma/client';
 import type { Cache } from 'cache-manager';
 import { HooksRepository } from './hooks.repository';
+
+type WebhookOrderRef = {
+  id: bigint;
+  userId: bigint | null;
+};
 
 @Injectable()
 export class HooksService {
@@ -28,14 +33,38 @@ export class HooksService {
     private readonly prismaService: PrismaService,
   ) { }
 
-  private handlePaymentIntentExpired = async (normalizedOrderCode: string, webHookId: bigint, orderId: bigint) => {
-    Logger.debug('Payment intent is expired for order code', normalizedOrderCode);
+  private async saveWebhookTransaction(
+    body: SePayHooksDto,
+    providerEventId: string,
+    status: PaymentStatus,
+    order?: WebhookOrderRef | null,
+  ) {
+    await this.paymentRepository.createWebhookSepayTransaction({
+      amount: Number(body.transferAmount),
+      orderId: order?.id ?? null,
+      userId: order?.userId ?? null,
+      providerEventId,
+      referenceNumber: body.referenceCode?.toString().slice(0, 200) ?? null,
+      requestId: body.code?.toString().slice(0, 100) ?? null,
+      idempotencyKey: providerEventId.slice(0, 100),
+      status,
+      payload: body,
+    });
+  }
+
+  private handlePaymentIntentExpired = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+    orderId: bigint,
+  ) => {
+    Logger.debug('Payment intent is expired for transfer content', content);
     await Promise.all([
       this.paymentIntent.markPaymentIntentAsExpire(orderId),
       this.hooksRepository.updateWebhookStatus(
         webHookId,
         JobStatus.FAILED,
-        0,
+        attempts,
         HooksMessage.PAYMENT_INTENT_EXPIRED,
       ),
     ]);
@@ -43,34 +72,45 @@ export class HooksService {
     return {
       ok: false,
       providerEventId: null,
-      normalizedOrderCode,
+      content,
       webhookInboxId: webHookId.toString(),
       orderId: orderId.toString(),
       message: HooksMessage.PAYMENT_INTENT_EXPIRED,
     };
-  }
+  };
 
-
-  private handlePaymentIntentNotFoundOrderCode = async (normalizedOrderCode: string, webHookId: bigint) => {
-    Logger.debug('Payment intent is not found for order code', normalizedOrderCode);
+  private handlePaymentIntentNotFoundByContent = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+  ) => {
+    Logger.debug('Payment intent is not found for transfer content', content);
     await this.hooksRepository.updateWebhookStatus(
       webHookId,
       JobStatus.FAILED,
-      0,
+      attempts,
       HooksMessage.PAYMENT_INTENT_NOT_FOUND,
     );
 
     return {
       ok: false,
       providerEventId: null,
-      normalizedOrderCode,
+      content,
       webhookInboxId: webHookId.toString(),
       message: HooksMessage.PAYMENT_INTENT_NOT_FOUND,
     };
-  }
+  };
 
-  private handleAlreadyProcessedPaymentIntent = async (normalizedOrderCode: string, webHookId: bigint, attempts: number, providerEventId) => {
-    Logger.debug('Payment intent already marked as success, skipping', normalizedOrderCode);
+  private handleAlreadyProcessedPaymentIntent = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+  ) => {
+    Logger.debug(
+      'Payment intent already marked as success, skipping',
+      content,
+    );
     await this.hooksRepository.updateWebhookStatus(
       webHookId,
       JobStatus.DONE,
@@ -81,12 +121,48 @@ export class HooksService {
       ok: true,
       duplicate: true,
       providerEventId,
-      webhookInboxId: webHookId,
+      content,
+      webhookInboxId: webHookId.toString(),
       message: 'Webhook already processed for successful payment intent',
     };
-  }
+  };
 
-  private handleSepayWebhookMarkDone = (orderId: bigint, webHookId: bigint, attempts: number, providerEventId: string, body: SePayHooksDto) => {
+  private handleSepayWebhookWithoutContent = async (
+    body: SePayHooksDto,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+  ) => {
+    await this.saveWebhookTransaction(
+      body,
+      providerEventId,
+      PaymentStatus.NOT_FOUND_ORDER_CODE,
+      null,
+    );
+
+    const doneWebhook = await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.DONE,
+      attempts,
+      'Webhook không có nội dung chuyển khoản, đã lưu giao dịch để đối soát',
+    );
+
+    return {
+      ok: true,
+      ignored: true,
+      providerEventId,
+      webhookInboxId: doneWebhook.id.toString(),
+      message: 'Webhook không có nội dung chuyển khoản',
+    };
+  };
+
+  private handleSepayWebhookMarkDone = (
+    orderId: bigint,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+    body: SePayHooksDto,
+  ) => {
     return this.prismaService.$transaction(async (tx) => {
       const [paidOrder, doneWebhook] = await Promise.all([
         this.hooksRepository.markOrderAndPaymentSuccess(
@@ -104,13 +180,12 @@ export class HooksService {
         ),
       ]);
 
-      // Lấy ra các order item
       const orders =
         await this.orderRepository.findOrderItemWWithParentVariantByOrderId(
           paidOrder.id,
           tx,
         );
-      // Chuyển thành bookVariantId, và quantity
+
       const variantMapWithQuantity = new Map<string, number>(
         orders?.items.map((item) => [
           item.bookVariantSnapshot.bookVariant.id.toString(),
@@ -118,7 +193,6 @@ export class HooksService {
         ]),
       );
 
-      // Update trừ số quantity trong order vào variant
       await this.orderRepository.updateOrderDone(
         variantMapWithQuantity,
         paidOrder.id,
@@ -126,13 +200,12 @@ export class HooksService {
       );
 
       return {
-        paidOrder, doneWebhook
+        paidOrder, doneWebhook,
       };
-    })
-  }
+    });
+  };
 
   async handleSepayWebhook(body: SePayHooksDto) {
-    // Chống trùng lặp
     Logger.debug('Received webhook event', body);
 
     const providerEventId = this.extractProviderEventId(body);
@@ -140,7 +213,6 @@ export class HooksService {
       throw new BadRequestException(HooksMessage.MISSING_WEBHOOK_EVENT_ID);
     }
 
-    // Nếu tồn tại thì dùng, chưa thì lưu web hooks mới
     const webhookInbox = await this.hooksRepository.saveSepayWebhook(
       providerEventId,
       body,
@@ -155,115 +227,165 @@ export class HooksService {
         message: 'Webhook already processed',
       };
     }
+
     const attempts = (webhookInbox.attempts ?? 0) + 1;
-    // Check mã định danh orderCode ở trong webhooks check chắn chắn tất cả trường hợp có thể có
-    // khi tất cả đều không có thì là failed
-    const normalizedOrderCode = this.extractNormalizedOrderCode(body);
+    const transferContent = body.content?.trim();
 
-    if (!normalizedOrderCode) {
-      await this.hooksRepository.updateWebhookStatus(
+    if (!transferContent) {
+      return this.handleSepayWebhookWithoutContent(
+        body,
         webhookInbox.id,
-        JobStatus.FAILED,
         attempts,
-        HooksMessage.ORDER_CODE_NOT_FOUND_IN_WEBHOOK_PAYLOAD,
-      );
-
-      throw new BadRequestException(
-        HooksMessage.ORDER_CODE_NOT_FOUND_IN_WEBHOOK_PAYLOAD,
+        providerEventId,
       );
     }
 
-    const paymentIntent = await this.paymentIntent.findByOrderCode(normalizedOrderCode);
-    if (paymentIntent?.expiredAt && paymentIntent.expiredAt < new Date()) {
-      return this.handlePaymentIntentExpired(normalizedOrderCode, webhookInbox.id, paymentIntent.orderId);
+    const paymentIntent = await this.paymentIntent.findByContent(transferContent);
+    if (!paymentIntent) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.NOT_FOUND_ORDER_CODE,
+        null,
+      );
+
+      return this.handlePaymentIntentNotFoundByContent(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+      );
     }
 
-    if (paymentIntent) {
-      Logger.debug('Found payment intent for order code', normalizedOrderCode);
-      if (paymentIntent.status === PaymentStatus.SUCCESS) {
-        return this.handleAlreadyProcessedPaymentIntent(normalizedOrderCode, webhookInbox.id, attempts, providerEventId);
-      }
-    } else {
-
-      Logger.debug('No payment intent found for order code', normalizedOrderCode);
-      return this.handlePaymentIntentNotFoundOrderCode(normalizedOrderCode, webhookInbox.id);
-    }
-
-    // Tạo tìm order cũ đó xem có không
-    const order = paymentIntent?.order;
-
-    // Nếu không JOB FAILED
+    const order = paymentIntent.order;
     if (!order) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.NOT_FOUND_ORDER_CODE,
+        null,
+      );
+
       await this.hooksRepository.updateWebhookStatus(
         webhookInbox.id,
         JobStatus.FAILED,
         attempts,
-        `Không tìm thấy đơn hàng với mã: ${normalizedOrderCode}`,
+        HooksMessage.ORDER_NOT_FOUND,
       );
 
       throw new BadRequestException(HooksMessage.ORDER_NOT_FOUND);
     }
 
-    // Nếu không bằng
-    if (Number(body.transferAmount) !== Number(order?.totalAmount)) {
-      Logger.debug(
-        'subtotal',
-        Number(body.transferAmount),
-        Number(order?.totalAmount),
+    const orderRef: WebhookOrderRef = {
+      id: order.id,
+      userId: order.userId ?? null,
+    };
+
+    if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.EXPIRED,
+        orderRef,
       );
 
-      if (order.userId) {
-        await this.paymentRepository.createPaymentTransaction(order.userId, {
-          orderId: order.id,
-          amount: body.transferAmount,
-          gateway: PaymentGateway.SEPAY,
-        });
-      } else if (order.guestSessionId) {
-        await this.paymentRepository.createPaymentTransactionGuestId({
-          orderId: order.id,
-          amount: body.transferAmount,
-          gateway: PaymentGateway.SEPAY,
-        });
-      }
-      // Check thanh toán sai
-      if (body.transferAmount < Number(order?.totalAmount)) {
-        return this.hooksRepository.markPaymentNotSuccess(
-          order.id,
-          providerEventId,
-          body,
-          PaymentStatus.PAYMENT_SHORTFALL,
-        );
-      } else {
-        return this.hooksRepository.markPaymentNotSuccess(
-          order.id,
-          providerEventId,
-          body,
-          PaymentStatus.PAYMENT_OVERAGE,
-        );
-      }
+      return this.handlePaymentIntentExpired(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+        paymentIntent.orderId,
+      );
     }
 
-    const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(order.id, webhookInbox.id, attempts, providerEventId, body);
+    if (paymentIntent.status === PaymentStatus.SUCCESS) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.SUCCESS,
+        orderRef,
+      );
 
-    const cachedOrder = await this.cacheManager.get(
-      `order:status:${normalizedOrderCode}`,
+      return this.handleAlreadyProcessedPaymentIntent(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+        providerEventId,
+      );
+    }
+
+    if (Number(body.transferAmount) !== Number(order.totalAmount)) {
+      const mismatchStatus =
+        Number(body.transferAmount) < Number(order.totalAmount)
+          ? PaymentStatus.PAYMENT_SHORTFALL
+          : PaymentStatus.PAYMENT_OVERAGE;
+
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        mismatchStatus,
+        orderRef,
+      );
+
+      await this.hooksRepository.markPaymentNotSuccess(
+        order.id,
+        providerEventId,
+        body,
+        mismatchStatus,
+      );
+
+      await this.hooksRepository.updateWebhookStatus(
+        webhookInbox.id,
+        JobStatus.FAILED,
+        attempts,
+        `Thanh toán không khớp số tiền đơn hàng: ${order.orderCode}`,
+      );
+
+      return {
+        ok: false,
+        providerEventId,
+        content: transferContent,
+        webhookInboxId: webhookInbox.id.toString(),
+        orderId: order.id.toString(),
+        orderCode: order.orderCode,
+        paymentStatus: mismatchStatus,
+      };
+    }
+
+    await this.saveWebhookTransaction(
+      body,
+      providerEventId,
+      PaymentStatus.SUCCESS,
+      orderRef,
     );
 
-    if (cachedOrder) {
-      await this.cacheManager.set(`order:status:${normalizedOrderCode}`, {
-        id: paidOrder.id.toString(),
-        orderCode: paidOrder.orderCode,
-        status: paidOrder.status,
-        paymentStatus: paidOrder.paymentStatus,
-        updatedAt: paidOrder.updatedAt,
-      }, ORDER_STATUS_TTL);
-    }
+    const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(
+      order.id,
+      webhookInbox.id,
+      attempts,
+      providerEventId,
+      body,
+    );
 
+    const cacheKey = `order:status:${paidOrder.orderCode}`;
+    const cachedOrder = await this.cacheManager.get(cacheKey);
+
+    if (cachedOrder) {
+      await this.cacheManager.set(
+        cacheKey,
+        {
+          id: paidOrder.id.toString(),
+          orderCode: paidOrder.orderCode,
+          status: paidOrder.status,
+          paymentStatus: paidOrder.paymentStatus,
+          updatedAt: paidOrder.updatedAt,
+        },
+        ORDER_STATUS_TTL,
+      );
+    }
 
     return {
       ok: true,
       providerEventId,
-      normalizedOrderCode,
+      content: transferContent,
       webhookInboxId: doneWebhook.id.toString(),
       orderId: paidOrder.id.toString(),
       orderCode: paidOrder.orderCode,
@@ -273,76 +395,32 @@ export class HooksService {
   }
 
   async getOrderStatus(orderCode: string) {
-    let order: Awaited<
-      ReturnType<HooksRepository['findOrderByNormalizedOrderCode']>
-    > = null;
-    const orderCodeUppercase = orderCode.toUpperCase();
-    const normalizedOrderCode = orderCodeUppercase.replace(/[^A-Z0-9]/g, '');
-
-    const cachedOrder = await this.cacheManager.get(
-      `order:status:${normalizedOrderCode}`,
-    );
+    const cacheKey = `order:status:${orderCode}`;
+    const cachedOrder = await this.cacheManager.get(cacheKey);
 
     if (cachedOrder) return cachedOrder;
 
-    if (!order) {
-      order =
-        await this.hooksRepository.findOrderByNormalizedOrderCode(
-          normalizedOrderCode,
-        );
-    }
-
+    const order = await this.hooksRepository.findOrderStatusByOrderCode(orderCode);
     if (!order) {
       throw new NotFoundException(HooksMessage.ORDER_NOT_FOUND);
     }
 
-    await this.cacheManager.set(
-      `order:status:${normalizedOrderCode}`,
-      {
-        id: order.id.toString(),
-        orderCode: order.orderCode,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        updatedAt: order.updatedAt,
-      },
-      ORDER_STATUS_TTL,
-    );
-
-    return {
+    const response = {
       id: order.id.toString(),
       orderCode: order.orderCode,
       status: order.status,
       paymentStatus: order.paymentStatus,
       updatedAt: order.updatedAt,
     };
+
+    await this.cacheManager.set(cacheKey, response, ORDER_STATUS_TTL);
+
+    return response;
   }
 
   private extractProviderEventId(body: SePayHooksDto): string | null {
     const raw = body.id ?? body.referenceCode ?? body.code;
     if (raw === undefined || raw === null) return null;
     return raw.toString().trim();
-  }
-
-  private extractNormalizedOrderCode(body: SePayHooksDto): string | null {
-    const candidates = [
-      body.content,
-      body.description,
-      body.code,
-      body.referenceCode,
-    ];
-
-    for (const candidate of candidates) {
-      if (typeof candidate !== 'string') continue;
-      const upper = candidate.toUpperCase();
-      const matched = upper.match(/OD[-_\s]*\d{6}[-_\s]*[A-Z0-9]{6,}/);
-      if (!matched?.[0]) continue;
-
-      const normalized = matched[0].replace(/[^A-Z0-9]/g, '');
-      if (normalized.startsWith('OD')) {
-        return normalized;
-      }
-    }
-
-    return null;
   }
 }

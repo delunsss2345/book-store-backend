@@ -35,6 +35,7 @@ export class PaymentIntentService {
       await this.paymentIntentRepository.create({
         orderId: dto.orderId,
         orderCode: dto.orderCode,
+        content: dto.content,
         gateway: dto.gateway,
         paymentUrl: dto.paymentUrl,
         status: dto.status ?? PaymentStatus.PENDING,
@@ -87,6 +88,15 @@ export class PaymentIntentService {
     if (!paymentIntent) {
       return null;
     }
+    return paymentIntent;
+  }
+
+  async findByContent(content: string) {
+    const paymentIntent = await this.paymentIntentRepository.findByContent(content);
+    if (!paymentIntent) {
+      return null;
+    }
+
     return paymentIntent;
   }
 }

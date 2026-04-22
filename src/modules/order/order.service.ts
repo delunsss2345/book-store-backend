@@ -231,25 +231,56 @@ export class OrderService {
       if (cartHash === existing?.cartHash) {
         // Nếu bấm mà chưa tạo payment chỉ toàn kiểu tạo order (ko thanh toán) thì mình tiếng hành gửi lại cái mã mới mà không phải tạo lại order
         if (existing?.payments.length <= 0) {
+          const gatewayResp = this.paymentService.createTransactionUrl({
+            orderId: existing.id,
+            gateway: PaymentGateway.SEPAY,
+            amount: Number(existing.totalAmount),
+          });
+
+          await this.paymentIntent.createPaymentIntent(
+            {
+              orderId: existing.id,
+              gateway: PaymentGateway.SEPAY,
+              orderCode: existing.orderCode,
+              tokenUrl: gatewayResp.result.token,
+              paymentUrl: gatewayResp.result.url,
+              content: gatewayResp.result.content,
+              status: PaymentStatus.PENDING,
+            },
+            tx,
+          );
+
           return {
             id: existing.id,
             subtotal: existing.subtotal,
             orderCode: existing.orderCode,
-            payment: this.paymentService.createTransactionUrl({
-              orderId: existing.id,
-              gateway: PaymentGateway.SEPAY,
-              amount: Number(existing.totalAmount),
-            }),
+            payment: gatewayResp,
             totalAmount: existing.totalAmount,
           };
         }
-        return {
-          id: existing.id,
-          payment: this.paymentService.createTransactionUrl({
+
+        const gatewayResp = this.paymentService.createTransactionUrl({
+          orderId: existing.id,
+          gateway: PaymentGateway.SEPAY,
+          amount: Number(existing.totalAmount),
+        });
+
+        await this.paymentIntent.createPaymentIntent(
+          {
             orderId: existing.id,
             gateway: PaymentGateway.SEPAY,
-            amount: Number(existing.totalAmount),
-          }),
+            orderCode: existing.orderCode,
+            tokenUrl: gatewayResp.result.token,
+            paymentUrl: gatewayResp.result.url,
+            content: gatewayResp.result.content,
+            status: PaymentStatus.PENDING,
+          },
+          tx,
+        );
+
+        return {
+          id: existing.id,
+          payment: gatewayResp,
           orderCode: existing.orderCode,
 
         };
@@ -334,7 +365,8 @@ export class OrderService {
         gateway: body.paymentGateway,
         orderCode: order.orderCode,
         tokenUrl: gatewayResp.result.token,
-        paymentUrl : gatewayResp.result.url,
+        paymentUrl: gatewayResp.result.url,
+        content: gatewayResp.result.content,
         status: PaymentStatus.PENDING,
       }, tx);
     });
@@ -464,11 +496,26 @@ export class OrderService {
         amount: totalAmount,
       });
 
+      const paymentIntent = await this.paymentIntent.createPaymentIntent(
+        {
+          orderId: order.id,
+          gateway: body.paymentGateway,
+          orderCode: order.orderCode,
+          tokenUrl: gatewayResp.result.token,
+          paymentUrl: gatewayResp.result.url,
+          content: gatewayResp.result.content,
+          status: PaymentStatus.PENDING,
+        },
+        tx,
+      );
+
       return {
         orderId: order.id,
         subtotal: updatedOrder.subtotal,
         totalAmount: updatedOrder.totalAmount,
-        paymentUrl: (gatewayResp as any)?.paymentUrl,
+        payment: paymentIntent,
+        paymentUrl: gatewayResp.result.url,
+        paymentContent: gatewayResp.result.content,
         orderCode: order.orderCode,
       };
     });
@@ -498,8 +545,15 @@ export class OrderService {
     );
   }
   async cleanOrder(orderSecondMinutes: number) {
+    Logger.debug(`Bắt đầu dọn dẹp order đã hết hạn trước ${orderSecondMinutes} giây`, 'OrderService');
+
     const expiredOrders =
       await this.orderRepository.findOrderIsExpire(orderSecondMinutes);
+
+    Logger.debug(`Tìm thấy ${expiredOrders.length} order đã hết hạn`, 'OrderService');
+    if (expiredOrders.length === 0) {
+      return { cleanedCount: 0 };
+    }
     const variantMap = new Map<string, number>();
 
     for (const order of expiredOrders) {

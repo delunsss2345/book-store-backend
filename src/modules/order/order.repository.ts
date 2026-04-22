@@ -2,7 +2,7 @@ import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 
@@ -168,11 +168,12 @@ export class OrderRepository {
 
 
     findOrderIsExpire(orderSecondMinutes: number) {
+        Logger.debug(`Tìm kiếm order đã hết hạn trước ${orderSecondMinutes} giây`, 'OrderRepository');
         return this.prisma.order.findMany({
             where: {
                 expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
-                status: OrderStatus.CANCELLED,
-
+                status: OrderStatus.PENDING_PAYMENT,
+                paymentStatus: PaymentStatus.PENDING
             },
             select: {
                 items: {
@@ -202,10 +203,11 @@ export class OrderRepository {
             }
             await tx.order.updateMany({
                 where: {
-                    expiredAt: new Date(Date.now() + orderSecondMinutes * 1000)
+                    expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
                 },
                 data: {
-                    status: OrderStatus.CANCELLED
+                    status: OrderStatus.CANCELLED,
+                    paymentStatus: PaymentStatus.EXPIRED
                 }
             })
         })

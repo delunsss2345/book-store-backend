@@ -21,6 +21,13 @@ export class PaymentIntentResponseDto {
   @ApiProperty()
   tokenUrl: string;
 
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: 'taschen A1b2C3d4',
+  })
+  content: string | null;
+
   // @ApiProperty()
   // expiredAt: Date;
 

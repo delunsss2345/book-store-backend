@@ -1,5 +1,7 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { imageFileFilter } from '@/utils/upload.util';
 import {
   Body,
   Controller,
@@ -8,6 +10,7 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -15,21 +18,18 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { BookAssetService } from './book-asset.service';
 import { ConfirmBookAssetRequestDto } from './dto/request/confirm-book-asset.request.dto';
-import { imageFileFilter } from '@/utils/upload.util';
 import { UploadBookAssetRequestDto } from './dto/request/upload-book-asset.request.dto';
 import { ConfirmBookAssetResponseDto } from './dto/response/confirm-book-asset.response.dto';
-import { BookAssetService } from './book-asset.service';
 
 @ApiTags('admin')
 @Controller(['admin/book-assets', 'upload/book-asset'])
 @RequirePermissions(PermissionCode.UPLOAD_MANAGE)
 @ApiBearerAuth('access-token')
 export class BookAssetController {
-  constructor(private readonly bookAssetService: BookAssetService) {}
+  constructor(private readonly bookAssetService: BookAssetService) { }
 
   @Post('upload')
   @ApiConsumes('multipart/form-data')
@@ -48,7 +48,7 @@ export class BookAssetController {
     return this.bookAssetService.uploadBookAsset({ ...body, file });
   }
 
-  @Post([':bookId/cofirm', ':bookId/confirm'])
+  @Post([':bookId/confirm'])  
   @ApiOkResponse({ type: ConfirmBookAssetResponseDto })
   confirmBookAsset(
     @Param('bookId') bookId: string,

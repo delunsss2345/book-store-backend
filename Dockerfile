@@ -1,14 +1,27 @@
-FROM node:22-alpine
+FROM node:22-alpine AS builder
+
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci  
-# Xoá node_modules cài lại
+RUN npm ci
+ARG DATABASE_URL=mysql://username:password@localhost:3306/book_store?allowPublicKeyRetrieval=true
+ENV DATABASE_URL=$DATABASE_URL
 
 COPY . .
-# Prisma reads DATABASE_URL while generating client at build-time.
-# Use a dummy value so image build does not depend on runtime secrets.
-RUN DATABASE_URL="mysql://admin:huy123@mysql:3306/book_store?allowPublicKeyRetrieval=true" npx prisma generate && npm run build
 
-EXPOSE 3301
+RUN npx prisma generate
+RUN npm run build
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 CMD ["node", "dist/src/main.js"]

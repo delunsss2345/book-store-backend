@@ -1,5 +1,7 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { supplierItemSelect } from './select';
 
 @Injectable()
 export class SupplierRepository {
@@ -14,39 +16,29 @@ export class SupplierRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
-      select: {
-        id: true,
-        name: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: supplierItemSelect,
     });
   }
 
-  createSupplier(name: string) {
+  createSupplier(name: string, code: string) {
     return this.prisma.supplier.create({
-      data: { name },
-      select: {
-        id: true,
-        name: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      data: { name, code },
+      select: supplierItemSelect,
+    });
+  }
+
+  createSupplierTx(name: string, code: string, tx: Prisma.TransactionClient) {
+    const db: Prisma.TransactionClient = tx ?? this.prisma;
+    return db.supplier.create({
+      data: { name, code },
+      select: supplierItemSelect,
     });
   }
 
   findSupplierById(supplierId: bigint) {
     return this.prisma.supplier.findUnique({
       where: { id: supplierId },
-      select: {
-        id: true,
-        name: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: supplierItemSelect,
     });
   }
 
@@ -54,13 +46,7 @@ export class SupplierRepository {
     return this.prisma.supplier.update({
       where: { id: supplierId },
       data: { isActive },
-      select: {
-        id: true,
-        name: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: supplierItemSelect,
     });
   }
 }

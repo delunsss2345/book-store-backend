@@ -12,7 +12,7 @@ export class CreateUserAddressRequestDto {
     @IsOptional()
     @IsString()
     @MaxLength(200)
-    recipientName?: string;
+    recipientName: string;
 
     @ApiProperty({ maxLength: 30, example: '0901234567' })
     @IsString()

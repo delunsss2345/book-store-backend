@@ -15,7 +15,21 @@ import bcrypt from 'bcrypt';
 
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
+type SeedSupplier = {
+  code: string;
+  name: string;
+};
 
+const SUPPLIERS: SeedSupplier[] = [
+  { code: 'SUP-FAHASA', name: 'Công ty Phát hành sách Fahasa' },
+  { code: 'SUP-PNB', name: 'Công ty Sách Phương Nam' },
+  { code: 'SUP-ALPHA', name: 'Công ty Cổ phần Sách Alpha Books' },
+  { code: 'SUP-THAIHA', name: 'Công ty Sách Thái Hà' },
+  { code: 'SUP-TRITHUC', name: 'Nhà sách Tri Thức' },
+  { code: 'SUP-GLOBAL', name: 'Công ty Phân phối Sách Global' },
+  { code: 'SUP-NORTHSTAR', name: 'Nhà phát hành North Star' },
+  { code: 'SUP-BLUERIVER', name: 'Công ty Sách Blue River' },
+];
 type SeedUser = {
   email: string;
   password: string;
@@ -119,6 +133,28 @@ const MAX_REVIEW_PER_BOOK = 10;
 const ORDER_CODE_PREFIX = 'SEED-ORD-';
 const REVIEW_CONTENT_PREFIX = '[seed-review]';
 
+async function upsertSuppliers() {
+  for (const s of SUPPLIERS) {
+    await prisma.supplier.upsert({
+      where: { code: s.code },
+      update: {
+        name: s.name,
+        isActive: true,
+      },
+      create: {
+        code: s.code,
+        name: s.name,
+        isActive: true,
+      },
+    });
+  }
+
+  const rows = await prisma.supplier.findMany({
+    select: { id: true, code: true },
+  });
+
+  return new Map(rows.map((x) => [x.code, x.id] as const));
+}
 async function upsertRoles() {
   const roles = [
     { code: RoleCode.ADMIN, name: 'admin', description: 'Full access' },
@@ -316,6 +352,12 @@ async function upsertPermissions() {
       method: 'GET',
       pathPattern: '/api/v1/admin/*',
       description: 'Read admin resources',
+    },
+    {
+      code: PermissionCode.UPLOAD_MANAGE,
+      method: 'POST',
+      pathPattern: '/api/v1/uploads/*',
+      description: 'Upload files and confirm book assets',
     },
 
     {
@@ -1889,6 +1931,7 @@ async function main() {
   const languageIdByCode = await upsertLanguages();
   const roleIdByCode = await upsertRoles();
   const permissionIdByCode = await upsertPermissions();
+  await upsertSuppliers();
   await upsertRolePermissions(roleIdByCode, permissionIdByCode);
 
   const fixedUsers: SeedUser[] = [

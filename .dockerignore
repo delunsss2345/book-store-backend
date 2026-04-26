@@ -10,3 +10,7 @@ docker/mysql_data/**
 **/mysql_data/**
 **/.git
 node_modules
+.agents
+doc
+.md
+.github

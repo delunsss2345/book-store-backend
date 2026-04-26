@@ -5,6 +5,7 @@ import { AdminModule } from '@/modules/admin/admin.module';
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { BookAssetModule } from '@/modules/book-asset/book-asset.module';
+import { BookVariantModule } from '@/modules/book-variant';
 import { CartModule } from '@/modules/cart/cart.module';
 import { CatalogModule } from '@/modules/catalog';
 import { CategoryModule } from '@/modules/category/category.module';
@@ -12,8 +13,11 @@ import { GuestSessionModule } from '@/modules/guest-session/guest-session.module
 import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
+import { PurchaseOrderModule } from '@/modules/purchase-order';
 import { ReviewModule } from '@/modules/review/review.module';
 import { SearchModule } from '@/modules/search/search.module';
+import { StockImportModule } from '@/modules/stock-import';
+import { StockImportItemModule } from '@/modules/stock-import-item';
 import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { WishlistModule } from '@/modules/wishlist/wishlist.module';
@@ -27,13 +31,12 @@ import { HooksModule } from './modules/hooks/hooks.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './modules/mail/mail.module';
 import { OrderModule } from './modules/order/order.module';
-import { PaymentModule } from './modules/payment/payment.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 import { RoleModule } from './modules/role/role.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UserAddressModule } from './modules/user-address/user-address.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-import { UploadsModule } from './modules/uploads/uploads.module';
-import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 
 @Module({
   imports: [
@@ -68,11 +71,14 @@ import { R2ServiceModule } from './modules/r2-service/r2-service.module';
     SearchModule,
     WishlistModule,
     OrderModule,
-    PaymentModule,
     HooksModule,
     LanguageModule,
     UploadsModule,
     R2ServiceModule,
+    PurchaseOrderModule,
+    StockImportModule,
+    StockImportItemModule,
+    BookVariantModule,
   ],
 })
 export class AppModule implements NestModule {

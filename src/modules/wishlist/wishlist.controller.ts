@@ -1,4 +1,6 @@
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { JwtPayload } from '@/common';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
+import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
@@ -26,26 +28,73 @@ export class WishlistController {
 
     @Get()
     @ApiOkResponse()
-    getWish(@Req() request: Request, @GetLanguage() lang: string) {
-        return this.wishlistService.getWishlist(request, lang);
+    getWish(
+        @Req() request: Request,
+        @GetLanguageId() langId: number,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const { guestSessionId, userId } = this.resolveActor(request, user);
+        return this.wishlistService.getWishlist(guestSessionId, userId, langId);
     }
 
     @Post('items')
     @ApiOkResponse()
-    addWish(@Req() request: Request, @Body() body: AddWishItemRequestDto, @GetLanguage() lang: string) {
-        return this.wishlistService.addWishItem(request, body, lang);
+    addWish(
+        @Req() request: Request,
+        @Body() body: AddWishItemRequestDto,
+        @GetLanguageId() langId: number,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const { guestSessionId, userId } = this.resolveActor(request, user);
+        return this.wishlistService.addWishItem(
+            guestSessionId,
+            userId,
+            body,
+            langId,
+        );
     }
 
     @Delete('items/:itemKey')
     @ApiOkResponse()
-    deleteWishItem(@Req() request: Request, @Param('itemKey') itemKey: string, @GetLanguage() lang: string) {
+    deleteWishItem(
+        @Req() request: Request,
+        @Param('itemKey') itemKey: string,
+        @GetLanguageId() langId: number,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const { guestSessionId, userId } = this.resolveActor(request, user);
         const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
-        return this.wishlistService.deleteWishItem(request, parsedItemId, lang);
+        return this.wishlistService.deleteWishItem(
+            guestSessionId,
+            userId,
+            parsedItemId,
+            langId,
+        );
     }
 
     @Delete()
     @ApiOkResponse()
-    deleteWish(@Req() request: Request, @GetLanguage() lang: string) {
-        return this.wishlistService.deleteWishlist(request, lang);
+    deleteWish(
+        @Req() request: Request,
+        @GetLanguageId() langId: number,
+        @GetUser() user: JwtPayload | null,
+    ) {
+        const { guestSessionId, userId } = this.resolveActor(request, user);
+        return this.wishlistService.deleteWishlist(guestSessionId, userId, langId);
+    }
+
+    private resolveActor(
+        request: Request,
+        user: JwtPayload | null,
+    ): { guestSessionId: string | null; userId: bigint | null } {
+        const userId = user?.sub ? BigInt(user.sub) : null;
+        const guestSessionId = userId
+            ? null
+            : ((request['guestSessionId'] as string | undefined) ?? null);
+
+        return {
+            guestSessionId,
+            userId,
+        };
     }
 }

@@ -1,16 +1,12 @@
+import { SupplierMessage } from '@/common';
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSupplierRequestDto } from './dto/request/create-supplier.request.dto';
 import { GetSuppliersQueryDto } from './dto/request/get-suppliers.query.dto';
 import { SupplierItemResponseDto } from './dto/response/supplier-item.response.dto';
 import { SupplierListResponseDto } from './dto/response/supplier-list.response.dto';
+import { toSupplierItem } from './mapper';
 import { SupplierRepository } from './supplier.repository';
-
-type SupplierRow = Awaited<
-  ReturnType<SupplierRepository['findSuppliers']>
->[number];
-type SupplierDetailRow = Awaited<
-  ReturnType<SupplierRepository['findSupplierById']>
->;
 
 @Injectable()
 export class SupplierService {
@@ -27,20 +23,22 @@ export class SupplierService {
       this.supplierRepository.findSuppliers(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => toSupplierItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toSupplierItem(row)),
-    };
+    );
   }
 
   async createSupplier(
     body: CreateSupplierRequestDto,
   ): Promise<SupplierItemResponseDto> {
-    const created = await this.supplierRepository.createSupplier(body.name);
-    return this.toSupplierItem(created);
+    const created = await this.supplierRepository.createSupplier(
+      body.name,
+      body.code,
+    );
+    return toSupplierItem(created);
   }
 
   async toggleSupplierActive(
@@ -49,7 +47,7 @@ export class SupplierService {
     const supplier = await this.supplierRepository.findSupplierById(supplierId);
 
     if (!supplier) {
-      throw new NotFoundException('Supplier not found');
+      throw new NotFoundException(SupplierMessage.SUPPLIER_NOT_FOUND);
     }
 
     const updated = await this.supplierRepository.updateSupplierActive(
@@ -57,18 +55,6 @@ export class SupplierService {
       !supplier.isActive,
     );
 
-    return this.toSupplierItem(updated);
-  }
-
-  private toSupplierItem(
-    row: SupplierRow | NonNullable<SupplierDetailRow>,
-  ): SupplierItemResponseDto {
-    return {
-      id: row.id.toString(),
-      name: row.name,
-      isActive: row.isActive,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return toSupplierItem(updated);
   }
 }

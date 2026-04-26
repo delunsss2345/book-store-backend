@@ -1,10 +1,18 @@
 import { PrismaService } from '@/database';
+import { UpdateAdminBookVariantRequestDto } from '@/modules/admin/dto/request';
 import {
   CreateBookSpecDto,
   CreateBookVariantDto,
 } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import {
+  adminBookDetailSelect,
+  adminBookSelect,
+  adminBookSnapshotSelect,
+  adminBookTranslationCreateSelect,
+  buildAdminBookListSelect,
+} from './select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
@@ -15,11 +23,16 @@ export type CreateAdminBookParams = {
   weightGrams?: number;
   coverImageUrl?: string;
   actorUserId: bigint;
+  supplerId: bigint;
 };
 
-export type UpdateAdminBookParams = {
-  publisherId?: bigint;
-  publicationYear?: number;
+export type UpdateAdminBookTranslationParams = {
+  languageId: number;
+  title?: string;
+  description?: string;
+};
+
+export type UpdateAdminBookMain = {
   pageCount?: number;
   weightGrams?: number;
   coverImageUrl?: string;
@@ -39,46 +52,9 @@ export type CreateBookAuthorLinkInput = {
   isPrimary?: boolean;
 };
 
-const adminBookSelect = {
-  id: true,
-  publisherId: true,
-  publicationYear: true,
-  pageCount: true,
-  weightGrams: true,
-  coverImageUrl: true,
-  isActive: true,
-  deletedAt: true,
-  createdAt: true,
-  updatedAt: true,
-  translations: {
-    select: {
-      id: true,
-      languageId: true,
-      title: true,
-      description: true,
-      slug: true,
-    },
-    orderBy: [{ languageId: 'asc' }],
-  },
-  variants: {
-    select: {
-      id: true,
-      format: true,
-      edition: true,
-      isbn: true,
-      costPrice: true,
-      price: true,
-      currencyCode: true,
-      stock: true,
-      isActive: true,
-    },
-    orderBy: [{ id: 'asc' }],
-  },
-} satisfies Prisma.BookSelect;
-
 @Injectable()
 export class AdminBookRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   findPublisherById(publisherId: bigint) {
     return this.prisma.publisher.findUnique({
@@ -220,16 +196,24 @@ export class AdminBookRepository {
 
   findBookById(bookId: bigint, tx?: Prisma.TransactionClient) {
     const db: DbClient = tx ?? this.prisma;
-
     return db.book.findFirst({
       where: { id: bookId },
       select: adminBookSelect,
     });
   }
 
+  findBookDetailById(bookId: bigint, tx?: Prisma.TransactionClient) {
+    const db: DbClient = tx ?? this.prisma;
+
+    return db.book.findFirst({
+      where: { id: bookId },
+      select: adminBookDetailSelect,
+    });
+  }
+
   updateBook(
     bookId: bigint,
-    params: UpdateAdminBookParams,
+    params: UpdateAdminBookMain,
     actorUserId: bigint,
     tx?: Prisma.TransactionClient,
   ) {
@@ -238,35 +222,52 @@ export class AdminBookRepository {
       updatedBy: actorUserId,
     };
 
-    if (params.publisherId !== undefined) {
-      data.publisherId = params.publisherId;
-    }
-
-    if (params.publicationYear !== undefined) {
-      data.publicationYear = params.publicationYear;
-    }
-
-    if (params.pageCount !== undefined) {
-      data.pageCount = params.pageCount;
-    }
-
-    if (params.weightGrams !== undefined) {
-      data.weightGrams = params.weightGrams;
-    }
-
-    if (params.coverImageUrl !== undefined) {
-      data.coverImageUrl = params.coverImageUrl;
-    }
-
-    if (params.isActive !== undefined) {
-      data.isActive = params.isActive;
-    }
-
     return db.book.update({
       where: { id: bookId },
-      data,
+      data: { ...params, ...data },
       select: adminBookSelect,
     });
+  }
+
+  updateTranslationBook(
+    bookId: bigint,
+    params: UpdateAdminBookTranslationParams,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: DbClient = tx ?? this.prisma;
+
+    return db.bookTranslation.update({
+      where: {
+        bookId_languageId: {
+          bookId,
+          languageId: params.languageId,
+        },
+      },
+      data: {
+        title: params.title,
+        description: params.description,
+      },
+    });
+  }
+
+  updateVariantById(
+    bookId: bigint,
+    variants: UpdateAdminBookVariantRequestDto[],
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: DbClient = tx ?? this.prisma;
+    return Promise.all(
+      variants.map((variant) => {
+        console.log('variant before update =', variant);
+        return db.bookVariant.update({
+          where: { id: variant.id },
+          data: {
+            price: variant.price,
+            isActive: variant.isActive,
+          },
+        });
+      }),
+    );
   }
 
   softDeleteBook(
@@ -295,15 +296,15 @@ export class AdminBookRepository {
       deletedAt: null,
       ...(searchPhrase
         ? {
-          translations: {
-            some: {
-              languageId,
-              title: {
-                contains: searchPhrase,
+            translations: {
+              some: {
+                languageId,
+                title: {
+                  contains: searchPhrase,
+                },
               },
             },
-          },
-        }
+          }
         : {}),
     };
   }
@@ -350,43 +351,7 @@ export class AdminBookRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
-      select: {
-        id: true,
-        publisherId: true,
-        publicationYear: true,
-        pageCount: true,
-        weightGrams: true,
-        coverImageUrl: true,
-        isActive: true,
-        deletedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        translations: {
-          where: { languageId },
-          select: {
-            id: true,
-            languageId: true,
-            title: true,
-            description: true,
-            slug: true,
-          },
-          take: 1,
-        },
-        variants: {
-          select: {
-            id: true,
-            format: true,
-            edition: true,
-            isbn: true,
-            costPrice: true,
-            price: true,
-            currencyCode: true,
-            stock: true,
-            isActive: true,
-          },
-          orderBy: [{ id: 'asc' }],
-        },
-      },
+      select: buildAdminBookListSelect(languageId),
     });
   }
 
@@ -440,13 +405,7 @@ export class AdminBookRepository {
         description: params.description,
         slug: params.slug,
       },
-      select: {
-        id: true,
-        languageId: true,
-        title: true,
-        description: true,
-        slug: true,
-      },
+      select: adminBookTranslationCreateSelect,
     });
   }
 
@@ -459,24 +418,7 @@ export class AdminBookRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
-      select: {
-        id: true,
-        bookVariantId: true,
-        titleSnapshot: true,
-        coverImageUrlSnapshot: true,
-        skuSnapshot: true,
-        priceSnapshot: true,
-        currencyCodeSnapshot: true,
-        formatSnapshot: true,
-        editionSnapshot: true,
-        isbnSnapshot: true,
-        createdAt: true,
-        bookVariant: {
-          select: {
-            bookId: true,
-          },
-        },
-      },
+      select: adminBookSnapshotSelect,
     });
   }
 }

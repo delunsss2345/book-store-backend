@@ -13,13 +13,6 @@ export class AuthorRepository {
         });
     }
 
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
     countAuthors() {
         return this.prisma.author.count();
     }

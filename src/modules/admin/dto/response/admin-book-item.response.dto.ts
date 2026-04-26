@@ -39,3 +39,5 @@ export class AdminBookItemResponseDto {
     @ApiProperty({ type: () => [AdminBookVariantItemResponseDto] })
     variants: AdminBookVariantItemResponseDto[];
 }
+
+

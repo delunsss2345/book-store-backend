@@ -1,9 +1,14 @@
+import { AdminBookMessage } from '@/common';
+import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
+import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import { AuditLogService } from '@/modules/audit-log/audit-log.service';
 import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PublisherService } from '@/modules/publisher/publisher.service';
+import { SupplierRepository } from '@/modules/supplier/supplier.repository';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -19,14 +24,12 @@ import type { Cache } from 'cache-manager';
 import {
   AdminBookListQueryDto,
   AdminBookSnapshotListQueryDto,
-  CreateAdminBookRequestDto,
   CreateAdminBookTranslationRequestDto,
   UpdateAdminBookRequestDto,
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
   AdminBookListResponseDto,
-  AdminBookSnapshotItemResponseDto,
   AdminBookSnapshotListResponseDto,
   AdminBookStatsResponseDto,
   AdminBookTranslationResponseDto,
@@ -35,14 +38,13 @@ import {
   AdminBookRepository,
   CreateBookAuthorLinkInput,
 } from './admin-book.repository';
-
-type BookRow = Awaited<ReturnType<AdminBookRepository['findBookById']>>;
-type BookListRow = Awaited<
-  ReturnType<AdminBookRepository['findBooks']>
->[number];
-type SnapshotRow = Awaited<
-  ReturnType<AdminBookRepository['findBookSnapshots']>
->[number];
+import {
+  toAdminBookItem,
+  toAdminBookListItem,
+  toBookDetail,
+  toMapperUpdateBook,
+  toSnapshotItem,
+} from './mapper';
 
 const ADMIN_STATS_CACHE_KEY = 'admin:stats';
 const ADMIN_STATS_CACHE_TTL = 86_400_000;
@@ -56,76 +58,44 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
+    private readonly supplierRepository: SupplierRepository,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) { }
+  ) {}
 
-  async createBook(
-    body: CreateAdminBookRequestDto,
-    actorUserId: bigint,
-    ip?: string,
-  ): Promise<AdminBookItemResponseDto> {
-    const publisherId = this.parsePublisherId(body.publisherId);
-
-    if (publisherId !== undefined) {
-      const publisher =
-        await this.adminBookRepository.findPublisherById(publisherId);
-      if (!publisher) {
-        throw new NotFoundException('Publisher not found');
-      }
+  async getDetail(bookId: bigint): Promise<AdminBookDetailResponseDto> {
+    const book = await this.adminBookRepository.findBookById(bookId);
+    if (!book || book.deletedAt) {
+      throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
     }
-
-    return this.prisma.$transaction(async (tx) => {
-      const created = await this.adminBookRepository.createBook(
-        {
-          publisherId,
-          publicationYear: body.publicationYear,
-          pageCount: body.pageCount,
-          weightGrams: body.weightGrams,
-          coverImageUrl: body.coverImageUrl,
-          actorUserId,
-        },
-        tx,
-      );
-
-      const response = this.toAdminBookItem(created);
-
-      await this.auditLogService.createAuditLog(
-        {
-          actorUserId,
-          action: 'ADMIN_BOOK_CREATE',
-          entityType: 'BOOK',
-          entityId: response.id,
-          before: null,
-          after: response as unknown as Prisma.InputJsonValue,
-          ip,
-        },
-        tx,
-      );
-
-      return response;
-    });
+    return toBookDetail(book);
   }
-
-  // Tạo sách cùng 1 lúc nhiều phần variant, translation, author
+  // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
     body: CreateAdminBookAllRequestDto,
     actorUserId: bigint,
     ip?: string,
   ) {
+    // Kiem tra publisher
     const normalizedPublisherName = body.publisherName?.trim();
     if (!normalizedPublisherName) {
-      throw new BadRequestException('publisherName is required');
+      throw new BadRequestException(AdminBookMessage.PUBLISHER_NAME_REQUIRED);
     }
 
-    const publisher = await this.publisherService.createPublisher({
-      defaultName: normalizedPublisherName,
-    });
-
+    const [publisher, supplier] = await Promise.all([
+      this.publisherService.createPublisher({
+        defaultName: normalizedPublisherName,
+      }),
+      this.supplierRepository.findSupplierById(body.supplierId),
+    ]);
     const publisherId = this.parsePublisherId(publisher.id);
+
     if (!publisherId) {
-      throw new BadRequestException('Invalid publisher id');
+      throw new BadRequestException(AdminBookMessage.INVALID_PUBLISHER_ID);
     }
 
+    if (!supplier) {
+      throw new BadRequestException(AdminBookMessage.INVALID_SUPPLIER);
+    }
     const normalizedAuthorMap = new Map<
       string,
       { name: string; isPrimary: boolean }
@@ -193,6 +163,7 @@ export class AdminBookService {
           weightGrams: body.weightGrams,
           coverImageUrl: body.coverImageUrl,
           actorUserId,
+          supplerId: body.supplierId,
         },
         tx,
       );
@@ -247,7 +218,7 @@ export class AdminBookService {
         createBook.id,
         tx,
       );
-      return this.toAdminBookItem(newBook!);
+      return toAdminBookItem(newBook!);
     });
   }
 
@@ -262,7 +233,7 @@ export class AdminBookService {
     return this.prisma.$transaction(async (tx) => {
       const book = await this.adminBookRepository.findBookById(bookId, tx);
       if (!book || book.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
       const existed =
@@ -274,7 +245,7 @@ export class AdminBookService {
 
       if (existed) {
         throw new ConflictException(
-          'Book translation already exists in this language',
+          AdminBookMessage.BOOK_TRANSLATION_ALREADY_EXISTS_IN_THIS_LANGUAGE,
         );
       }
 
@@ -322,79 +293,67 @@ export class AdminBookService {
     body: UpdateAdminBookRequestDto,
     actorUserId: bigint,
     ip?: string,
-  ): Promise<AdminBookItemResponseDto> {
-    const hasPayload = [
-      body.publisherId,
-      body.publicationYear,
-      body.pageCount,
-      body.weightGrams,
-      body.coverImageUrl,
-      body.isActive,
-    ].some((item) => item !== undefined);
-
-    if (!hasPayload) {
-      throw new BadRequestException('At least one field is required to update');
-    }
-
-    const publisherId = this.parsePublisherId(body.publisherId);
-
-    if (publisherId !== undefined) {
-      const publisher =
-        await this.adminBookRepository.findPublisherById(publisherId);
-      if (!publisher) {
-        throw new NotFoundException('Publisher not found');
-      }
-    }
-
+  ): Promise<AdminBookItemUpdateResponseDto> {
     return this.prisma.$transaction(async (tx) => {
       const before = await this.adminBookRepository.findBookById(bookId, tx);
       if (!before || before.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
-      let updated: Awaited<ReturnType<AdminBookRepository['updateBook']>>;
-      try {
-        updated = await this.adminBookRepository.updateBook(
+      if (body.translations) {
+        for (const translation of body.translations) {
+          await this.adminBookRepository.updateTranslationBook(
+            bookId,
+            {
+              languageId: translation.languageId,
+              title: translation.title,
+              description: translation.description,
+            },
+            tx,
+          );
+        }
+      }
+      if (body.variants) {
+        for (const variant of body.variants) {
+          if (variant.price < variant.costPrice) {
+            throw new BadRequestException(
+              AdminBookMessage.VARIANT_PRICE_CANNOT_BE_LESS_THAN_COST_PRICE,
+            );
+          }
+        }
+        await this.adminBookRepository.updateVariantById(
           bookId,
-          {
-            publisherId,
-            publicationYear: body.publicationYear,
-            pageCount: body.pageCount,
-            weightGrams: body.weightGrams,
-            coverImageUrl: body.coverImageUrl,
-            isActive: body.isActive,
-          },
-          actorUserId,
+          body.variants,
           tx,
         );
-      } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2025'
-        ) {
-          throw new NotFoundException('Book not found');
-        }
-
-        throw error;
       }
 
-      const beforeMapped = this.toAdminBookItem(before);
-      const afterMapped = this.toAdminBookItem(updated);
+      const updatedBook = await this.adminBookRepository.updateBook(
+        bookId,
+        {
+          pageCount: body.pageCount,
+          weightGrams: body.weightGrams,
+          coverImageUrl: body.coverImageUrl,
+          isActive: body.isActive,
+        },
+        actorUserId,
+        tx,
+      );
 
       await this.auditLogService.createAuditLog(
         {
           actorUserId,
           action: 'ADMIN_BOOK_UPDATE',
           entityType: 'BOOK',
-          entityId: afterMapped.id,
-          before: beforeMapped as unknown as Prisma.InputJsonValue,
-          after: afterMapped as unknown as Prisma.InputJsonValue,
+          entityId: String(updatedBook.id),
+          before,
+          after: updatedBook as unknown as Prisma.InputJsonValue,
           ip,
         },
         tx,
       );
-
-      return afterMapped;
+      console.log(updatedBook);
+      return toMapperUpdateBook(updatedBook);
     });
   }
 
@@ -406,7 +365,7 @@ export class AdminBookService {
     return this.prisma.$transaction(async (tx) => {
       const before = await this.adminBookRepository.findBookById(bookId, tx);
       if (!before || before.deletedAt) {
-        throw new NotFoundException('Book not found');
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
       }
 
       let updated: Awaited<ReturnType<AdminBookRepository['softDeleteBook']>>;
@@ -421,14 +380,14 @@ export class AdminBookService {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2025'
         ) {
-          throw new NotFoundException('Book not found');
+          throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
         }
 
         throw error;
       }
 
-      const beforeMapped = this.toAdminBookItem(before);
-      const afterMapped = this.toAdminBookItem(updated);
+      const beforeMapped = toAdminBookItem(before);
+      const afterMapped = toAdminBookItem(updated);
 
       await this.auditLogService.createAuditLog(
         {
@@ -449,37 +408,29 @@ export class AdminBookService {
 
   async getBooks(
     query: AdminBookListQueryDto,
-    lang: string,
+    langId: number,
   ): Promise<AdminBookListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const searchPhrase = query.searchPhrase?.trim() || undefined;
-    const language = await this.languageService.resolveLanguage(lang);
 
     const [total, rows] = await Promise.all([
-      this.adminBookRepository.countBooks(language.id, searchPhrase),
-      this.adminBookRepository.findBooks(
-        page,
-        limit,
-        language.id,
-        searchPhrase,
-      ),
+      this.adminBookRepository.countBooks(langId, searchPhrase),
+      this.adminBookRepository.findBooks(page, limit, langId, searchPhrase),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => toAdminBookListItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toAdminBookListItem(row)),
-    };
+    );
   }
 
   async getStats(): Promise<AdminBookStatsResponseDto> {
-    const cached =
-      await this.cacheManager.get<AdminBookStatsResponseDto>(
-        ADMIN_STATS_CACHE_KEY,
-      );
+    const cached = await this.cacheManager.get<AdminBookStatsResponseDto>(
+      ADMIN_STATS_CACHE_KEY,
+    );
     if (cached) {
       return cached;
     }
@@ -519,13 +470,12 @@ export class AdminBookService {
       this.adminBookRepository.findBookSnapshots(page, limit),
     ]);
 
-    return {
+    return buildPaginatedResult(
+      rows.map((row) => toSnapshotItem(row)),
+      total,
       page,
       limit,
-      total,
-      totalPages: total ? Math.ceil(total / limit) : 0,
-      items: rows.map((row) => this.toSnapshotItem(row)),
-    };
+    );
   }
 
   private parsePublisherId(value?: string): bigint | undefined {
@@ -559,106 +509,5 @@ export class AdminBookService {
       candidate = `${baseSlug}-${index}`;
       index += 1;
     }
-  }
-
-  private toAdminBookItem(row: NonNullable<BookRow>): AdminBookItemResponseDto {
-    const translation = row.translations[0] ?? null;
-
-    return {
-      id: row.id.toString(),
-      publisherId: row.publisherId ? row.publisherId.toString() : null,
-      publicationYear: row.publicationYear ?? null,
-      pageCount: row.pageCount ?? null,
-      weightGrams: row.weightGrams ?? null,
-      coverImageUrl: row.coverImageUrl ?? null,
-      isActive: row.isActive,
-      deletedAt: row.deletedAt ?? null,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      translation: translation
-        ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
-        : null,
-      variants: row.variants.map((variant) => ({
-        id: variant.id.toString(),
-        format: String(variant.format),
-        edition: variant.edition ?? null,
-        isbn: variant.isbn ?? null,
-        costPrice: this.toDecimalText(variant.costPrice) as string,
-        price: this.toDecimalText(variant.price) as string,
-        currencyCode: variant.currencyCode ?? null,
-        stock: variant.stock ?? null,
-        isActive: variant.isActive,
-      })),
-    };
-  }
-
-  private toAdminBookListItem(row: BookListRow): AdminBookItemResponseDto {
-    const translation = row.translations[0] ?? null;
-
-    return {
-      id: row.id.toString(),
-      publisherId: row.publisherId ? row.publisherId.toString() : null,
-      publicationYear: row.publicationYear ?? null,
-      pageCount: row.pageCount ?? null,
-      weightGrams: row.weightGrams ?? null,
-      coverImageUrl: row.coverImageUrl ?? null,
-      isActive: row.isActive,
-      deletedAt: row.deletedAt ?? null,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      translation: translation
-        ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
-        : null,
-      variants: row.variants.map((variant) => ({
-        id: variant.id.toString(),
-        format: String(variant.format),
-        edition: variant.edition ?? null,
-        isbn: variant.isbn ?? null,
-        costPrice: this.toDecimalText(variant.costPrice) as string,
-        price: this.toDecimalText(variant.price) as string,
-        currencyCode: variant.currencyCode ?? null,
-        stock: variant.stock ?? null,
-        isActive: variant.isActive,
-      })),
-    };
-  }
-
-  private toSnapshotItem(row: SnapshotRow): AdminBookSnapshotItemResponseDto {
-    return {
-      id: row.id.toString(),
-      bookVariantId: row.bookVariantId.toString(),
-      bookId: row.bookVariant.bookId.toString(),
-      titleSnapshot: row.titleSnapshot ?? null,
-      coverImageUrlSnapshot: row.coverImageUrlSnapshot ?? null,
-      skuSnapshot: row.skuSnapshot,
-      priceSnapshot: this.toDecimalText(row.priceSnapshot) as string,
-      currencyCodeSnapshot: row.currencyCodeSnapshot ?? null,
-      formatSnapshot: String(row.formatSnapshot),
-      editionSnapshot: row.editionSnapshot ?? null,
-      isbnSnapshot: row.isbnSnapshot ?? null,
-      createdAt: row.createdAt,
-    };
-  }
-
-  private toDecimalText(
-    value: Prisma.Decimal | number | null | undefined,
-  ): string | null {
-    if (value === null || value === undefined) {
-      return null;
-    }
-
-    return Number(value).toFixed(2);
   }
 }

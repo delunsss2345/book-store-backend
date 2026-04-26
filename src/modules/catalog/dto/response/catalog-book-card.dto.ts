@@ -44,6 +44,9 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: 'PAPERBACK' })
     format?: string | null;
 
+    @ApiPropertyOptional({ type: () => [CatalogCategoryDto] })
+    categories?: CatalogCategoryDto[];
+
     @ApiProperty()
     badges?: Badge[]
 
@@ -108,5 +111,5 @@ export class CatalogBookVariantDto {
     currencyCode?: string | null;
 
     @ApiPropertyOptional({ example: 80 })
-    stock?: number | null;
+    available?: number | null;
 }

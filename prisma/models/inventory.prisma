@@ -1,0 +1,104 @@
+model Supplier {
+  id        BigInt   @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  stockImports  StockImport[]
+  bookVariants  BookVariant[]
+  purchaseOrder PurchaseOrder[]
+
+  @@map("supplier")
+}
+
+model StockImport {
+  id              String   @id @default(cuid())
+  purchaseOrderId String?  @unique @map("purchase_order_id")
+  supplierId      BigInt   @map("supplier_id")
+  createdBy       BigInt   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  note            String?
+  totalAmount     Decimal  @db.Decimal(18, 2)
+  taxAmount       Decimal  @db.Decimal(18, 2)
+
+  purchaseOrder PurchaseOrder?    @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  supplier      Supplier          @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  creator       User              @relation("StockImportCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  items         StockImportItem[]
+
+  @@map("stock_import")
+}
+
+model StockImportItem {
+  id            String  @id @default(cuid())
+  stockImportId String  @map("stock_import_id")
+  bookVariantId BigInt  @map("variant_id")
+  quantity      Int
+  importPrice   Decimal @map("import_price") @db.Decimal(12, 2)
+
+  stockImport StockImport @relation(fields: [stockImportId], references: [id], onDelete: Cascade)
+  variant     BookVariant @relation("BookVariantToStockImportItem", fields: [bookVariantId], references: [id])
+
+  @@map("stock_import_item")
+}
+
+model PurchaseOrder {
+  id           String              @id @default(cuid())
+  code         String              @unique
+  supplierId   BigInt
+  createdById  BigInt
+  approvedById BigInt?
+  status       PurchaseOrderStatus @default(PENDING)
+  note         String?
+  totalAmount  Decimal             @db.Decimal(18, 2)
+  taxAmount    Decimal             @db.Decimal(18, 2)
+  approvedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  items       PurchaseOrderItem[]
+  stockImport StockImport?
+  supplier    Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  creator     User                @relation(name: "PurchaseOrderCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  bookVariantId   BigInt
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(18, 2)
+  totalPrice      Decimal  @db.Decimal(18, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  bookVariant   BookVariant   @relation(fields: [bookVariantId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// Log
+model InventoryMovement {
+  id            BigInt          @id @default(autoincrement())
+  bookVariantId BigInt          @map("book_variant_id")
+  changeQty     Int             @map("change_qty")
+  reason        InventoryReason
+  refType       String?         @map("ref_type") @db.VarChar(50)
+  refId         BigInt?         @map("ref_id")
+  note          String?         @db.Text
+  createdBy     BigInt?         @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  variant BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
+  creator User?       @relation("InventoryMovementCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([bookVariantId, createdAt])
+  @@index([reason, createdAt])
+  @@map("inventory_movements")
+}

@@ -3,7 +3,9 @@ import { CartItemRepository } from './cart-item.repository';
 
 @Injectable()
 export class CartItemService {
-    constructor(private readonly cartItemRepository: CartItemRepository) { }
+    constructor(private readonly cartItemRepository: CartItemRepository
+
+    ) { }
 
     findByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint) {
         return this.cartItemRepository.findByCartIdAndBookVariantId(cartId, bookVariantId);
@@ -21,7 +23,15 @@ export class CartItemService {
         return this.cartItemRepository.updateQuantityById(id, quantity);
     }
 
-    createByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint, quantity: number) {
+    async createByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint, quantity: number) {
+        const bookVariant = await this.cartItemRepository.getStockByBookVariantId(bookVariantId);
+        if (bookVariant === null) {
+            throw new Error('Book variant not found');
+        }
+        if (bookVariant.available === null || bookVariant.available < quantity) {
+            throw new Error('Not enough stock');
+        }
+
         return this.cartItemRepository.createByCartIdAndBookVariantId(cartId, bookVariantId, quantity);
     }
 

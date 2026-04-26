@@ -79,17 +79,95 @@ export class OrderItemRepository {
         return rows.map(r => r.bookVariantSnapshotId);
     }
 
-     createOrderItem(orderId: bigint, bookVariantSnapshotId: bigint, quantity: number, price: number) {
+    createOrderItem(orderId: bigint, bookVariantSnapshotId: bigint, quantity: number, price: number) {
         return this.prisma.orderItem.create({
             data: {
                 orderId,
                 bookVariantSnapshotId,
-                quantity ,
-                lineTotal : quantity * price,
-                unitPrice : price,
+                quantity,
+                lineTotal: quantity * price,
+                unitPrice: price,
             }
         })
     }
-
+    /// Chưa fix bổ sug userId vào tìm chưa ra
+    findOrderItemsByOrderId(orderId: bigint, userId: bigint, langId: number) {
+        return this.prisma.orderItem.findMany({
+            where: {
+                orderId,
+                order: {
+                    userId,
+                }
+            },
+            select: {
+                quantity: true,
+                bookVariantSnapshotId: true,
+                bookVariantSnapshot: {
+                    select: {
+                        priceSnapshot: true,
+                        bookVariantId: true,
+                        bookVariant: {
+                            select: {
+                                book: {
+                                    select: {
+                                        coverImageUrl: true,
+                                        id: true,
+                                        translations: {
+                                            where: { languageId: langId },
+                                            select: {
+                                                title: true,
+                                                slug: true
+                                            },
+                                            take: 1
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+    findOrderDetailBySessionGuestId(orderId: bigint, sessionGuestId: string, langId: number) {
+        return this.prisma.orderItem.findMany({
+            where: {
+                orderId,
+                order: {
+                    guestSessionId: sessionGuestId
+                }
+            },
+            select: {
+                quantity: true,
+                bookVariantSnapshotId: true,
+                bookVariantSnapshot: {
+                    select: {
+                        priceSnapshot: true,
+                        bookVariantId: true,
+                        bookVariant: {
+                            select: {
+                                book: {
+                                    select: {
+                                        coverImageUrl: true,
+                                        id: true,
+                                        translations: {
+                                            where: { languageId: langId },
+                                            select: {
+                                                title: true,
+                                                slug: true
+                                            },
+                                            take: 1
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
 }
 

@@ -18,27 +18,19 @@ export type BookFilterParams = {
 
 export type BookListFilterParams = {
     languageId: number;
+    categoryId?: bigint;
+};
+
+type FindBooksForListParams = {
+    languageId: number;
+    page: number;
+    limit: number;
+    categoryId?: bigint;
 };
 
 @Injectable()
 export class CatalogRepository {
     constructor(private readonly prisma: PrismaService) { }
-
-
-    findLanguageByCode(code: string) {
-        return this.prisma.language.findFirst({
-            where: { code, isActive: true },
-            select: { id: true, code: true },
-        });
-    }
-
-    findDefaultLanguage() {
-        return this.prisma.language.findFirst({
-            where: { isActive: true },
-            orderBy: { id: 'asc' },
-            select: { id: true, code: true },
-        });
-    }
 
     findActiveCategoriesByLanguage(languageId: number) {
         return this.prisma.category.findMany({
@@ -66,49 +58,55 @@ export class CatalogRepository {
         });
     }
 
+    findCategoryBySlug(slug: string, languageId: number) {
+        return this.prisma.category.findFirst({
+            where: {
+                isActive: true,
+                deletedAt: null,
+                categoryTranslation: {
+                    some: {
+                        languageId,
+                        slug,
+                    },
+                },
+            },
+            select: {
+                id: true,
+            },
+        });
+    }
+
     countBooksForList(languageId: number) {
         return this.prisma.book.count({
             where: this.buildBookListWhere({ languageId }),
         });
     }
 
+    countBooksForListByCategory(categoryId: bigint, languageId: number) {
+        return this.prisma.book.count({
+            where: this.buildBookListWhere({ languageId, categoryId }),
+        });
+    }
+
     findBooksForList(languageId: number, page: number, limit: number) {
-        return this.prisma.book.findMany({
-            where: this.buildBookListWhere({ languageId }),
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            skip: (page - 1) * limit,
-            take: limit,
-            select: {
-                id: true,
-                coverImageUrl: true,
-                createdAt: true,
-                translations: {
-                    where: { languageId },
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                    },
-                    take: 1,
-                },
-                bookBadge: {
-                    select: {
-                        code: true
-                    }
-                },
-                variants: {
-                    where: { isActive: true, stock: { gt: 0 } },
-                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
-                    take: 1,
-                    select: {
-                        id: true,
-                        price: true,
-                        currencyCode: true,
-                        stock: true,
-                        format: true
-                    },
-                },
-            },
+        return this.findBooksForListByFilter({
+            languageId,
+            page,
+            limit,
+        });
+    }
+
+    findBooksForListByCategory(
+        categoryId: bigint,
+        languageId: number,
+        page: number,
+        limit: number,
+    ) {
+        return this.findBooksForListByFilter({
+            languageId,
+            categoryId,
+            page,
+            limit,
         });
     }
 
@@ -515,7 +513,7 @@ export class CatalogRepository {
                             isbn: true,
                             price: true,
                             currencyCode: true,
-                            stock: true,
+                            available: true,
                         },
                     },
                 },
@@ -602,7 +600,7 @@ export class CatalogRepository {
                         isbn: true,
                         price: true,
                         currencyCode: true,
-                        stock: true,
+                        available: true,
                     },
                 },
             },
@@ -715,6 +713,67 @@ export class CatalogRepository {
         }));
     }
 
+    private findBooksForListByFilter(params: FindBooksForListParams) {
+        const { languageId, categoryId, page, limit } = params;
+
+        return this.prisma.book.findMany({
+            where: this.buildBookListWhere({ languageId, categoryId }),
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            skip: (page - 1) * limit,
+            take: limit,
+            select: {
+                id: true,
+                coverImageUrl: true,
+                createdAt: true,
+                translations: {
+                    where: { languageId },
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true,
+                    },
+                    take: 1,
+                },
+                bookBadge: {
+                    select: {
+                        code: true,
+                    },
+                },
+                categories: {
+                    select: {
+                        category: {
+                            select: {
+                                id: true,
+                                parentId: true,
+                                sortOrder: true,
+                                categoryTranslation: {
+                                    where: { languageId },
+                                    select: {
+                                        name: true,
+                                        slug: true,
+                                    },
+                                    take: 1,
+                                },
+                            },
+                        },
+                    },
+                },
+                variants: {
+                    where: { isActive: true },
+                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
+                    take: 1,
+                    select: {
+                        id: true,
+                        price: true,
+                        currencyCode: true,
+                        stock: true,
+                        format: true,
+                    },
+                },
+            },
+        });
+    }
+
 
     private buildBookWhere(filter: BookFilterParams): Prisma.BookWhereInput {
         return {
@@ -759,6 +818,15 @@ export class CatalogRepository {
                     languageId: filter.languageId,
                 },
             },
+            ...(filter.categoryId
+                ? {
+                    categories: {
+                        some: {
+                            categoryId: filter.categoryId,
+                        },
+                    },
+                }
+                : {}),
         };
     }
 }

@@ -1,3 +1,4 @@
+import { ResponsePaginationDto } from '@/common/pagination/response/response-pagination.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import { CatalogBookCardDto } from './catalog-book-card.dto';
 
@@ -25,19 +26,7 @@ export class CatalogRecommendRequestDto {
     generatedAt: Date;
 }
 
-export class CatalogBookListResponseDto {
-    @ApiProperty({ example: 1 })
-    page: number;
-
-    @ApiProperty({ example: 20 })
-    limit: number;
-
-    @ApiProperty({ example: 120 })
-    total: number;
-
-    @ApiProperty({ example: 6 })
-    totalPages: number;
-
+export class CatalogBookListResponseDto extends ResponsePaginationDto<CatalogBookCardDto> {
     @ApiProperty({ type: () => [CatalogBookCardDto] })
-    items: CatalogBookCardDto[];
+    declare items: CatalogBookCardDto[];
 }

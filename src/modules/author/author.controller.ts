@@ -1,5 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
@@ -29,8 +29,8 @@ export class AuthorController {
     @Public()
     @Get()
     @ApiOkResponse({ type: AuthorListResponseDto })
-    getAuthors(@Query() query: GetAuthorsQueryDto, @GetLanguage() lang: string) {
-        return this.authorService.getAuthors(query, lang);
+    getAuthors(@Query() query: GetAuthorsQueryDto, @GetLanguageId() langId: number) {
+        return this.authorService.getAuthors(query, langId);
     }
 
     @Public()
@@ -39,12 +39,12 @@ export class AuthorController {
     getAuthorBooks(
         @Param('authorId') authorId: string,
         @Query() query: GetAuthorBooksQueryDto,
-        @GetLanguage() lang: string,
+        @GetLanguageId() langId: number,
     ) {
         return this.authorService.getAuthorBooks(
             parseBigIntRequired(authorId, 'authorId'),
             query,
-            lang,
+            langId,
         );
     }
 }

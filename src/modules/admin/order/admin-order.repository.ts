@@ -1,85 +1,90 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
+import { OrderStatus } from '@prisma/client';
+import {
+  guestOrderListSelect,
+  orderDetailSelect,
+  orderStatusCheckSelect,
+  userOrderListSelect,
+} from './select';
 
 @Injectable()
 export class AdminOrderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  countOrders() {
-    return this.prisma.order.count();
-  }
-
-  findOrders(page: number, limit: number) {
-    return this.prisma.order.findMany({
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      skip: (page - 1) * limit,
-      take: limit,
-      select: {
-        id: true,
-        orderCode: true,
-        userId: true,
-        guestSessionId: true,
-        guestEmail: true,
-        status: true,
-        paymentStatus: true,
-        subtotal: true,
-        discountAmount: true,
-        shippingFee: true,
-        totalAmount: true,
-        currencyCode: true,
-        placedAt: true,
-        createdAt: true,
-        expiredAt: true,
-        updatedAt: true,
+  countGuestOrders() {
+    return this.prisma.order.count({
+      where: {
+        userId: null,
       },
     });
   }
 
+  countUserOrders() {
+    return this.prisma.order.count({
+      where: {
+        userId: {
+          not: null,
+        },
+      },
+    });
+  }
+
+  findGuestOrders(page: number, limit: number) {
+    return this.prisma.order.findMany({
+      where: {
+        userId: null,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+      select: guestOrderListSelect,
+    });
+  }
+
+  findUserOrders(page: number, limit: number) {
+    return this.prisma.order.findMany({
+      where: {
+        userId: {
+          not: null,
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+      select: userOrderListSelect,
+    });
+  }
+
   findOrderDetailById(orderId: bigint) {
-    return this.prisma.order.findFirst({
+    return this.prisma.order.findUnique({
       where: {
         id: orderId,
       },
+      select: orderDetailSelect,
+    });
+  }
+
+  findOrderStatusById(orderId: bigint) {
+    return this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: orderStatusCheckSelect,
+    });
+  }
+
+  updateOrderStatus(orderId: bigint, status: OrderStatus, note: string | null) {
+    return this.prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status,
+        note,
+      },
       select: {
         id: true,
-        orderCode: true,
-        userId: true,
-        guestSessionId: true,
-        guestEmail: true,
-        status: true,
-        paymentStatus: true,
-        subtotal: true,
-        discountAmount: true,
-        shippingFee: true,
-        totalAmount: true,
-        currencyCode: true,
-        placedAt: true,
-        createdAt: true,
-        expiredAt: true,
-        updatedAt: true,
-        items: {
-          orderBy: [{ id: 'asc' }],
-          select: {
-            id: true,
-            bookVariantSnapshotId: true,
-            quantity: true,
-            unitPrice: true,
-            lineTotal: true,
-            createdAt: true,
-            bookVariantSnapshot: {
-              select: {
-                titleSnapshot: true,
-                coverImageUrlSnapshot: true,
-                skuSnapshot: true,
-                priceSnapshot: true,
-                currencyCodeSnapshot: true,
-                formatSnapshot: true,
-                editionSnapshot: true,
-                isbnSnapshot: true,
-              },
-            },
-          },
-        },
       },
     });
   }

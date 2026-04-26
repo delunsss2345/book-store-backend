@@ -1,5 +1,6 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { PermissionsGuard } from '@/common/security/guard/permission.guard';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
   Body,
@@ -9,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CreateSupplierRequestDto } from './dto/request/create-supplier.request.dto';
@@ -19,8 +21,9 @@ import { SupplierService } from './supplier.service';
 
 @ApiTags('supplier')
 @Controller('suppliers')
+@UseGuards(PermissionsGuard)
 export class SupplierController {
-  constructor(private readonly supplierService: SupplierService) {}
+  constructor(private readonly supplierService: SupplierService) { }
 
   @Get()
   @RequirePermissions(PermissionCode.SUPPLIER_READ)

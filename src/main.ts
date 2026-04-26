@@ -1,4 +1,4 @@
-import { TransformInterceptor } from '@/common';
+import { LoggingInterceptor, TransformInterceptor } from '@/common';
 import { PrismaExceptionFilter } from '@/common/filters/prisma-exception.filter';
 import { HttpExceptionFilter } from '@common/filters';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -16,6 +16,7 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,

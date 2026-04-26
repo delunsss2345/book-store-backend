@@ -1,82 +1,89 @@
+import { GeminiMessage } from '@/common';
 import { QUICK_BOOK_FILL_SCHEMA } from '@/common/constants/ai-schema.constant';
 import { GoogleGenAI } from '@google/genai';
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 
 type DraftInput = {
-    title: string;
-    format: string;
-    userHint: string;
-    targetWords?: number;
+  title: string;
+  format: string;
+  userHint: string;
+  targetWords?: number;
 };
 
 const DRAFT_SCHEMA = {
-    type: 'object',
-    properties: {
-        draftText: { type: 'string' },
-        wordCount: { type: 'integer' },
-    },
-    required: ['draftText', 'wordCount'],
+  type: 'object',
+  properties: {
+    draftText: { type: 'string' },
+    wordCount: { type: 'integer' },
+  },
+  required: ['draftText', 'wordCount'],
 };
 
 @Injectable()
 export class GeminiService {
-    private readonly client: GoogleGenAI;
-    private readonly model: string;
+  private readonly client: GoogleGenAI;
+  private readonly model: string;
 
-    constructor() {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
+  constructor() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error(GeminiMessage.MISSING_GEMINI_API_KEY);
 
-        this.client = new GoogleGenAI({ apiKey });
-        this.model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+    this.client = new GoogleGenAI({ apiKey });
+    this.model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+  }
+
+  async generateReviewDraft(input: DraftInput) {
+    const targetWords = input.targetWords ?? 100;
+
+    const prompt = [
+      `Viet review tieng Viet, giong tieu cuc nhung lich su, khoang ${targetWords} chu.`,
+      `Khong markdown, khong emoji, khong cong kich ca nhan.`,
+      `Sach: ${input.title}. Dinh dang: ${input.format}.`,
+      `Y nguoi dung: "${input.userHint}".`,
+    ].join('\n');
+
+    try {
+      const res = await this.client.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseJsonSchema: DRAFT_SCHEMA,
+          temperature: 0.6,
+          maxOutputTokens: 320,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      });
+
+      const parsed = JSON.parse(res.text || '{}');
+      if (!parsed?.draftText) throw new Error(GeminiMessage.INVALID_OUTPUT);
+
+      return {
+        draftText: String(parsed.draftText).trim(),
+        wordCount: Number(parsed.wordCount ?? 0),
+        model: this.model,
+      };
+    } catch (error) {
+      Logger.log(error);
+      throw new InternalServerErrorException(
+        GeminiMessage.GENERATE_DRAFT_FAILED,
+      );
     }
+  }
 
-    async generateReviewDraft(input: DraftInput) {
-        const targetWords = input.targetWords ?? 100;
+  async generateBookData(googleResponse: any, lang: string) {
+    // Google Books trả về mảng items, ta lấy item đầu tiên
+    const book = googleResponse.items?.[0];
+    if (!book) return {};
 
-        const prompt = [
-            `Viet review tieng Viet, giong tieu cuc nhung lich su, khoang ${targetWords} chu.`,
-            `Khong markdown, khong emoji, khong cong kich ca nhan.`,
-            `Sach: ${input.title}. Dinh dang: ${input.format}.`,
-            `Y nguoi dung: "${input.userHint}".`,
-        ].join('\n');
+    const info = book.volumeInfo;
+    const searchInfo = book.searchInfo;
 
-        try {
-            const res = await this.client.models.generateContent({
-                model: this.model,
-                contents: prompt,
-                config: {
-                    responseMimeType: 'application/json',
-                    responseJsonSchema: DRAFT_SCHEMA,
-                    temperature: 0.6,
-                    maxOutputTokens: 320,
-                    thinkingConfig: { thinkingBudget: 0 },
-                },
-            });
-
-            const parsed = JSON.parse(res.text || '{}');
-            if (!parsed?.draftText) throw new Error('Invalid output');
-
-            return {
-                draftText: String(parsed.draftText).trim(),
-                wordCount: Number(parsed.wordCount ?? 0),
-                model: this.model,
-            };
-        } catch (error) {
-            Logger.log(error)
-            throw new InternalServerErrorException('Gemini generate draft failed');
-        }
-    }
-
-    async generateBookData(googleResponse: any, lang: string) {
-        // Google Books trả về mảng items, ta lấy item đầu tiên
-        const book = googleResponse.items?.[0];
-        if (!book) return {};
-
-        const info = book.volumeInfo;
-        const searchInfo = book.searchInfo;
-
-        const prompt = `
+    const prompt = `
         Dữ liệu nguồn (Google Books API):
         ${JSON.stringify(book)}
 
@@ -108,51 +115,57 @@ export class GeminiService {
         Chỉ trả JSON.
         `;
 
-        const res = await this.client.models.generateContent({
-            model: this.model,
-            contents: [{ role: "user", parts: [{ text: prompt + "\nCHỈ TRẢ VỀ JSON, KHÔNG THÊM BẤT KỲ TEXT NÀO." }] }],
-            config: {
-                responseMimeType: "application/json",
-                responseJsonSchema: QUICK_BOOK_FILL_SCHEMA,
-                temperature: 0.2, // Giữ thấp để dữ liệu chính xác
-                maxOutputTokens: 500, // Tăng nhẹ để description không bị cắt ngang
-                thinkingConfig: { thinkingBudget: 0 },
-            },
-        });
+    const res = await this.client.models.generateContent({
+      model: this.model,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt + '\nCHỈ TRẢ VỀ JSON, KHÔNG THÊM BẤT KỲ TEXT NÀO.' },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: QUICK_BOOK_FILL_SCHEMA,
+        temperature: 0.2, // Giữ thấp để dữ liệu chính xác
+        maxOutputTokens: 500, // Tăng nhẹ để description không bị cắt ngang
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
 
-        const text = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
-        return this.safeJsonParse(text);
+    const text = res.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+    return this.safeJsonParse(text);
+  }
+  // Chuyển đổi 1 mảng text thành vector
+  async getEmbedding(texts: string[]) {
+    try {
+      const res = await this.client.models.embedContent({
+        model: 'gemini-embedding-001',
+        contents: texts,
+        config: {
+          outputDimensionality: 768,
+        },
+      });
+      return res.embeddings!.map((e) => e.values); // gen ra chuỗi vector có liên quan với nhau
+    } catch (error) {
+      Logger.error(error);
+      throw new InternalServerErrorException(GeminiMessage.EMBEDDING_FAILED);
     }
-    // Chuyển đổi 1 mảng text thành vector 
-    async getEmbedding(texts: string[]) {
-        try {
-            const res = await this.client.models.embedContent({
-                model: 'gemini-embedding-001',
-                contents: texts,
-                config: {
-                    outputDimensionality: 768,
-                },
-            });
-            return res.embeddings!.map(e => e.values); // gen ra chuỗi vector có liên quan với nhau
-        } catch (error) {
-            Logger.error(error);
-            throw new InternalServerErrorException('Gemini embedding failed');
-        }
+  }
+  // User chỉ thường query 1 lần nên có thể dùng helper
+  async embedText(text: string) {
+    const [vec] = await this.getEmbedding([text]);
+    return vec;
+  }
 
-    }
-    // User chỉ thường query 1 lần nên có thể dùng helper 
-    async embedText(text: string) {
-        const [vec] = await this.getEmbedding([text]);
-        return vec;
+  safeJsonParse(text: string) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(text.slice(start, end + 1));
     }
 
-    safeJsonParse(text: string) {
-        const start = text.indexOf("{");
-        const end = text.lastIndexOf("}");
-        if (start !== -1 && end !== -1 && end > start) {
-            return JSON.parse(text.slice(start, end + 1));
-        }
-
-        return JSON.parse(text);
-    }
+    return JSON.parse(text);
+  }
 }

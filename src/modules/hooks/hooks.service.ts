@@ -1,203 +1,426 @@
+import { HooksMessage } from '@/common';
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
+import { PrismaService } from '@/database';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { OrderRepository } from '@/modules/order/order.repository';
+import { PaymentIntentService } from '@/modules/payment-intent';
 import { PaymentRepository } from '@/modules/payment/payment.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { JobStatus, PaymentGateway, PaymentStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { JobStatus, PaymentStatus } from '@prisma/client';
 import type { Cache } from 'cache-manager';
 import { HooksRepository } from './hooks.repository';
 
+type WebhookOrderRef = {
+  id: bigint;
+  userId: bigint | null;
+};
+
 @Injectable()
 export class HooksService {
-    constructor(private readonly hooksRepository: HooksRepository,
-        private readonly paymentRepository: PaymentRepository,
-        @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-        private readonly orderRepository: OrderRepository
-    ) { }
+  constructor(
+    private readonly hooksRepository: HooksRepository,
+    private readonly paymentRepository: PaymentRepository,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly orderRepository: OrderRepository,
+    private readonly paymentIntent: PaymentIntentService,
+    private readonly prismaService: PrismaService,
+  ) { }
 
-    async handleSepayWebhook(body: SePayHooksDto) {
-        // Chống trùng lặp 
-        Logger.debug('Received webhook event', body);
-        const providerEventId = this.extractProviderEventId(body);
-        if (!providerEventId) {
-            throw new BadRequestException('Missing webhook event id');
-        }
-        // Check đã tồn tại web hook này chưa 
-        const existedWebhook =
-            await this.hooksRepository.findWebhookByProviderEventId(providerEventId);
+  private async saveWebhookTransaction(
+    body: SePayHooksDto,
+    providerEventId: string,
+    status: PaymentStatus,
+    order?: WebhookOrderRef | null,
+  ) {
+    await this.paymentRepository.createWebhookSepayTransaction({
+      amount: Number(body.transferAmount),
+      orderId: order?.id ?? null,
+      userId: order?.userId ?? null,
+      providerEventId,
+      referenceNumber: body.referenceCode?.toString().slice(0, 200) ?? null,
+      requestId: body.code?.toString().slice(0, 100) ?? null,
+      idempotencyKey: providerEventId.slice(0, 100),
+      status,
+      payload: body,
+    });
+  }
 
-        Logger.debug('Received webhook event existedWebhook', existedWebhook);
+  private handlePaymentIntentExpired = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+    orderId: bigint,
+  ) => {
+    Logger.debug('Payment intent is expired for transfer content', content);
+    await Promise.all([
+      this.paymentIntent.markPaymentIntentAsExpire(orderId),
+      this.hooksRepository.updateWebhookStatus(
+        webHookId,
+        JobStatus.FAILED,
+        attempts,
+        HooksMessage.PAYMENT_INTENT_EXPIRED,
+      ),
+    ]);
 
-        // Nếu tồn tại thì dùng, chưa thì lưu web hooks mới 
-        const webhookInbox =
-            existedWebhook ??
-            (await this.hooksRepository.saveSepayWebhook(providerEventId, body));
+    return {
+      ok: false,
+      providerEventId: null,
+      content,
+      webhookInboxId: webHookId.toString(),
+      orderId: orderId.toString(),
+      message: HooksMessage.PAYMENT_INTENT_EXPIRED,
+    };
+  };
 
-        Logger.debug('Received webhook event webhookInbox', webhookInbox);
+  private handlePaymentIntentNotFoundByContent = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+  ) => {
+    Logger.debug('Payment intent is not found for transfer content', content);
+    await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.FAILED,
+      attempts,
+      HooksMessage.PAYMENT_INTENT_NOT_FOUND,
+    );
 
-        if (webhookInbox.status === JobStatus.DONE) {
-            return {
-                ok: true,
-                duplicate: true,
-                providerEventId,
-                webhookInboxId: webhookInbox.id.toString(),
-                message: 'Webhook already processed',
-            };
-        }
+    return {
+      ok: false,
+      providerEventId: null,
+      content,
+      webhookInboxId: webHookId.toString(),
+      message: HooksMessage.PAYMENT_INTENT_NOT_FOUND,
+    };
+  };
 
-        const attempts = (webhookInbox.attempts ?? 0) + 1;
-        // Check mã định danh orderCode ở trong webhooks check chắn chắn tất cả trường hợp có thể có
-        // khi tất cả đều không có thì là failed
-        const normalizedOrderCode = this.extractNormalizedOrderCode(body);
+  private handleAlreadyProcessedPaymentIntent = async (
+    content: string,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+  ) => {
+    Logger.debug(
+      'Payment intent already marked as success, skipping',
+      content,
+    );
+    await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.DONE,
+      attempts,
+      HooksMessage.WEBHOOK_ALREADY_PROCESSED_FOR_SUCCESS_PAYMENT_INTENT,
+    );
+    return {
+      ok: true,
+      duplicate: true,
+      providerEventId,
+      content,
+      webhookInboxId: webHookId.toString(),
+      message: HooksMessage.PAYMENT_INTENT_ALREADY_SUCCESS,
+    };
+  };
 
-        if (!normalizedOrderCode) {
-            await this.hooksRepository.updateWebhookStatus(
-                webhookInbox.id,
-                JobStatus.FAILED,
-                attempts,
-                'Order code not found in webhook payload',
-            );
+  private handleSepayWebhookWithoutContent = async (
+    body: SePayHooksDto,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+  ) => {
+    await this.saveWebhookTransaction(
+      body,
+      providerEventId,
+      PaymentStatus.NOT_FOUND_ORDER_CODE,
+      null,
+    );
 
-            throw new BadRequestException('Order code not found in webhook payload');
-        }
+    const doneWebhook = await this.hooksRepository.updateWebhookStatus(
+      webHookId,
+      JobStatus.DONE,
+      attempts,
+      HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT_RECORDED,
+    );
 
-        // Tạo tìm order cũ đó xem có không
-        const order =
-            await this.hooksRepository.findOrderByNormalizedOrderCode(
-                normalizedOrderCode,
-            );
+    return {
+      ok: true,
+      ignored: true,
+      providerEventId,
+      webhookInboxId: doneWebhook.id.toString(),
+      message: HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT,
+    };
+  };
 
-        // Nếu không JOB FAILED
-        if (!order) {
-            await this.hooksRepository.updateWebhookStatus(
-                webhookInbox.id,
-                JobStatus.FAILED,
-                attempts,
-                `Order not found for code: ${normalizedOrderCode}`,
-            );
-
-            throw new BadRequestException('Order not found');
-
-        }
-        if (!order?.subtotal) {
-            throw new BadRequestException('Order not found');
-        }
-
-        // Nếu không bằng 
-        if (Number(body.transferAmount) !== Number(order?.totalAmount)) {
-            Logger.debug('subtotal', Number(body.transferAmount), Number(order?.totalAmount));
-
-            if (order.userId) {
-                await this.paymentRepository.createPaymentTransaction(order.userId, {
-                    orderId: order.id,
-                    amount: body.transferAmount,
-                    gateway: PaymentGateway.SEPAY,
-                })
-            } else if (order.guestSessionId) {
-                await this.paymentRepository.createPaymentTransactionGuestId({
-                    orderId: order.id,
-                    amount: body.transferAmount,
-                    gateway: PaymentGateway.SEPAY,
-                })
-            }
-            // Check thanh toán sai 
-            if (body.transferAmount < Number(order?.totalAmount)) {
-                return this.hooksRepository.markPaymentNotSuccess(order.id, providerEventId, body, PaymentStatus.PAYMENT_SHORTFALL);
-            } else {
-                return this.hooksRepository.markPaymentNotSuccess(order.id, providerEventId, body, PaymentStatus.PAYMENT_OVERAGE);
-            }
-        }
-        const [paidOrder, doneWebhook] = await Promise.all([this.hooksRepository.markOrderAndPaymentSuccess(
-            order.id,
-            providerEventId,
-            body,
+  private handleSepayWebhookMarkDone = (
+    orderId: bigint,
+    webHookId: bigint,
+    attempts: number,
+    providerEventId: string,
+    body: SePayHooksDto,
+  ) => {
+    return this.prismaService.$transaction(async (tx) => {
+      const [paidOrder, doneWebhook] = await Promise.all([
+        this.hooksRepository.markOrderAndPaymentSuccess(
+          orderId,
+          providerEventId,
+          body,
+          tx,
         ),
         this.hooksRepository.updateWebhookStatus(
-            webhookInbox.id,
-            JobStatus.DONE,
-            attempts,
-        )
-        ])
+          webHookId,
+          JobStatus.DONE,
+          attempts,
+          undefined,
+          tx,
+        ),
+      ]);
 
+      const orders =
+        await this.orderRepository.findOrderItemWWithParentVariantByOrderId(
+          paidOrder.id,
+          tx,
+        );
 
-        // Lấy ra các order item
-        const orders = await this.orderRepository.findOrderItemWWithParentVariantByOrderId(paidOrder.id);
-        // Chuyển thành bookVariantId, và quantity 
-        const variantMapWithQuantity = new Map<string, number>(orders?.items.map(item =>
-            [item.bookVariantSnapshot.bookVariant.id.toString(), item.quantity]));
+      const variantMapWithQuantity = new Map<string, number>(
+        orders?.items.map((item) => [
+          item.bookVariantSnapshot.bookVariant.id.toString(),
+          item.quantity,
+        ]),
+      );
 
-        // Update trừ số quantity trong order vào variant 
-        await this.orderRepository.updateOrderDone(variantMapWithQuantity, paidOrder.id);
-        return {
-            ok: true,
-            duplicate: Boolean(existedWebhook),
-            providerEventId,
-            normalizedOrderCode,
-            webhookInboxId: doneWebhook.id.toString(),
-            orderId: paidOrder.id.toString(),
-            orderCode: paidOrder.orderCode,
-            orderStatus: paidOrder.status,
-            paymentStatus: paidOrder.paymentStatus,
-        };
+      await this.orderRepository.updateOrderDone(
+        variantMapWithQuantity,
+        paidOrder.id,
+        tx,
+      );
+
+      return {
+        paidOrder, doneWebhook,
+      };
+    });
+  };
+
+  async handleSepayWebhook(body: SePayHooksDto) {
+    Logger.debug('Received webhook event', body);
+
+    const providerEventId = this.extractProviderEventId(body);
+    if (!providerEventId) {
+      throw new BadRequestException(HooksMessage.MISSING_WEBHOOK_EVENT_ID);
     }
 
-    async getOrderStatus(orderCode: string) {
-        let order: Awaited<ReturnType<HooksRepository['findOrderByNormalizedOrderCode']>> = null;
-        const orderCodeUppercase = orderCode.toUpperCase();
-        const normalizedOrderCode = orderCodeUppercase
-            .replace(/[^A-Z0-9]/g, '');
+    const webhookInbox = await this.hooksRepository.saveSepayWebhook(
+      providerEventId,
+      body,
+    );
+    Logger.debug('Received webhook event webhookInbox', webhookInbox);
 
-        const cachedOrder = await this.cacheManager.get(`order:status:${normalizedOrderCode}`);
-        if (cachedOrder) return cachedOrder;
-
-        if (!order) {
-            order = await this.hooksRepository.findOrderByNormalizedOrderCode(
-                normalizedOrderCode,
-            );
-        }
-
-        if (!order) {
-            throw new NotFoundException('Order not found');
-        }
-
-        await this.cacheManager.set(`order:status:${normalizedOrderCode}`, order, ORDER_STATUS_TTL);
-
-        return {
-            id: order.id.toString(),
-            orderCode: order.orderCode,
-            status: order.status,
-            paymentStatus: order.paymentStatus,
-            updatedAt: order.updatedAt,
-        };
+    if (webhookInbox.status === JobStatus.DONE) {
+      return {
+        ok: true,
+        providerEventId,
+        webhookInboxId: webhookInbox.id.toString(),
+        message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
+      };
     }
 
-    private extractProviderEventId(body: SePayHooksDto): string | null {
-        const raw = body.id ?? body.referenceCode ?? body.code;
-        if (raw === undefined || raw === null) return null;
-        return raw.toString().trim();
+    const attempts = (webhookInbox.attempts ?? 0) + 1;
+    const transferContent = body.content?.trim();
+
+    if (!transferContent) {
+      return this.handleSepayWebhookWithoutContent(
+        body,
+        webhookInbox.id,
+        attempts,
+        providerEventId,
+      );
     }
 
-    private extractNormalizedOrderCode(body: SePayHooksDto): string | null {
-        const candidates = [
-            body.content,
-            body.description,
-            body.code,
-            body.referenceCode,
-        ];
+    const paymentIntent = await this.paymentIntent.findByContent(transferContent);
+    if (!paymentIntent) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.NOT_FOUND_ORDER_CODE,
+        null,
+      );
 
-        for (const candidate of candidates) {
-            if (typeof candidate !== 'string') continue;
-            const upper = candidate.toUpperCase();
-            const matched = upper.match(/OD[-_\s]*\d{6}[-_\s]*[A-Z0-9]{6,}/);
-            if (!matched?.[0]) continue;
-
-            const normalized = matched[0].replace(/[^A-Z0-9]/g, '');
-            if (normalized.startsWith('OD')) {
-                return normalized;
-            }
-        }
-
-        return null;
+      return this.handlePaymentIntentNotFoundByContent(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+      );
     }
+
+    const order = paymentIntent.order;
+    if (!order) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.NOT_FOUND_ORDER_CODE,
+        null,
+      );
+
+      await this.hooksRepository.updateWebhookStatus(
+        webhookInbox.id,
+        JobStatus.FAILED,
+        attempts,
+        HooksMessage.ORDER_NOT_FOUND,
+      );
+
+      throw new BadRequestException(HooksMessage.ORDER_NOT_FOUND);
+    }
+
+    const orderRef: WebhookOrderRef = {
+      id: order.id,
+      userId: order.userId ?? null,
+    };
+
+    if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.EXPIRED,
+        orderRef,
+      );
+
+      return this.handlePaymentIntentExpired(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+        paymentIntent.orderId,
+      );
+    }
+
+    if (paymentIntent.status === PaymentStatus.SUCCESS) {
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        PaymentStatus.SUCCESS,
+        orderRef,
+      );
+
+      return this.handleAlreadyProcessedPaymentIntent(
+        transferContent,
+        webhookInbox.id,
+        attempts,
+        providerEventId,
+      );
+    }
+
+    if (Number(body.transferAmount) !== Number(order.totalAmount)) {
+      const mismatchStatus =
+        Number(body.transferAmount) < Number(order.totalAmount)
+          ? PaymentStatus.PAYMENT_SHORTFALL
+          : PaymentStatus.PAYMENT_OVERAGE;
+
+      await this.saveWebhookTransaction(
+        body,
+        providerEventId,
+        mismatchStatus,
+        orderRef,
+      );
+
+      await this.hooksRepository.markPaymentNotSuccess(
+        order.id,
+        providerEventId,
+        body,
+        mismatchStatus,
+      );
+
+      await this.hooksRepository.updateWebhookStatus(
+        webhookInbox.id,
+        JobStatus.FAILED,
+        attempts,
+        HooksMessage.PAYMENT_AMOUNT_MISMATCH(order.orderCode),
+      );
+
+      return {
+        ok: false,
+        providerEventId,
+        content: transferContent,
+        webhookInboxId: webhookInbox.id.toString(),
+        orderId: order.id.toString(),
+        orderCode: order.orderCode,
+        paymentStatus: mismatchStatus,
+      };
+    }
+
+    await this.saveWebhookTransaction(
+      body,
+      providerEventId,
+      PaymentStatus.SUCCESS,
+      orderRef,
+    );
+
+    const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(
+      order.id,
+      webhookInbox.id,
+      attempts,
+      providerEventId,
+      body,
+    );
+
+    const cacheKey = `order:status:${paidOrder.orderCode}`;
+    const cachedOrder = await this.cacheManager.get(cacheKey);
+
+    if (cachedOrder) {
+      await this.cacheManager.set(
+        cacheKey,
+        {
+          id: paidOrder.id.toString(),
+          orderCode: paidOrder.orderCode,
+          status: paidOrder.status,
+          paymentStatus: paidOrder.paymentStatus,
+          updatedAt: paidOrder.updatedAt,
+        },
+        ORDER_STATUS_TTL,
+      );
+    }
+
+    return {
+      ok: true,
+      providerEventId,
+      content: transferContent,
+      webhookInboxId: doneWebhook.id.toString(),
+      orderId: paidOrder.id.toString(),
+      orderCode: paidOrder.orderCode,
+      orderStatus: paidOrder.status,
+      paymentStatus: paidOrder.paymentStatus,
+    };
+  }
+
+  async getOrderStatus(orderCode: string) {
+    const cacheKey = `order:status:${orderCode}`;
+    const cachedOrder = await this.cacheManager.get(cacheKey);
+
+    if (cachedOrder) return cachedOrder;
+
+    const order = await this.hooksRepository.findOrderStatusByOrderCode(orderCode);
+    if (!order) {
+      throw new NotFoundException(HooksMessage.ORDER_NOT_FOUND);
+    }
+
+    const response = {
+      id: order.id.toString(),
+      orderCode: order.orderCode,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      updatedAt: order.updatedAt,
+    };
+
+    await this.cacheManager.set(cacheKey, response, ORDER_STATUS_TTL);
+
+    return response;
+  }
+
+  private extractProviderEventId(body: SePayHooksDto): string | null {
+    const raw = body.id ?? body.referenceCode ?? body.code;
+    if (raw === undefined || raw === null) return null;
+    return raw.toString().trim();
+  }
 }

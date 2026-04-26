@@ -1,0 +1,179 @@
+model User {
+  id                BigInt    @id @default(autoincrement())
+  email             String    @unique @db.VarChar(255)
+  phoneNumber       String?   @map("phone_number") @db.VarChar(30)
+  firstName         String?   @map("first_name") @db.VarChar(100)
+  lastName          String?   @map("last_name") @db.VarChar(100)
+  gender            String?   @db.VarChar(20)
+  avatarUrl         String?   @map("avatar_url") @db.VarChar(255)
+  password          String    @map("password") @db.VarChar(255)
+  passwordChangedAt DateTime? @map("password_changed_at")
+  isEmailVerified   Boolean   @default(false) @map("is_email_verified")
+  totpSecret        String?   @map("totp_secret") @db.VarChar(255)
+  verifyEmailAt     DateTime? @map("verify_email_at")
+
+  status      UserStatus @default(ACTIVE)
+  lastLoginAt DateTime?  @map("last_login_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  userRoles UserRole[]
+
+  userDevices        UserDevice[]
+  loginAttempts      LoginAttempt[]
+  verificationCodes  VerificationCode[]
+  createdPermissions Permission[]       @relation("PermissionCreatedBy")
+  updatedPermissions Permission[]       @relation("PermissionUpdatedBy")
+  createdRoles       Role[]             @relation("RoleCreatedBy")
+  updatedRoles       Role[]             @relation("RoleUpdatedBy")
+  userSessions       UserSession[]
+  userAuditLogs      AuditLog[]
+  userAddress        UserAddress[]
+  categoryCreator    Category[]         @relation("CategoryCreator")
+  categoryUpdater    Category[]         @relation("CategoryUpdater")
+
+  purchaseOder       PurchaseOrder[] @relation("PurchaseOrderCreator")
+  stockImportCreator StockImport[]   @relation("StockImportCreator")
+  bookCreator        Book[]          @relation("BookCreator")
+  bookUpdater        Book[]          @relation("BookUpdater")
+  orderCreator       Order[]         @relation("OrderCreator")
+  orderUpdater       Order[]         @relation("OrderUpdater")
+  cart               Cart[]
+  review             Review[]
+  order              Order[]
+
+  paymentTransaction        PaymentTransaction[]
+  convertedGuestSessions    GuestSession[]       @relation("GuestSessionConvertedUser")
+  createdInventoryMovements InventoryMovement[]  @relation("InventoryMovementCreator")
+  userEvents                UserEvent[]
+  wishlists                 Wishlist[]
+
+  @@map("users")
+}
+
+model VerificationCode {
+  id        BigInt           @id @default(autoincrement())
+  userId    BigInt?          @map("user_id")
+  email     String?          @db.VarChar(200)
+  type      VerificationType
+  codeHash  String?          @map("code_hash") @db.VarChar(200)
+  expiresAt DateTime         @map("expires_at")
+  usedAt    DateTime?        @map("used_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email, type])
+  @@map("verification_codes")
+}
+
+model LoginAttempt {
+  id            BigInt   @id @default(autoincrement())
+  userId        BigInt?  @map("user_id")
+  ip            String?  @db.VarChar(64)
+  userAgent     String?  @map("user_agent") @db.VarChar(1000)
+  success       Boolean?
+  failureReason String?  @map("failure_reason") @db.VarChar(500)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_attempts")
+}
+
+model UserDevice {
+  id                BigInt          @id @default(autoincrement())
+  userId            BigInt          @map("user_id")
+  deviceFingerprint String          @map("device_fingerprint") @db.VarChar(255) // FE gửi chuỗi ngẫu nhiên hoặc BE tự tạo, đây là id của thiết bị
+  deviceName        String?         @map("device_name") @db.VarChar(200) //  Tên thiết bị
+  platform          DevicePlatform? //Nền tảng thiết bị
+  osVersion         String?         @map("os_version") @db.VarChar(50) // Phiên bản hệ điều hành
+  appVersion        String?         @map("app_version") @db.VarChar(50) // Phiên bản ứng dụng
+  isTrusted         Boolean         @default(false) @map("is_trusted") // Có tin tưởng thiết bị này không
+  firstSeenAt       DateTime?       @map("first_seen_at") // Gửi lần đầu tiên
+  lastSeenAt        DateTime?       @map("last_seen_at") // Lần cuối cùng zô
+  revokedAt         DateTime?       @map("revoked_at") // Đã bị chặn khi nào
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions UserSession[]
+
+  @@unique([userId, deviceFingerprint])
+  @@map("user_devices")
+}
+
+model UserSession {
+  id               String        @id @default(uuid()) @db.Char(36)
+  userId           BigInt        @map("user_id")
+  deviceId         BigInt?       @map("device_id")
+  status           SessionStatus @default(ACTIVE)
+  refreshTokenHash String        @unique @map("refresh_token_hash") @db.VarChar(255)
+  userAgent        String?       @map("user_agent") @db.VarChar(150)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  expiresAt        DateTime?     @map("expires_at")
+  revokedAt        DateTime?     @map("revoked_at")
+
+  // Relations
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device UserDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  events UserEvent[]
+
+  @@index([userId, status])
+  @@index([deviceId, status])
+  @@map("user_sessions")
+}
+
+model RevokedToken {
+  id        String @id @default(uuid()) @db.Char(36)
+  tokenHash String @unique @map("token_hash") @db.VarChar(150)
+
+  revokedAt DateTime @default(now()) @map("revoked_at")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("revoked_tokens")
+}
+
+model UserAddress {
+  id            BigInt    @id @default(autoincrement())
+  userId        BigInt    @map("user_id")
+  addressType   String?   @map("address_type") @db.VarChar(50) // mặc định là không có
+  recipientName String   @map("recipient_name") @db.VarChar(200) // mặc định là tên thật, thích thì điền không thôi
+  phoneNumber   String    @map("phone_number") @db.VarChar(30) // buộc phải có số
+  addressDetail String    @map("address_detail") @db.VarChar(255) // buộc phải có địa chỉ
+  ward          String    @db.VarChar(200) // Buộc có đường
+  district      String    @db.VarChar(200) // Buộc có quận
+  city          String    @db.VarChar(200) // Buộc có thành phố
+  isDefault     Boolean?  @map("is_default") // thêm lần đầu mặc định true , lần sau thì false (code nghiệp vụ)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order[]
+
+  @@map("user_addresses")
+}
+
+model GuestSession {
+  id              String    @id @default(uuid()) @db.Char(36)
+  ipFirst         String?   @map("ip_first") @db.VarChar(64)
+  userAgentHash   String?   @map("user_agent_hash") @db.VarChar(255)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastSeenAt      DateTime? @map("last_seen_at")
+  convertedUserId BigInt?   @map("converted_user_id")
+  convertedAt     DateTime? @map("converted_at")
+
+  // Relations
+  convertedUser User?       @relation("GuestSessionConvertedUser", fields: [convertedUserId], references: [id], onDelete: SetNull)
+  carts         Cart[]
+  wishlists     Wishlist[]
+  orders        Order[]
+  events        UserEvent[]
+
+  @@map("guest_sessions")
+}
+
+

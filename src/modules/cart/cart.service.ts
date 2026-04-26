@@ -1,264 +1,350 @@
+import { CartMessage, JwtPayload } from '@/common';
 import { AuthRepository } from '@/modules/auth/auth.repository';
 import { CartItemService } from '@/modules/cart-item/cart-item.service';
-import { AddCartItemRequestDto, UpdateCartItemDeltaRequestDto } from '@/modules/cart/dto/request';
-import { LanguageService } from '@/modules/language/language.service';
-import { ForbiddenException, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
-import { Request } from 'express';
+import {
+  AddCartItemRequestDto,
+  UpdateCartItemDeltaRequestDto,
+} from '@/modules/cart/dto/request';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common';
 import { CartRepository } from './cart.repository';
 
 type CartRequestUser = {
-    id?: bigint | string;
+  id?: bigint | string;
 };
 
 @Injectable()
 export class CartService {
-    constructor(
-        private readonly cartRepository: CartRepository,
-        private readonly cartItemService: CartItemService,
-        private readonly authRepository: AuthRepository,
-        private readonly languageService: LanguageService,
-    ) { }
+  constructor(
+    private readonly cartRepository: CartRepository,
+    private readonly cartItemService: CartItemService,
+    private readonly authRepository: AuthRepository,
+  ) { }
 
-    async getCartUser(userId: bigint, lang?: string) {
-        const language = await this.languageService.resolveLanguage(lang);
-        const result = await this.cartRepository.findByUserId(userId, language.id);
-        if (result) return result;
-        return this.cartRepository.createCartByUserId(userId, language.id);
-    }
+  async getCartUser(userId: bigint, langId: number) {
+    const result = await this.cartRepository.findByUserId(userId, langId);
+    if (result) return result;
+    return this.cartRepository.createCartByUserId(userId, langId);
+  }
 
-    async getCartGuest(guestSessionId: string, lang?: string) {
-        const language = await this.languageService.resolveLanguage(lang);
-        const result = await this.cartRepository.findByGuestSessionId(guestSessionId, language.id);
-        if (result) return result;
-        return this.cartRepository.createCartByGuestSessionId(guestSessionId, language.id);
-    }
-    async addCartItem(request: Request, body: AddCartItemRequestDto) {
-        const bookVariantId = BigInt(body.bookVariantId);
-        const quantity = (body.quantity);
-        const actor = this.resolveActor(request);
+  async getCartGuest(guestSessionId: string, langId: number) {
+    const result = await this.cartRepository.findByGuestSessionId(
+      guestSessionId,
+      langId,
+    );
+    if (result) return result;
+    return this.cartRepository.createCartByGuestSessionId(
+      guestSessionId,
+      langId,
+    );
+  }
 
-        if (actor.authError || !actor.userId) {
-            if (!actor.guestSessionId) {
-                throw new ForbiddenException();
-            }
+  async addCartItem(
+    guestSessionId: string | null,
+    user: JwtPayload | null,
+    body: AddCartItemRequestDto,
+  ) {
+    const bookVariantId = BigInt(body.bookVariantId);
+    const quantity = body.quantity ?? 1;
+    if (guestSessionId) {
+      let guestCart = await this.cartRepository.findByGuestSessionId(guestSessionId);
 
-            const guestCart = await this.cartRepository.findByGuestSessionId(actor.guestSessionId);
-            if (!guestCart) {
-                const createdCart = await this.cartRepository.createByGuestSessionId(actor.guestSessionId);
-                const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
-                    createdCart.id,
-                    bookVariantId,
-                    quantity ?? 1,
-                );
+      if (!guestCart) {
+        guestCart = await this.cartRepository.createCartByGuestSessionId(guestSessionId);
+      }
 
-                return {
-                    authError: true,
-                    item: {
-                        id: createdItem.id.toString(),
-                        bookVariantId: Number(createdItem.bookVariantId),
-                        quantity: createdItem.quantity,
-                    },
-                };
-            }
+      const existedItem = guestCart.items.find(
+        (item) => item.bookVariantId === bookVariantId,
+      );
 
-            const existed = guestCart.items.find((item) => item.bookVariantId === bookVariantId);
+      if (existedItem) {
+        // Kiểm tra xem số lượng mới có vượt quá tồn kho không, nếu có thì chỉ cập nhật đến mức tồn kho.
+        const adjustedQuantity = await this.resolveAdjustedQuantity(guestSessionId, undefined, existedItem.id, bookVariantId, existedItem.quantity, quantity);
+        Logger.debug("Quantity", quantity)
 
-            if (existed) {
-                const updatedItem = await this.cartItemService.updateQuantityById(existed.id, existed.quantity + (quantity ?? 1));
-                return {
-                    authError: true,
-                    item: {
-                        id: updatedItem.id.toString(),
-                        bookVariantId: Number(updatedItem.bookVariantId),
-                        quantity: updatedItem.quantity,
-                    },
-                };
-            }
-            const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(guestCart.id, bookVariantId, ((quantity ?? 1)));
-            return {
-                authError: true,
-                item: {
-                    id: createdItem.id.toString(),
-                    bookVariantId: Number(createdItem.bookVariantId),
-                    quantity: createdItem.quantity,
-                },
-            };
+        if (!adjustedQuantity) return {
+          success: true
         }
-
-        const user = await this.authRepository.findUserById(actor.userId);
-        if (!user) {
-            throw new ForbiddenException();
-        }
-
-        let cart = await this.cartRepository.findByUserId(user.id);
-        if (!cart) {
-            cart = await this.cartRepository.createCartByUserId(user.id);
-        }
-
-        const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(cart.id, bookVariantId);
-        if (existedItem) {
-            const updatedItem = await this.cartItemService.updateQuantityById(existedItem.id, existedItem.quantity + ((quantity ?? 1)));
-            return {
-                authError: false,
-                cartItem: {
-                    itemKey: updatedItem.id.toString(),
-                    bookVariantId: Number(updatedItem.bookVariantId),
-                    quantity: updatedItem.quantity,
-                },
-            };
-        }
-
-        const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(cart.id, bookVariantId, ((quantity ?? 1)));
-        return {
-            authError: false,
-            cartItem: {
-                itemKey: createdItem.id.toString(),
-                bookVariantId: Number(createdItem.bookVariantId),
-                quantity: createdItem.quantity,
-            },
-        };
-    }
-
-    async updateCartItemDelta(
-        request: Request,
-        itemId: bigint,
-        body: UpdateCartItemDeltaRequestDto,
-    ) {
-        const actor = this.resolveActor(request);
-
-        if (actor.authError || !actor.userId) {
-            if (!actor.guestSessionId) {
-                throw new ForbiddenException();
-            }
-
-            const item = await this.cartItemService.findByIdAndGuestSessionId(itemId, actor.guestSessionId);
-            if (!item) {
-                throw new NotFoundException('Cart item not found');
-            }
-
-            const quantity = await this.resolveAdjustedQuantity(item.bookVariantId, item.quantity, body.quantity);
-            const updatedItem = await this.cartItemService.updateQuantityById(item.id, quantity);
-
-            return {
-                authError: true,
-                cartItem: {
-                    itemKey: updatedItem.id.toString(),
-                    bookVariantId: Number(updatedItem.bookVariantId),
-                    quantity: updatedItem.quantity,
-                },
-            };
-        }
-
-        const user = await this.authRepository.findUserById(actor.userId);
-        if (!user) {
-            throw new ForbiddenException();
-        }
-
-        const item = await this.cartItemService.findByIdAndUserId(itemId, user.id);
-        if (!item) {
-            throw new NotFoundException('Cart item not found');
-        }
-
-        const quantity = await this.resolveAdjustedQuantity(item.bookVariantId, item.quantity, body.quantity);
-        const updatedItem = await this.cartItemService.updateQuantityById(item.id, quantity);
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          existedItem.id,
+          adjustedQuantity,
+        );
 
         return {
-            authError: false,
-            cartItem: {
-                itemKey: updatedItem.id.toString(),
-                bookVariantId: Number(updatedItem.bookVariantId),
-                quantity: updatedItem.quantity,
-            },
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
         };
+      }
+
+      const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
+        guestCart.id,
+        bookVariantId,
+        quantity,
+      );
+
+      return {
+        cartItem: {
+          itemKey: createdItem.id.toString(),
+          bookVariantId: Number(createdItem.bookVariantId),
+          quantity: createdItem.quantity,
+        },
+      };
     }
 
-    async removeCartItem(request: Request, itemId: bigint) {
-        const actor = this.resolveActor(request);
+    if (user) {
+      const userId = BigInt(user.sub);
+      const foundUser = await this.authRepository.findUserById(userId);
 
-        if (actor.authError || !actor.userId) {
-            if (!actor.guestSessionId) {
-                throw new ForbiddenException();
-            }
+      if (!foundUser) {
+        throw new ForbiddenException();
+      }
 
-            const deleted = await this.cartItemService.deleteByIdAndGuestSessionId(itemId, actor.guestSessionId);
-            if (!deleted) {
-                throw new NotFoundException('Cart item not found');
-            }
+      let cart = await this.cartRepository.findByUserId(foundUser.id);
+      if (!cart) {
+        cart = await this.cartRepository.createCartByUserId(foundUser.id);
+      }
 
-            return { authError: true, success: true };
-        }
+      const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(
+        cart.id,
+        bookVariantId,
+      );
 
-        const user = await this.authRepository.findUserById(actor.userId);
-        if (!user) {
-            throw new ForbiddenException();
-        }
+      if (existedItem) {
+        const adjustedQuantity = await this.resolveAdjustedQuantity(undefined, userId, existedItem.id, bookVariantId, existedItem.quantity, quantity);
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          existedItem.id,
+          adjustedQuantity,
+        );
 
-        const deleted = await this.cartItemService.deleteByIdAndUserId(itemId, user.id);
-        if (!deleted) {
-            throw new NotFoundException('Cart item not found');
-        }
 
-        return { authError: false, success: true };
-    }
-
-    async clearCart(request: Request) {
-        const actor = this.resolveActor(request);
-
-        if (actor.authError || !actor.userId) {
-            if (!actor.guestSessionId) {
-                throw new ForbiddenException();
-            }
-
-            await this.cartRepository.deleteByGuestSessionId(actor.guestSessionId);
-            return { authError: true, success: true };
-        }
-
-        const user = await this.authRepository.findUserById(actor.userId);
-        if (!user) {
-            throw new ForbiddenException();
-        }
-
-        await this.cartRepository.deleteByUserId(user.id);
-        return { authError: false, success: true };
-    }
-
-    mergeCart(_: unknown) {
-        throw new NotImplementedException('Cart merge is not implemented yet');
-    }
-
-    private async resolveAdjustedQuantity(
-        bookVariantId: bigint,
-        currentQuantity: number,
-        delta: number,
-    ): Promise<number> {
-        const desiredQuantity = Math.max(0, currentQuantity + delta);
-        const stock = await this.cartItemService.getStockByBookVariantId(bookVariantId);
-
-        if (stock === null || stock === undefined) {
-            return desiredQuantity;
-        }
-
-        const normalizedStock = Math.max(0, stock);
-        return Math.min(desiredQuantity, normalizedStock);
-    }
-
-    private resolveActor(request: Request): { authError: boolean; userId: bigint | null; guestSessionId: string | null } {
-        const requestUser = request['user'] as CartRequestUser | undefined;
         return {
-            authError: Boolean(request['authError']),
-            userId: this.parseUserId(requestUser?.id),
-            guestSessionId: (request['guestSessionId'] as string | undefined) ?? null,
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
         };
+      }
+
+      const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
+        cart.id,
+        bookVariantId,
+        quantity,
+      );
+
+      return {
+        cartItem: {
+          itemKey: createdItem.id.toString(),
+          bookVariantId: Number(createdItem.bookVariantId),
+          quantity: createdItem.quantity,
+        },
+      };
     }
 
-    private parseUserId(value: bigint | string | undefined): bigint | null {
-        if (typeof value === 'bigint') return value;
-        if (!value) return null;
+    throw new ForbiddenException('Guest session or user is required');
+  }
 
-        try {
-            return BigInt(value);
-        } catch {
-            return null;
+  async updateCartItemDelta(
+    guestSessionId: string | null,
+    user: JwtPayload | null,
+    itemId: bigint,
+    body: UpdateCartItemDeltaRequestDto,
+  ) {
+    if (guestSessionId) {
+      const item = await this.cartItemService.findByIdAndGuestSessionId(
+        itemId,
+        guestSessionId,
+      );
+
+      if (!item) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      const quantity = await this.resolveAdjustedQuantity(
+        guestSessionId,
+        undefined,
+        item.id,
+        item.bookVariantId,
+        item.quantity,
+        body.quantity,
+      );
+      if (!quantity) {
+        return {
+          cartItem: {
+            itemKey: item.id.toString(),
+            bookVariantId: Number(item.bookVariantId),
+            quantity,
+            remove: true
+          },
         }
+      } else {
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          item.id,
+          quantity,
+        );
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
     }
+
+    if (user) {
+      const userId = BigInt(user.sub);
+      const foundUser = await this.authRepository.findUserById(userId);
+
+      if (!foundUser) {
+        throw new ForbiddenException();
+      }
+
+      const item = await this.cartItemService.findByIdAndUserId(
+        itemId,
+        foundUser.id,
+      );
+
+      if (!item) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      const quantity = await this.resolveAdjustedQuantity(
+        undefined,
+        userId,
+        item.id,
+        item.bookVariantId,
+        item.quantity,
+        body.quantity,
+      );
+      if (!quantity) {
+        return {
+          cartItem: {
+            itemKey: item.id.toString(),
+            bookVariantId: Number(item.bookVariantId),
+            quantity,
+            remove: true
+          },
+        }
+      } else {
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          item.id,
+          quantity,
+        );
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
+    }
+
+    throw new ForbiddenException('Guest session or user is required');
+  }
+
+  async removeCartItem(
+    itemId: bigint,
+    guestSessionId?: string | null,
+    user?: JwtPayload | null,
+  ) {
+    if (guestSessionId) {
+      const deleted = await this.cartItemService.deleteByIdAndGuestSessionId(
+        itemId,
+        guestSessionId,
+      );
+
+      if (!deleted) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      return { success: true };
+    }
+    if (user) {
+      const foundUser = await this.authRepository.findUserById(BigInt(user.sub));
+      if (!foundUser) {
+        throw new ForbiddenException();
+      }
+
+      const deleted = await this.cartItemService.deleteByIdAndUserId(
+        itemId,
+        foundUser.id,
+      );
+
+      if (!deleted) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      return { success: true };
+    }
+
+    throw new ForbiddenException("Vui lòng thử lại sau");
+  }
+
+  async clearCart(
+    guestSessionId?: string | null,
+    user?: JwtPayload | null,
+  ) {
+    if (guestSessionId) {
+      await this.cartRepository.deleteByGuestSessionId(guestSessionId);
+      return { success: true };
+    }
+
+    if (user?.sub) {
+      const foundUser = await this.authRepository.findUserById(BigInt(user.sub));
+      if (!foundUser) {
+        throw new ForbiddenException();
+      }
+
+      await this.cartRepository.deleteByUserId(foundUser.id);
+      return { success: true };
+    }
+
+    throw new ForbiddenException();
+  }
+  mergeCart(guestSessionId: string, user: JwtPayload) {
+    throw new NotImplementedException(
+      CartMessage.CART_MERGE_IS_NOT_IMPLEMENTED_YET,
+    );
+  }
+
+  // Điều chỉnh giá 
+  private async resolveAdjustedQuantity(
+    guestSessionId: string | undefined,
+    userId: bigint | undefined,
+    itemId: bigint,
+    bookVariantId: bigint,
+    currentQuantity: number,
+    delta: number,
+  ): Promise<number> {
+    // giá lúc tăng
+    const desiredQuantity = Math.max(0, currentQuantity + delta);
+    if (!desiredQuantity) {
+      if (guestSessionId) {
+        await this.cartItemService.deleteByIdAndGuestSessionId(itemId, guestSessionId);
+      }
+      else if (userId) {
+        await this.cartItemService.deleteByIdAndUserId(itemId, userId);
+      }
+    }
+    // tồn kho
+    const stock =
+      await this.cartItemService.getStockByBookVariantId(bookVariantId);
+    if (!stock) throw new NotFoundException("Sản phẩm đã hết hàng");
+
+    const normalizedStock = Math.max(0, stock?.available ?? 0);
+    if (!normalizedStock) throw new NotFoundException("Sản phẩm đã hết hàng");
+
+    return Math.min(desiredQuantity, normalizedStock);
+  }
+
 }

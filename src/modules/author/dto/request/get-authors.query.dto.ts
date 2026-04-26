@@ -1,3 +1,3 @@
-import { BasePaginationDto } from '@/common/dto/base-pagination.dto';
+import { BasePaginationDto } from '@/common/pagination/request/base-pagination.dto';
 
-export class GetAuthorsQueryDto extends BasePaginationDto {}
+export class GetAuthorsQueryDto extends BasePaginationDto { }

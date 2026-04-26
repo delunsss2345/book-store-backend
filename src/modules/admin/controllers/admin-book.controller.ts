@@ -1,9 +1,11 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
-import { GetLanguage } from '@/common/decorators/getLanguage.decorator';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
+import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
   Body,
@@ -20,8 +22,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AdminBookService } from '../book/admin-book.service';
 import {
   AdminBookListQueryDto,
-  CreateAdminBookRequestDto,
-  UpdateAdminBookRequestDto,
+  UpdateAdminBookRequestDto
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
@@ -42,18 +43,18 @@ export class AdminBookController {
     return this.adminBookService.getStats();
   }
 
-  @Post()
-  @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK)
-  @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminBookItemResponseDto })
-  createBook(
-    @Body() body: CreateAdminBookRequestDto,
-    @GetUser() user: JwtPayload,
-    @Ip() ip: string,
+  @Public()
+  @Get(":bookId")
+  // @RequirePermissions(PermissionCode.ADMIN_READ_DETAIL)
+  // @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminBookDetailResponseDto })
+  getDetail(
+    @Param('bookId') bookId: string
   ) {
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
-    return this.adminBookService.createBook(body, actorUserId, ip);
+    const parsedBookId = parseBigIntRequired(bookId, 'bookId');
+    return this.adminBookService.getDetail(parsedBookId);
   }
+
 
   @Post('/all')
   // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK_ALL)
@@ -106,7 +107,8 @@ export class AdminBookController {
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookListResponseDto })
-  getBooks(@Query() query: AdminBookListQueryDto, @GetLanguage() lang: string) {
-    return this.adminBookService.getBooks(query, lang);
+  getBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+    return this.adminBookService.getBooks(query, langId);
   }
+
 }

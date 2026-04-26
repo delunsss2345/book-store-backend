@@ -17,6 +17,7 @@ export class HooksController {
     async sePayPayment(@Body() body: SePayHooksDto) {
         return this.hooksService.handleSepayWebhook(body);
     }
+
     @Get(':orderCode/status')
     @Public()
     getOrderStatus(@Param('orderCode') orderCode: string) {

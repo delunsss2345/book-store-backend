@@ -1,0 +1,47 @@
+name: CI Compose Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [testing]
+
+jobs:
+  compose-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: testing
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Create env testing
+        run: |
+          cat > .env.testing.local <<'EOF'
+          ${{ secrets.TESTING_ENV }}
+          EOF
+
+      - name: Start compose
+        run: docker compose --env-file .env.testing.local -f docker-compose.dev.yml up -d --build
+
+      - name: Show compose
+        run: docker compose -f docker-compose.dev.yml ps
+
+      - name: Wait for app
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3301/api/v1/health ; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose -f docker-compose.dev.yml logs
+          exit 1
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.dev.yml logs --no-color
+
+      - name: Shut down
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v

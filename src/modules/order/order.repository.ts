@@ -1,8 +1,8 @@
 import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 
@@ -50,8 +50,19 @@ export class OrderRepository {
 
     }
 
-    async findOrderItemWWithParentVariantByOrderId(orderId: bigint) {
-        return this.prisma.order.findFirst({
+    async updateStatusByOrderId(orderId: bigint, status: OrderStatus) {
+        return this.prisma.order.update({
+            where: { id: orderId },
+            data: { status }
+        })
+    }
+
+    async findOrderItemWWithParentVariantByOrderId(
+        orderId: bigint,
+        tx?: PrismaClientTransaction,
+    ) {
+        const db = tx ?? this.prisma;
+        return db.order.findFirst({
             where: { id: orderId },
             select: {
                 id: true,
@@ -106,7 +117,7 @@ export class OrderRepository {
         })
     }
 
-    findOrderBySessionGuestId(guestId: string, page: number, limit: number, lang: string) {
+    findOrderBySessionGuestId(guestId: string, page: number, limit: number) {
         return this.prisma.order.findMany({
             take: limit,
             skip: (page - 1) * limit,
@@ -115,21 +126,54 @@ export class OrderRepository {
         })
     }
 
-    findOrderByUserId(userId: bigint, page: number, limit: number, lang: string) {
+    findOrderByUserId(userId: bigint, page: number, limit: number) {
         return this.prisma.order.findMany({
             take: limit,
             skip: (page - 1) * limit,
             where: { userId: userId },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                orderCode: true,
+                totalAmount: true,
+                userId: true,
+                addressId: true,
+                status: true,
+                paymentStatus: true,
+                subtotal: true,
+                shippingFee: true,
+                expiredAt: true,
+                discountAmount: true,
+                currencyCode: true,
+                createdAt: true,
+            }
         })
-
 
     }
 
+
+    findOrderDetailByUserId(userId: bigint, page: number, limit: number) {
+        return this.prisma.order.findMany({
+            take: limit,
+            skip: (page - 1) * limit,
+            where: { userId: userId },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                items: true
+            }
+
+        })
+
+    }
+
+
     findOrderIsExpire(orderSecondMinutes: number) {
+        Logger.debug(`Tìm kiếm order đã hết hạn trước ${orderSecondMinutes} giây`, 'OrderRepository');
         return this.prisma.order.findMany({
             where: {
                 expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
+                status: OrderStatus.PENDING_PAYMENT,
+                paymentStatus: PaymentStatus.PENDING
             },
             select: {
                 items: {
@@ -159,19 +203,24 @@ export class OrderRepository {
             }
             await tx.order.updateMany({
                 where: {
-                    expiredAt: new Date(Date.now() + orderSecondMinutes * 1000)
+                    expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
                 },
                 data: {
-                    status: OrderStatus.CANCELLED
+                    status: OrderStatus.CANCELLED,
+                    paymentStatus: PaymentStatus.EXPIRED
                 }
             })
         })
     }
 
-    updateOrderDone(variantMap: Map<string, number>, orderId: bigint) {
-        return this.prisma.$transaction(async (tx) => {
+    updateOrderDone(
+        variantMap: Map<string, number>,
+        orderId: bigint,
+        tx?: PrismaClientTransaction,
+    ) {
+        const updateOrderAndVariant = async (db: PrismaClientTransaction) => {
             for (const [key, value] of variantMap) {
-                await tx.bookVariant.updateMany({
+                await db.bookVariant.updateMany({
                     where: { id: BigInt(key) },
                     data: {
                         stock: { decrement: value },
@@ -179,7 +228,7 @@ export class OrderRepository {
                     }
                 })
             }
-            await tx.order.update({
+            await db.order.update({
                 where:
                     { id: orderId }
                 ,
@@ -187,6 +236,14 @@ export class OrderRepository {
                     status: OrderStatus.PAID
                 }
             })
+        };
+
+        if (tx) {
+            return updateOrderAndVariant(tx);
+        }
+
+        return this.prisma.$transaction(async (prismaTx) => {
+            return updateOrderAndVariant(prismaTx);
         })
     }
 }

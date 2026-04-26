@@ -1,4 +1,5 @@
-import { Public } from '@/common/security/decorators/public.decorator';
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { PresignMultipleRequestDto } from '@/modules/uploads/dto/request/get-presign-multi-url.dto';
 import { PresignRequestDto } from '@/modules/uploads/dto/request/get-single-url.dto';
 import { PresignMultipleResponseDto } from '@/modules/uploads/dto/response/persign-multi.response.dto';
@@ -14,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
+  ApiBearerAuth,
   ApiConsumes,
   ApiOperation,
   ApiResponse
@@ -23,11 +25,12 @@ import { UploadFileDto } from './dto/request/upload-file-single.dto';
 import { UploadsService } from './uploads.service';
 
 @Controller('uploads')
+@RequirePermissions(PermissionCode.UPLOAD_MANAGE)
+@ApiBearerAuth('access-token')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) { }
 
   @Post('/')
-  @Public()
   @ApiOperation({ summary: 'Upload product image' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFileDto })
@@ -44,7 +47,6 @@ export class UploadsController {
 
 
   @Post("presigned-url/book")
-  @Public()
   @ApiBody({ type: PresignRequestDto })
   @ApiResponse({ type: PresignResponseDto })
   getPresignedUrl(@Body() body: PresignRequestDto) {
@@ -53,7 +55,6 @@ export class UploadsController {
 
 
   @Post("presigned-url/multipart-books")
-  @Public()
   @ApiBody({ type: PresignMultipleRequestDto })
   @ApiResponse({ type: PresignMultipleResponseDto })
   getPresignedUrlMultipart(@Body() body: PresignMultipleRequestDto) {

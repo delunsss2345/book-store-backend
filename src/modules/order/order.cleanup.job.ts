@@ -10,7 +10,7 @@ export class OrderCleanupJob {
 
     constructor(private readonly orderService: OrderService) { }
 
-    @Cron(CronExpression.EVERY_5_MINUTES)
+    @Cron(CronExpression.EVERY_10_MINUTES)
     async cleanupOrderSessionsMinutes(): Promise<void> {
         try {
             const result = await this.orderService.cleanOrder(ORDER_EXPIRED_SECONDS);

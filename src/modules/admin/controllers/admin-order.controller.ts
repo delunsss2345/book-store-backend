@@ -1,10 +1,15 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { Controller, Get, Query } from '@nestjs/common';
+import { parseBigIntRequired } from '@/utils/parseBigInt.util';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { AdminOrderListQueryDto, AdminOrderStatusDto } from '../dto/request';
+import {
+  AdminGuestOrderListResponseDto,
+  AdminOrderStatusResponseDto,
+  AdminUserOrderListResponseDto,
+} from '../dto/response';
 import { AdminOrderService } from '../order/admin-order.service';
-import { AdminOrderListQueryDto } from '../dto/request';
-import { AdminOrderListResponseDto } from '../dto/response';
 
 @ApiTags('admin')
 @Controller('admin/orders')
@@ -14,8 +19,28 @@ export class AdminOrderController {
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminOrderListResponseDto })
-  getOrders(@Query() query: AdminOrderListQueryDto) {
-    return this.adminOrderService.getOrders(query);
+  @ApiOkResponse({ type: AdminGuestOrderListResponseDto })
+  getGuestOrders(@Query() query: AdminOrderListQueryDto) {
+    return this.adminOrderService.getGuestOrders(query);
+  }
+
+  @Get('/user')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminUserOrderListResponseDto })
+  getUserOrders(@Query() query: AdminOrderListQueryDto) {
+    return this.adminOrderService.getUserOrders(query);
+  }
+
+  @Patch(':orderId/status')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminOrderStatusResponseDto })
+  updateOrderStatus(
+    @Param('orderId') orderId: string,
+    @Body() body: AdminOrderStatusDto,
+  ) {
+    const parsedOrderId = parseBigIntRequired(orderId, 'orderId');
+    return this.adminOrderService.updateOrderStatus(parsedOrderId, body);
   }
 }

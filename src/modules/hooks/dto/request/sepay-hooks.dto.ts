@@ -45,10 +45,13 @@ export class SePayHooksDto {
     @IsString()
     code?: string | null;
 
-    @ApiProperty({ example: 'OD260221VILRVN', description: 'Nội dung chuyển khoản' })
+    @ApiPropertyOptional({
+        example: 'taschen A1b2C3d4',
+        description: 'Nội dung chuyển khoản (có thể thiếu trong một số webhook)',
+    })
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    content: string;
+    content?: string;
 
     // payload thực tế: 'in' (lowercase)
     @ApiProperty({

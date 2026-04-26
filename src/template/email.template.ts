@@ -218,3 +218,101 @@ export const EMAIL_TEMPLATE_RESET_PASSWORD = `<html>
     </table>
   </body>
 </html>`;
+
+
+
+export const EMAIL_TEMPLATE_ORDER_SUCCESS = `<html>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Order Confirmation</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f3f5;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+      table {
+        border-spacing: 0;
+        border-collapse: collapse;
+      }
+      .container {
+        width: 600px;
+        max-width: 600px;
+        background-color: #ffffff;
+        border: 1px solid #dddddd;
+      }
+      .content {
+        padding: 40px;
+        color: #333333;
+        font-size: 15px;
+        line-height: 24px;
+      }
+      .info-box {
+        margin-top: 20px;
+        padding: 16px;
+        background-color: #f7f7f7;
+        border-radius: 4px;
+      }
+      .label {
+        font-weight: bold;
+        color: #555;
+      }
+      @media screen and (max-width: 600px) {
+        .container { width: 100% !important; }
+        .content { padding: 20px !important; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <table width='100%' cellpadding='0' cellspacing='0' border='0' style='padding: 20px 0;'>
+      <tr>
+        <td align='center'>
+
+          <table class='container'>
+            <tr>
+              <td align='center' style='background-color: #232f3e; padding: 25px;'>
+                <div style="font-size: 34px; font-weight: 900; color: #ffffff;">
+                  PTH
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td class='content'>
+                <h2 style='margin: 0 0 16px 0; color: #232f3e;'>Cảm ơn bạn đã đặt hàng 🎉</h2>
+
+                <p>Xin chào <b>{{email}}</b>,</p>
+
+                <p>Cảm ơn bạn đã tin tưởng và đặt hàng tại hệ thống của chúng tôi. Dưới đây là thông tin đơn hàng của bạn:</p>
+
+                <div class="info-box">
+                  <p><span class="label">Order Code:</span> {{orderCode}}</p>
+                  <p><span class="label">Order ID:</span> {{orderId}}</p>
+                  <p><span class="label">Trạng thái:</span> {{orderStatus}}</p>
+                </div>
+
+                <p style='margin-top: 20px;'>
+                  Chúng tôi sẽ tiếp tục xử lý đơn hàng và cập nhật trạng thái cho bạn trong thời gian sớm nhất.
+                </p>
+
+                <p>Trân trọng,<br/>PTH Team</p>
+              </td>
+            </tr>
+          </table>
+
+          <table width='600' style='margin-top: 20px;'>
+            <tr>
+              <td align='center' style='font-size: 11px; color: #7d818a;'>
+                © PTH Services, Inc.
+              </td>
+            </tr>
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;

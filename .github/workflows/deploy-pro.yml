@@ -101,9 +101,18 @@ jobs:
               \"mkdir -p /srv/app/nginx/conf.d\",
               \"cd /srv/app\",
               
-              \"printf '%s' '$COMPOSE_CONTENT' > docker-compose.yml\",
-              \"printf '%s' '$NGINX_CONF' > nginx/conf.d/default.conf\",
-              \"printf '%s' '$PROD_ENV' > .env.prod\",
+              \"cat << 'EOF' > docker-compose.yml
+              ${{ secrets.DOCKER_COMPOSE_PROD }}
+              EOF
+              \",
+                          \"cat << 'EOF' > nginx/conf.d/default.conf
+              ${{ secrets.NGINX_CONF_PROD }}
+              EOF
+              \",
+                          \"cat << 'EOF' > .env.prod
+              ${{ secrets.PROD_ENV_FILE }}
+              EOF
+              \",
 
               \"echo '${{ github.token }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin\",
               

@@ -84,7 +84,7 @@ jobs:
 
       - name: Deploy on EC2 via SSM
         env:
-          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          INSTANCE_ID: 'i-014f73143ed047bbd'
           AWS_REGION: ap-southeast-1
           PORT: '3301'
           APP_IMAGE: ${{ needs.build.outputs.image_uri }}

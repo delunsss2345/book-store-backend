@@ -81,30 +81,40 @@ jobs:
           aws-region: ap-southeast-1
 
       - name: Deploy on EC2 via SSM
+        env:
+          # Khai báo các biến môi trường cho script chạy bên dưới
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          AWS_REGION: 'ap-southeast-1'
+          CONTAINER_NAME: 'bookstore-app' # Khớp với name trong docker-compose
+          PORT: 3301
         run: |
+          NGINX_CONF=$(cat nginx/conf.d/default.conf)
+          COMPOSE_CONTENT=$(cat docker-compose.prod.yml)
+          PROD_ENV="${{ secrets.PROD_ENV_FILE }}"
+
           COMMAND_ID=$(aws ssm send-command \
-            --region "ap-southeast-1" \
-            --instance-ids "${INSTANCE_ID}" \
+            --region "$AWS_REGION" \
+            --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy book-store-backend from GitHub Actions" \
+            --comment "Deploy book-store-backend" \
             --parameters commands="[
-              \"set -euo pipefail\",
-              \"echo '${{ github.token }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin\",
-
-              NGINX_CONF=$(cat nginx/conf.d/default.conf)
-              COMPOSE_CONTENT=$(cat docker-compose.prod.yml)
-
+              \"mkdir -p /srv/app/nginx/conf.d\",
+              \"cd /srv/app\",
+              
               \"printf '%s' '$COMPOSE_CONTENT' > docker-compose.yml\",
-              \"printf '%s' '$NGINX_CONF' > nginx/conf.d/default.conf\"
+              \"printf '%s' '$NGINX_CONF' > nginx/conf.d/default.conf\",
+              \"printf '%s' '$PROD_ENV' > .env.prod\",
 
-              \"printf '%s' '${{ secrets.PROD_ENV_FILE }}' > .env.prod\",
-
-              \"docker pull '${{ needs.build.outputs.image_uri }}'\",
-              \"docker rm -f '${CONTAINER_NAME}' || true\",
-              \"docker compose -f docker-compose.yml up -d'\",
+              \"echo '${{ github.token }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin\",
+              
+              # Pull và khởi chạy
+              \"export APP_IMAGE=${{ needs.build.outputs.image_uri }}\",
+              \"docker compose pull\",
+              \"docker compose up -d --remove-orphans\",
+              
               \"docker image prune -af\",
               \"sleep 10\",
-              \"curl -fsS 'http://127.0.0.1:${PORT}/api/v1/health'\"
+              \"curl -fsS http://127.0.0.1:$PORT/api/v1/health\"
             ]" \
             --query "Command.CommandId" \
             --output text)
@@ -112,13 +122,13 @@ jobs:
           echo "Command ID: $COMMAND_ID"
 
           aws ssm wait command-executed \
-            --region "${AWS_REGION}" \
+            --region "$AWS_REGION" \
             --command-id "$COMMAND_ID" \
-            --instance-id ${INSTANCE_ID}
+            --instance-id "$INSTANCE_ID"
 
           aws ssm get-command-invocation \
-            --region "${AWS_REGION}" \
+            --region "$AWS_REGION" \
             --command-id "$COMMAND_ID" \
-            --instance-id "${INSTANCE_ID}" \
-            --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+            --instance-id "$INSTANCE_ID" \
+            --query \"{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}\" \
             --output json

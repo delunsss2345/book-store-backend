@@ -52,9 +52,7 @@ jobs:
 
       - name: Run container
         run: |
-          docker run -d --name ${{ steps.meta.outputs.tags }} -p 3301:3301
+          docker run -d --name bookstore-app ${{ steps.meta.outputs.tags }} -p 3301:3301
 
       - name: Check container logs
-        run : docker logs app 
-
-  
+        run: docker logs app

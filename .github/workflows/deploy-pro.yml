@@ -34,7 +34,6 @@ jobs:
           # ghcr.io/delunsss2345/book-store-backend:production
           tags: |
             type=sha
-      # build nhiều ngôn ngữ và platforms: linux/amd64,linux/arm64
       - name: Set up QEMU & Buildx
         uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3

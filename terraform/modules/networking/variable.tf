@@ -6,7 +6,7 @@ variable "availability_zones" {
   type = list(string)
 }
 
-variable "public_subnets" {
+variable "public_subnets_ips" {
   type = list(string)
 
 }

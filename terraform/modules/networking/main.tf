@@ -5,7 +5,7 @@ module "vpc" {
   name            = "book-store-vpc"
   cidr            = var.cidr_block
   azs             = var.availability_zones
-  public_subnets  = var.public_subnets
+  public_subnets  = var.public_subnets_ips
   private_subnets = var.private_subnet_ips
 
   enable_nat_gateway = true

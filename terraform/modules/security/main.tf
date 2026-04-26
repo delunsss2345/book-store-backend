@@ -2,6 +2,7 @@ resource "aws_security_group" "public_sg" {
   name        = "public-sg"
   description = "Security group for public access"
   vpc_id      = var.vpc_id
+  region      = var.region
 
   ingress {
     from_port   = 80
@@ -38,6 +39,7 @@ resource "aws_security_group" "private_sg" {
   name        = "private-sg"
   description = "Security group for private access"
   vpc_id      = var.vpc_id
+  region      = var.region
 
 
   ingress {

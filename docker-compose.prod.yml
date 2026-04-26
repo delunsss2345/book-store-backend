@@ -18,8 +18,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-
-  app:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    name: bookstore-nginx
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      bookstore-app:
+        # Nginx chỉ chạy KHI VÀ CHỈ KHI app đã pass cái healthcheck bên dưới
+        condition: service_healthy
+  bookstore-app:
     image: ${APP_IMAGE}
     restart: unless-stopped
     name: bookstore-app

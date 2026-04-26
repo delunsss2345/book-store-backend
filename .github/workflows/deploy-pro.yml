@@ -19,7 +19,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_uri: ${{ steps.meta.outputs.tags }} # xuất ra tags này là sha cuối cùng build
+      image_uri: ${{ steps.set-image.outputs.uri  }} # xuất ra tags này là sha cuối cùng build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,11 +29,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
-          # tag format (sẽ có 2 tag khác nhau)
-          # ghcr.io/delunsss2345/book-store-backend:a1b2c3d
-          # ghcr.io/delunsss2345/book-store-backend:production
           tags: |
-            type=sha
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:production
+
+      - name: Set Image URI
+        id: set-image
+        run: echo "uri=ghcr.io/${{ github.repository }}:production" >> $GITHUB_OUTPUT
+      # build nhiều ngôn ngữ và platforms: linux/amd64,linux/arm64
       - name: Set up QEMU & Buildx
         uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -59,67 +62,64 @@ jobs:
 
   deploy:
     needs: build
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: production
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare env and secrets
-        env:
-          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
-        run: |
-          printf '%s' "$PROD_ENV_FILE" > .env.prod
-          chmod 600 .env.prod
-
-      - name: Start SSH agent & Add Known Hosts
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          role-to-assume: arn:aws:iam::${{ secrets.ACCOUNT_ID }}:role/BookStore-GitHubActions-DeployRole
+          aws-region: ap-southeast-1
 
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
-          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/srv/app' }}
-          EC2_HEALTHCHECK_URL: ${{ secrets.EC2_HEALTHCHECK_URL || 'http://127.0.0.1:3301/api/v1/health' }}
-          IMAGE_URI: ${{ needs.build.outputs.image_uri }} # lấy đúng image vừa build xong
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ github.token }}
+      - name: Deploy on EC2 via SSM
         run: |
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          COMMAND_ID=$(aws ssm send-command \
+            --region "ap-southeast-1" \
+            --instance-ids "${INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy book-store-backend from GitHub Actions" \
+            --parameters commands="[
+              \"set -euo pipefail\",
+              \"echo '${{ github.token }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin\",
 
-          ssh "$EC2_USER@$EC2_HOST" "mkdir -p $EC2_APP_DIR"
-          scp .env.prod docker-compose.prod.yml "$EC2_USER@$EC2_HOST:$EC2_APP_DIR/"
-          # EOF là heredoc -> tác dụng sẽ giúp ghi nguyên 1 khối vào EC2
-          ssh "$EC2_USER@$EC2_HOST" "EC2_APP_DIR='$EC2_APP_DIR' IMAGE_URI='$IMAGE_URI' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' bash -s" << 'EOF'
-            set -euo pipefail
-            set -x
+              NGINX_CONF=$(cat nginx/conf.d/default.conf)
+              COMPOSE_CONTENT=$(cat docker-compose.prod.yml)
 
-            cd "$EC2_APP_DIR" 
-            
-            # 1. ghi vào file .env.prod để lưu lại (tìm và thay thế)
-            sed -i '/^APP_IMAGE=/d' .env.prod
-            
-            # ghi thêm 1 dòng vào cuối file
-            echo "APP_IMAGE=$IMAGE_URI" >> .env.prod
-            
-            # 2. export để docker compose đọc được
-            export APP_IMAGE="$IMAGE_URI"
-            
-            # login và Pull image (stout ghcr_token load vào --password-stdin stdin)
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            
-            # 3. load cờ env file với docker compose
-            docker compose -f docker-compose.prod.yml --env-file .env.prod pull app
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
-            docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T app npx prisma migrate deploy
-            docker image prune -af
+              \"printf '%s' '$COMPOSE_CONTENT' > docker-compose.yml\",
 
-            echo "Đang chờ App khởi động..."
-            sleep 40
-            curl -fsS http://127.0.0.1:3301/api/v1/docs
-            echo "✅ Deployment Healthy!"
-          EOF
+              \"printf '%s' '$NGINX_CONF' > nginx/conf.d/default.conf\"
+
+              \"printf '%s' '${{ secrets.PROD_ENV_FILE }}' > .env.prod\",
+
+              \"docker pull '${{ needs.build.outputs.image_uri }}'\",
+              \"docker rm -f '${CONTAINER_NAME}' || true\",
+              \"docker compose -f docker-compose.yml up -d'\",
+              \"docker image prune -af\",
+              \"sleep 10\",
+              \"curl -fsS 'http://127.0.0.1:${PORT}/api/v1/health'\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --region "${AWS_REGION}" \
+            --command-id "$COMMAND_ID" \
+            --instance-id ${INSTANCE_ID}
+
+          aws ssm get-command-invocation \
+            --region "${AWS_REGION}" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${INSTANCE_ID}" \
+            --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+            --output json

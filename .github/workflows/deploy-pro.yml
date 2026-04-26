@@ -82,17 +82,82 @@ jobs:
 
       - name: Deploy on EC2 via SSM
         env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          AWS_REGION: ap-southeast-1
+          PORT: 3301
+          APP_IMAGE: ${{ needs.build.outputs.image_uri }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+
+          DOCKER_COMPOSE_PROD: ${{ secrets.DOCKER_COMPOSE_PROD }}
+          NGINX_CONF_PROD: ${{ secrets.NGINX_CONF_PROD }}
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+        run: |
+          set -euo pipefail
+
+          COMPOSE_B64="$(printf '%s' "$DOCKER_COMPOSE_PROD" | base64 -w 0)"
+          NGINX_B64="$(printf '%s' "$NGINX_CONF_PROD" | base64 -w 0)"
+          ENV_B64="$(printf '%s' "$PROD_ENV_FILE" | base64 -w 0)"
+
+          jq -n \
+            --arg app_image "$APP_IMAGE" \
+            --arg ghcr_user "$GHCR_USER" \
+            --arg ghcr_token "$GHCR_TOKEN" \
+            --arg compose_b64 "$COMPOSE_B64" \
+            --arg nginx_b64 "$NGINX_B64" \
+            --arg env_b64 "$ENV_B64" \
+            --arg port "$PORT" \
+            '{
+              commands: [
+                "set -euo pipefail",
+                "mkdir -p /srv/app/nginx/conf.d",
+                "cd /srv/app",
+                ("printf %s " + ($compose_b64 | @sh) + " | base64 -d > docker-compose.yml"),
+                ("printf %s " + ($nginx_b64 | @sh) + " | base64 -d > nginx/conf.d/default.conf"),
+                ("printf %s " + ($env_b64 | @sh) + " | base64 -d > .env.prod"),
+                ("echo " + ($ghcr_token | @sh) + " | docker login ghcr.io -u " + ($ghcr_user | @sh) + " --password-stdin"),
+                ("export APP_IMAGE=" + ($app_image | @sh) + " && docker compose pull"),
+                ("export APP_IMAGE=" + ($app_image | @sh) + " && docker compose up -d --remove-orphans"),
+                "docker image prune -af",
+                "sleep 10",
+                ("curl -fsS http://127.0.0.1:" + $port + "/api/v1/health")
+              ]
+            }' > ssm-parameters.json
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy book-store-backend" \
+            --parameters file://ssm-parameters.json \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID"
+
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query '{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}' \
+            --output json
+        env:
           # Khai báo các biến môi trường cho script chạy bên dưới
           INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
           AWS_REGION: 'ap-southeast-1'
           CONTAINER_NAME: 'bookstore-app' # Khớp với name trong docker-compose
           PORT: 3301
-        run: |
-          NGINX_CONF=$(cat nginx/conf.d/default.conf)
-          COMPOSE_CONTENT=$(cat docker-compose.prod.yml)
-          PROD_ENV="${{ secrets.PROD_ENV_FILE }}"
+          run: |
+           NGINX_CONF=$(cat nginx/conf.d/default.conf)
+           COMPOSE_CONTENT=$(cat docker-compose.prod.yml)
+           PROD_ENV="${{ secrets.PROD_ENV_FILE }}"
 
-          COMMAND_ID=$(aws ssm send-command \
+           COMMAND_ID=$(aws ssm send-command \
             --region "$AWS_REGION" \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
@@ -128,14 +193,14 @@ jobs:
             --query "Command.CommandId" \
             --output text)
 
-          echo "Command ID: $COMMAND_ID"
+           echo "Command ID: $COMMAND_ID"
 
-          aws ssm wait command-executed \
+           aws ssm wait command-executed \
             --region "$AWS_REGION" \
             --command-id "$COMMAND_ID" \
             --instance-id "$INSTANCE_ID"
 
-          aws ssm get-command-invocation \
+           aws ssm get-command-invocation \
             --region "$AWS_REGION" \
             --command-id "$COMMAND_ID" \
             --instance-id "$INSTANCE_ID" \

@@ -5,7 +5,6 @@ services:
     env_file:
       - .env.prod
     volumes:
-      # Đã đổi sang dùng named volume để tránh lỗi quyền ghi trên Linux
       - mysql_data:/var/lib/mysql
     ports:
       - '127.0.0.1:3306:3306'
@@ -19,6 +18,19 @@ services:
       timeout: 5s
       retries: 20
       start_period: 60s
+
+  bookstore-app:
+    image: ${APP_IMAGE}
+    restart: unless-stopped
+    container_name: bookstore-app
+    env_file:
+      - .env.prod
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3301:3301'
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -29,21 +41,7 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       bookstore-app:
-        # Nginx chỉ chạy KHI VÀ CHỈ KHI app đã pass cái healthcheck bên dưới
-        condition: service_healthy
-  bookstore-app:
-    image: ${APP_IMAGE}
-    restart: unless-stopped
-    container_name: bookstore-app
-    env_file:
-      - .env.prod
-    depends_on:
-      mysql:
-        # App chỉ chạy KHI VÀ CHỈ KHI mysql đã pass cái healthcheck bên trên
-        condition: service_healthy
-    ports:
-      - '127.0.0.1:3301:3301'
+        condition: service_started
 
 volumes:
-  # Khai báo volume chính thức
   mysql_data:

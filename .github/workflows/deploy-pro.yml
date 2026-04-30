@@ -108,6 +108,7 @@ jobs:
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           PORT: ${{ secrets.PORT }}
+          APP_IMAGE: ${{ needs.build.outputs.image_uri }}
         run: |
           set -euo pipefail
 

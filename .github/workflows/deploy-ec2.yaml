@@ -77,7 +77,7 @@ jobs:
 
           cp docker-compose.prod.yml deploy-package/docker-compose.yml
           cp -r nginx/conf.d/. deploy-package/nginx/conf.d/
-          printf '%s' '${{ secrets.PROD_ENV_FILE }}' > deploy-package/.env
+          printf '%s' '${{ secrets.PROD_ENV_FILE }}' > deploy-package/.env.prod
 
           find deploy-package -maxdepth 4 -type f -print
 

@@ -113,10 +113,10 @@ jobs:
             ls -la /srv/app
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            cat > .env.prod <<'EOF'
+            cat >> .env.prod <<'EOF'
                 APP_IMAGE=${{ needs.build.outputs.image_uri }}
             EOF
-            
+
             APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose pull --quiet
             APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose up -d --remove-orphans
 

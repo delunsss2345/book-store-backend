@@ -89,7 +89,7 @@ jobs:
           mkdir -p deploy-package/nginx/conf.d
 
           cp -r docker-compose.prod.yml deploy-package/docker-compose.yml
-          cp -r nginx/conf.d/.git ad deploy-package/nginx/conf.d
+          cp -r nginx/conf.d/. deploy-package/nginx/conf.d
           printf '%s' '${{ secrets.PROD_ENV_FILE }}' > deploy-package/.env
 
           tar -czf deploy-package.tar.gz -C deploy-package .

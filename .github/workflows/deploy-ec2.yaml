@@ -117,8 +117,8 @@ jobs:
                 APP_IMAGE=${{ needs.build.outputs.image_uri }}
             EOF
 
-            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose pull --quiet
-            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose up -d --remove-orphans
+            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose --env-file .env.prod pull --quiet
+            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose --env-file .env.prod up -d --remove-orphans
 
             docker compose ps
             sleep 20

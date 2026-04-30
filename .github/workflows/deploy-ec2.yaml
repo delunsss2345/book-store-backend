@@ -113,15 +113,14 @@ jobs:
             ls -la /srv/app
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
             cat >> .env.prod <<'EOF'
                 APP_IMAGE=${{ needs.build.outputs.image_uri }}
             EOF
 
-            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose --env-file .env.prod pull --quiet
-            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose --env-file .env.prod up -d --remove-orphans
-
-            docker compose ps
+            docker compose --env-file .env.prod pull --quiet
+            docker compose --env-file .env.prod up -d --remove-orphans
+            docker compose --env-file .env.prod ps
             sleep 20
-            docker compose logs --tail=200
-
+            docker compose --env-file .env.prod logs --tail=200
             curl -fsS "http://127.0.0.1:${{ secrets.PORT }}/api/v1/health"

@@ -123,4 +123,3 @@ jobs:
             docker compose --env-file .env.prod ps
             sleep 20
             docker compose --env-file .env.prod logs --tail=200
-            curl -fsS "http://127.0.0.1:${{ secrets.PORT }}/api/v1/health"

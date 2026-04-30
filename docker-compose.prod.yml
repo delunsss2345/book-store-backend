@@ -21,7 +21,7 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
-    name: bookstore-nginx
+    container_name: bookstore-nginx
     ports:
       - '80:80'
     volumes:
@@ -33,7 +33,7 @@ services:
   bookstore-app:
     image: ${APP_IMAGE}
     restart: unless-stopped
-    name: bookstore-app
+    container_name: bookstore-app
     env_file:
       - .env.prod
     depends_on:

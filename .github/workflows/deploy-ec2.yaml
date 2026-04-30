@@ -1,0 +1,122 @@
+name: CD Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - production
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_uri: ${{ steps.set-image.outputs.uri }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Image URI
+        id: set-image
+        run: echo "uri=ghcr.io/${{ github.repository }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Inspect pushed image
+        run: |
+          docker buildx imagetools inspect ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare deploy files
+        run: |
+          set -euo pipefail
+
+          rm -rf deploy-package
+          mkdir -p deploy-package/nginx/conf.d
+
+          cp docker-compose.prod.yml deploy-package/docker-compose.yml
+          cp -r nginx/conf.d/. deploy-package/nginx/conf.d/
+          printf '%s' '${{ secrets.PROD_ENV_FILE }}' > deploy-package/.env
+
+          find deploy-package -maxdepth 4 -type f -print
+
+      - name: Upload deploy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: 'deploy-package/*'
+          target: '/tmp/bookstore-deploy'
+          strip_components: 1
+          rm: true
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY  }}
+          port: 22
+          script: |
+            set -euo pipefail
+
+            sudo mkdir -p /srv/app
+            sudo rm -rf /srv/app/*
+            sudo cp -r /tmp/bookstore-deploy/* /srv/app/
+            sudo chown -R "$USER":"$USER" /srv/app
+
+            cd /srv/app
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose pull --quiet
+            APP_IMAGE="${{ needs.build.outputs.image_uri }}" docker compose up -d --remove-orphans
+
+            docker compose ps
+            sleep 20
+            docker compose logs --tail=200
+
+            curl -fsS "http://127.0.0.1:${{ secrets.PORT }}/api/v1/health"

@@ -109,6 +109,16 @@ export class CatalogService {
     return this.buildCardVariantMap(parsedIds, langId);
   }
 
+  // Cho phép domain khác (vd OrderService) lấy variant theo ids qua service thay vì repository
+  findBookVariantByIds(ids: bigint[], languageId: number) {
+    return this.repo.findBookVariantByIds(ids, languageId);
+  }
+
+  // Cho phép domain khác (vd PineconeService) lấy variant đầu tiên của sách active qua service
+  findActiveBookFirstVariant() {
+    return this.repo.findActiveBookFirstVariant();
+  }
+
   private async buildCardMap(
     ids: bigint[],
     languageId: number,

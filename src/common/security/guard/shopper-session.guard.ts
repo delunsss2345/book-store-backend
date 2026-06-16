@@ -1,4 +1,4 @@
-import { AuthRepository } from '@/modules/auth/auth.repository';
+import { AuthRepository } from '@/modules/auth/repository/auth.repository';
 import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';

@@ -1,17 +1,24 @@
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { JwtProvider } from '@/config/jwt.config';
-import { AuthRepository } from '@/modules/auth/auth.repository';
+import { AuthModule } from '@/modules/auth/auth.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
-import { WishlistItemModule } from '@/modules/wishlist-item/wishlist-item.module';
 import { Module } from '@nestjs/common';
-import { WishlistController } from './wishlist.controller';
-import { WishlistRepository } from './wishlist.repository';
-import { WishlistService } from './wishlist.service';
+import { WishlistController } from './controller/wishlist.controller';
+import { WishlistItemRepository } from './repository/wishlist-item.repository';
+import { WishlistRepository } from './repository/wishlist.repository';
+import { WishlistItemService } from './service/wishlist-item.service';
+import { WishlistService } from './service/wishlist.service';
 
 @Module({
-    imports: [JwtProvider, GuestSessionModule, WishlistItemModule],
+    imports: [JwtProvider, GuestSessionModule, AuthModule],
     controllers: [WishlistController],
-    providers: [WishlistService, WishlistRepository, ShopperSessionGuard, AuthRepository],
-    exports: [WishlistService],
+    providers: [
+        WishlistService,
+        WishlistItemService,
+        WishlistRepository,
+        WishlistItemRepository,
+        ShopperSessionGuard,
+    ],
+    exports: [WishlistService, WishlistItemService],
 })
 export class WishlistModule { }

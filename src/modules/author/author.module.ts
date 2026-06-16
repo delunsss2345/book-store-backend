@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BookAuthorModule } from '../book-author/book-author.module';
+import { BookAuthorModule } from '../book/author/book-author.module';
 import { AuthorController } from './author.controller';
 import { AuthorRepository } from './author.repository';
 import { AuthorService } from './author.service';

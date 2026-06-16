@@ -1,5 +1,5 @@
 import { IS_REFRESH_KEY } from '@/common/security/decorators/refresh.decorator';
-import { UserSessionService } from '@/modules/user-session/user-session.service';
+import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { hashToken } from '@/utils/hashToken.util';
 import {
     CanActivate,

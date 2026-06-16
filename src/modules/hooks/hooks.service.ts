@@ -1,10 +1,10 @@
 import { HooksMessage } from '@/common';
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
-import { PrismaService } from '@/database';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
-import { OrderRepository } from '@/modules/order/order.repository';
-import { PaymentIntentService } from '@/modules/payment-intent';
-import { PaymentRepository } from '@/modules/payment/payment.repository';
+import { OrderService } from '@/modules/order/service/order.service';
+import { PaymentIntentService } from '@/modules/payment/service/payment-intent.service';
+import { PaymentService } from '@/modules/payment/service/payment.service';
+import { TransactionService } from '@/modules/transaction/transaction.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
@@ -26,11 +26,11 @@ type WebhookOrderRef = {
 export class HooksService {
   constructor(
     private readonly hooksRepository: HooksRepository,
-    private readonly paymentRepository: PaymentRepository,
+    private readonly paymentService: PaymentService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-    private readonly orderRepository: OrderRepository,
+    private readonly orderService: OrderService,
     private readonly paymentIntent: PaymentIntentService,
-    private readonly prismaService: PrismaService,
+    private readonly transactionService: TransactionService,
   ) { }
 
   private async saveWebhookTransaction(
@@ -39,7 +39,7 @@ export class HooksService {
     status: PaymentStatus,
     order?: WebhookOrderRef | null,
   ) {
-    await this.paymentRepository.createWebhookSepayTransaction({
+    await this.paymentService.createWebhookSepayTransaction({
       amount: Number(body.transferAmount),
       orderId: order?.id ?? null,
       userId: order?.userId ?? null,
@@ -163,7 +163,7 @@ export class HooksService {
     providerEventId: string,
     body: SePayHooksDto,
   ) => {
-    return this.prismaService.$transaction(async (tx) => {
+    return this.transactionService.doInTransaction(async (tx) => {
       const [paidOrder, doneWebhook] = await Promise.all([
         this.hooksRepository.markOrderAndPaymentSuccess(
           orderId,
@@ -181,7 +181,7 @@ export class HooksService {
       ]);
 
       const orders =
-        await this.orderRepository.findOrderItemWWithParentVariantByOrderId(
+        await this.orderService.findOrderItemWWithParentVariantByOrderId(
           paidOrder.id,
           tx,
         );
@@ -193,7 +193,7 @@ export class HooksService {
         ]),
       );
 
-      await this.orderRepository.updateOrderDone(
+      await this.orderService.updateOrderDone(
         variantMapWithQuantity,
         paidOrder.id,
         tx,

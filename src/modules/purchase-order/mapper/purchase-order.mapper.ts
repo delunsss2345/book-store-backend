@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { PurchaseOrderRepository } from '../purchase-order.repository';
+import { PurchaseOrderRepository } from '../repository/purchase-order.repository';
 
 type PurchaseOrderDetailRow = NonNullable<
   Awaited<ReturnType<PurchaseOrderRepository['findPurchaseOrderById']>>

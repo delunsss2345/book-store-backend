@@ -1,5 +1,5 @@
 import { Public } from '@/common/security/decorators/public.decorator';
-import { PaymentService } from '@/modules/payment/payment.service';
+import { PaymentService } from '@/modules/payment/service/payment.service';
 import { Controller, Get, Injectable, Param } from '@nestjs/common';
 @Injectable()
 @Controller('payments')

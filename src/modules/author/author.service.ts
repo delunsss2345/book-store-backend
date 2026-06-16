@@ -1,7 +1,7 @@
 import { AuthorMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { BookAuthorService } from '../book-author/book-author.service';
+import { BookAuthorService } from '../book/author/service/book-author.service';
 import { AuthorRepository } from './author.repository';
 import { CreateAuthorRequestDto } from './dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from './dto/request/get-author-books.query.dto';
@@ -16,7 +16,7 @@ export class AuthorService {
   constructor(
     private readonly authorRepository: AuthorRepository,
     private readonly bookAuthorService: BookAuthorService,
-  ) {}
+  ) { }
 
   async createAuthor(
     body: CreateAuthorRequestDto,
@@ -68,7 +68,7 @@ export class AuthorService {
 
     const items: AuthorItemResponseDto[] = rows.map((row) => ({
       id: row.id.toString(),
-      name: row.translations[0]?.displayName ?? row.defaultName,
+      name: row.defaultName,
     }));
 
     return buildPaginatedResult(items, total, page, limit);

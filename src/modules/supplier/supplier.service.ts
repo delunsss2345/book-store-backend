@@ -41,6 +41,11 @@ export class SupplierService {
     return toSupplierItem(created);
   }
 
+  // Cho phép domain khác (vd AdminBookService) lấy supplier theo id qua service thay vì repository
+  findSupplierById(supplierId: bigint) {
+    return this.supplierRepository.findSupplierById(supplierId);
+  }
+
   async toggleSupplierActive(
     supplierId: bigint,
   ): Promise<SupplierItemResponseDto> {

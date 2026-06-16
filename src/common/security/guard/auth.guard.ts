@@ -1,7 +1,7 @@
 import { SecurityMessage } from '@/common';
 import { IS_PUBLIC_KEY } from '@/common/security/decorators/public.decorator';
 import { IS_REFRESH_KEY } from '@/common/security/decorators/refresh.decorator';
-import { RevokedTokenService } from '@/modules/revoked-token/revoked-token.service';
+import { RevokedTokenService } from '@/modules/auth/service/revoked-token.service';
 import { tokenHash } from '@/utils/hashToken.util';
 import {
   CanActivate,

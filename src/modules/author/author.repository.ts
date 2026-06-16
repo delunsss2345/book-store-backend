@@ -17,7 +17,7 @@ export class AuthorRepository {
         return this.prisma.author.count();
     }
 
-    findAuthors(languageId: number, page: number, limit: number) {
+    findAuthors(_languageId: number, page: number, limit: number) {
         return this.prisma.author.findMany({
             orderBy: [{ id: 'asc' }],
             skip: (page - 1) * limit,
@@ -25,13 +25,6 @@ export class AuthorRepository {
             select: {
                 id: true,
                 defaultName: true,
-                translations: {
-                    where: { languageId },
-                    select: {
-                        displayName: true,
-                    },
-                    take: 1,
-                },
             },
         });
     }

@@ -1,8 +1,8 @@
 import { PERMISSION_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { PERMISSION_KEY } from '@/common/security/decorators/requirePermission.decorator';
-import { RolePermissionService } from '@/modules/role-permission/role-permission.service';
-import { UserRoleService } from '@/modules/user-role/user-role.service';
+import { RolePermissionService } from '@/modules/role/service/role-permission.service';
+import { UserRoleService } from '@/modules/user/service/user-role.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, type Provider } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';

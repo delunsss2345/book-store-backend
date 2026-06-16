@@ -1,12 +1,12 @@
 import { EventType, scoreEvent } from '@/common/constants/event-type.constant';
-import { BookSnapshotRepository } from '@/modules/book-snapshot/book-snapshot.repository';
+import { BookSnapshotRepository } from '@/modules/book/snapshot/repository/book-snapshot.repository';
 import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
 import {
     CatalogBookCardDto,
     CatalogRecommendRequestDto
 } from '@/modules/catalog/dto/response';
-import { OrderItemRepository } from '@/modules/order-item/order-item.repository';
-import { OrderRepository } from '@/modules/order/order.repository';
+import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
+import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { Injectable } from '@nestjs/common';
 import { EventType as PrismaEventType } from '@prisma/client';
 import { CatalogRepository } from '../catalog/catalog.repository';

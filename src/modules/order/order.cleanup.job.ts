@@ -1,5 +1,5 @@
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
-import { OrderService } from '@/modules/order/order.service';
+import { OrderService } from '@/modules/order/service/order.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 

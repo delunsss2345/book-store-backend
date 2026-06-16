@@ -1,5 +1,5 @@
 import { PineconeMessage } from '@/common';
-import { CatalogRepository } from '@/modules/catalog/catalog.repository';
+import { CatalogService } from '@/modules/catalog/catalog.service';
 import { GeminiService } from '@/modules/gemini/gemini.service';
 import {
   BookVariantEmbeddingSource,
@@ -42,7 +42,7 @@ export type QueryBookVariantResult = {
 };
 
 type SearchIndexVariantRow = Awaited<
-  ReturnType<CatalogRepository['findActiveBookFirstVariant']>
+  ReturnType<CatalogService['findActiveBookFirstVariant']>
 >[number];
 
 @Injectable()
@@ -52,7 +52,7 @@ export class PineconeService {
 
   constructor(
     private readonly geminiService: GeminiService,
-    private readonly catalogRepository: CatalogRepository,
+    private readonly catalogService: CatalogService,
   ) {
     const apiKey = process.env.PINECONE_API_KEY;
     const indexName = process.env.PINECONE_INDEX;
@@ -107,7 +107,7 @@ export class PineconeService {
     const startedAt = Date.now();
     const safeBatchSize = this.normalizeBatchSize(batchSize);
     // Lấy tất cả variant của sách đang active để đồng bộ lên Pinecone. Cần có dữ liệu đầy đủ để đảm bảo embedding chính xác.
-    const rows = await this.catalogRepository.findActiveBookFirstVariant();
+    const rows = await this.catalogService.findActiveBookFirstVariant();
 
     let indexed = 0;
     let skipped = 0;

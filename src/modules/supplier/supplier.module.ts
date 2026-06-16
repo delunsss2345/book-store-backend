@@ -1,13 +1,13 @@
 import { CacheProvider } from '@/config/redis.config';
-import { RolePermissionModule } from '@/modules/role-permission/role-permission.module';
-import { UserRoleModule } from '@/modules/user-role/user-role.module';
+import { RoleModule } from '@/modules/role/role.module';
+import { UserModule } from '@/modules/user/user.module';
 import { Module } from '@nestjs/common';
 import { SupplierController } from './supplier.controller';
 import { SupplierRepository } from './supplier.repository';
 import { SupplierService } from './supplier.service';
 
 @Module({
-  imports: [RolePermissionModule, UserRoleModule, CacheProvider],
+  imports: [RoleModule, UserModule, CacheProvider],
   controllers: [SupplierController],
   providers: [SupplierService, SupplierRepository],
   exports: [SupplierService, SupplierRepository],

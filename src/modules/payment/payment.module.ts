@@ -1,12 +1,23 @@
-import { PaymentIntentModule } from '@/modules/payment-intent';
 import { PaymentController } from '@/modules/payment/payment.controller';
 import { Module } from '@nestjs/common';
-import { PaymentRepository } from './payment.repository';
-import { PaymentService } from './payment.service';
+import { PaymentIntentRepository } from './repository/payment-intent.repository';
+import { PaymentRepository } from './repository/payment.repository';
+import { PaymentIntentService } from './service/payment-intent.service';
+import { PaymentService } from './service/payment.service';
 @Module({
-    imports: [PaymentIntentModule],
-    providers: [PaymentService, PaymentRepository, PaymentController],
-    exports: [PaymentService, PaymentRepository],
+    providers: [
+        PaymentService,
+        PaymentIntentService,
+        PaymentRepository,
+        PaymentIntentRepository,
+        PaymentController,
+    ],
+    exports: [
+        PaymentService,
+        PaymentIntentService,
+        PaymentRepository,
+        PaymentIntentRepository,
+    ],
     controllers: [PaymentController],
 })
 export class PaymentModule { };

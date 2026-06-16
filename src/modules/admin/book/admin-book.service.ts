@@ -8,7 +8,7 @@ import { AuditLogService } from '@/modules/audit-log/audit-log.service';
 import { AuthorService } from '@/modules/author/author.service';
 import { LanguageService } from '@/modules/language/language.service';
 import { PublisherService } from '@/modules/publisher/publisher.service';
-import { SupplierRepository } from '@/modules/supplier/supplier.repository';
+import { SupplierService } from '@/modules/supplier/supplier.service';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -58,7 +58,7 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
-    private readonly supplierRepository: SupplierRepository,
+    private readonly supplierService: SupplierService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
@@ -85,7 +85,7 @@ export class AdminBookService {
       this.publisherService.createPublisher({
         defaultName: normalizedPublisherName,
       }),
-      this.supplierRepository.findSupplierById(body.supplierId),
+      this.supplierService.findSupplierById(body.supplierId),
     ]);
     const publisherId = this.parsePublisherId(publisher.id);
 

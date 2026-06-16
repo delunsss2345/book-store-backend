@@ -89,9 +89,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           source: 'deploy-package/*'
-          target: '/tmp/bookstore-deploy'
+          target: '/tmp/bookstore-deploy' # gọt bỏ deploy-package/ để tránh tạo thư mục con trên EC2
           strip_components: 1
-          rm: true
+          rm: true # xóa các file cũ trên EC2 trước khi upload, tránh tồn đọng file không cần thiết
 
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.7
@@ -103,11 +103,10 @@ jobs:
           script: |
             set -euo pipefail
 
-            sudo mkdir -p /srv/app
-            sudo rm -rf /srv/app/*
-            sudo cp -r /tmp/bookstore-deploy/* /srv/app/
-            sudo mv /srv/app/env.prod /srv/app/.env.prod
-            sudo chown -R "$USER":"$USER" /srv/app
+            sudo mkdir -p /srv/app && sudo chown "$USER":"$USER" /srv/app 
+            sudo rm -rf /srv/app/* # xóa sạch thư mục trước khi copy, tránh tồn đọng file không cần thiết
+            sudo cp -r /tmp/bookstore-deploy/. /srv/app/ 
+            sudo cp -r /tmp/bookstore-deploy/env.prod /srv/app/.env.prod
 
             cd /srv/app
             ls -la /srv/app

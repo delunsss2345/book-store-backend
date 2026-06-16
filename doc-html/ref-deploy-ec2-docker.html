@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/deploy-ec2-docker-production.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ke hoach deploy BE NestJS len AWS EC2 (Docker, click-by-click, chi phi re) · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>deploy EC2 + docker</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Operations</p>
+    <h1>Ke hoach deploy BE NestJS len AWS EC2 (Docker, click-by-click, chi phi re)</h1>
+    <p class="lede">Cap nhat theo tai lieu AWS den ngay <strong>2026-02-09</strong>.</p>
+  </header>
+
+  <main>
+<h2 id="1-muc-tieu" class="h h2"><a class="anchor" href="#1-muc-tieu" aria-label="Link to this section">#</a>1) Muc tieu</h2>
+<ul>
+<li>Deploy backend NestJS len EC2 de chay production on dinh.</li>
+<li>Uu tien chi phi re va de van hanh (ban dang co AWS credit <code>$99</code>).</li>
+<li>Co domain rieng + HTTPS.</li>
+<li>SSH an toan vao server.</li>
+<li>Khong over-engineer: 1 EC2 + Docker Compose + Nginx.</li>
+</ul>
+<h2 id="2-dinh-huong-chi-phi-voi-credit-99" class="h h2"><a class="anchor" href="#2-dinh-huong-chi-phi-voi-credit-99" aria-label="Link to this section">#</a>2) Dinh huong chi phi (voi credit $99)</h2>
+<p>Thong diep chinh:</p>
+<ul>
+<li>Khong ep &quot;free tuyet doi&quot;.</li>
+<li>Muc tieu la <strong>goi re + on dinh production</strong>.</li>
+</ul>
+<p>Chi phi du kien (muc tham khao, can check lai truoc khi launch):</p>
+<ul>
+<li><code>EC2 t4g.small</code> + <code>EBS gp3 30GB</code> + <code>Public IPv4</code> + bang thong.</li>
+<li>Tong chi phi thuong o muc thap-trung binh/thang cho 1 moi truong nho.</li>
+</ul>
+<p>Canh bao chi phi quan trong:</p>
+<ul>
+<li>Public IPv4 tren AWS co phi theo gio.</li>
+<li>Neu dung Route 53 thi co phi hosted zone + DNS query.</li>
+</ul>
+<p>Khuyen nghi truoc khi launch:</p>
+<ul>
+<li>Dung AWS Pricing Calculator de estimate theo region <code>us-east-1</code>.</li>
+</ul>
+<h2 id="3-cau-hinh-da-chot-cho-du-an-nay" class="h h2"><a class="anchor" href="#3-cau-hinh-da-chot-cho-du-an-nay" aria-label="Link to this section">#</a>3) Cau hinh da chot cho du an nay</h2>
+<ul>
+<li>Region: <code>us-east-1</code>.</li>
+<li>Instance type: <code>t4g.small</code>.</li>
+<li>AMI/OS: <code>Ubuntu Server 24.04 LTS (64-bit Arm)</code>.</li>
+<li>Storage: <code>gp3 30 GiB</code>.</li>
+<li>Network inbound:<ul>
+<li><code>22/tcp</code> chi mo <code>My IP</code> (<code>x.x.x.x/32</code>).</li>
+<li><code>80/tcp</code> mo <code>Anywhere IPv4</code>.</li>
+<li><code>443/tcp</code> mo <code>Anywhere IPv4</code>.</li>
+</ul>
+</li>
+<li>DNS: giu nha cung cap DNS hien tai, tro A record ve Elastic IP cua EC2.</li>
+<li>Runtime: Docker Compose gom <code>app</code>, <code>mysql</code>, <code>redis</code>.</li>
+</ul>
+<h2 id="4-luong-bam-nut-aws-console-click-by-click" class="h h2"><a class="anchor" href="#4-luong-bam-nut-aws-console-click-by-click" aria-label="Link to this section">#</a>4) Luong bam nut AWS Console (click-by-click)</h2>
+<h3 id="b1-chon-region" class="h h3"><a class="anchor" href="#b1-chon-region" aria-label="Link to this section">#</a>B1. Chon region</h3>
+<ul>
+<li>O goc phai tren Console AWS, chon: <code>US East (N. Virginia) us-east-1</code>.</li>
+</ul>
+<h3 id="b2-bat-billing-alert" class="h h3"><a class="anchor" href="#b2-bat-billing-alert" aria-label="Link to this section">#</a>B2. Bat billing alert</h3>
+<ul>
+<li><code>Billing &amp; Cost Management</code> -&gt; <code>Billing preferences</code> -&gt; <code>Alert preferences</code> -&gt; <code>Edit</code>.</li>
+<li>Bat <code>Receive AWS Free Tier usage alerts</code>.</li>
+<li>Bam <code>Update</code>.</li>
+</ul>
+<h3 id="b3-tao-budget-0-usd" class="h h3"><a class="anchor" href="#b3-tao-budget-0-usd" aria-label="Link to this section">#</a>B3. Tao budget 0 USD</h3>
+<ul>
+<li><code>Billing &amp; Cost Management</code> -&gt; <code>Budgets</code> -&gt; <code>Create budget</code>.</li>
+<li>Chon <code>Use a template (simplified)</code>.</li>
+<li>Chon <code>Zero spend budget</code>.</li>
+<li>Nhap email nhan canh bao.</li>
+<li>Bam <code>Create budget</code>.</li>
+</ul>
+<h3 id="b4-launch-ec2" class="h h3"><a class="anchor" href="#b4-launch-ec2" aria-label="Link to this section">#</a>B4. Launch EC2</h3>
+<ul>
+<li><code>EC2</code> -&gt; <code>Instances</code> -&gt; <code>Launch instances</code>.</li>
+</ul>
+<h3 id="b5-dien-form-launch-an-instance" class="h h3"><a class="anchor" href="#b5-dien-form-launch-an-instance" aria-label="Link to this section">#</a>B5. Dien form &quot;Launch an instance&quot;</h3>
+<ul>
+<li><code>Name and tags</code>: <code>nest-auth-prod</code>.</li>
+<li><code>Application and OS Images (AMI)</code>: <code>Ubuntu Server 24.04 LTS (64-bit Arm)</code>.</li>
+<li><code>Instance type</code>: <code>t4g.small</code>.</li>
+<li><code>Key pair (login)</code>:<ul>
+<li><code>Create new key pair</code>.</li>
+<li>Type: <code>RSA</code>.</li>
+<li>Format: <code>.pem</code>.</li>
+<li>Bam <code>Create key pair</code> va luu file key.</li>
+</ul>
+</li>
+<li><code>Network settings</code> -&gt; <code>Edit</code>:<ul>
+<li>VPC: <code>default</code>.</li>
+<li>Auto-assign public IP: <code>Enable</code>.</li>
+<li>Firewall: <code>Create security group</code>.</li>
+<li>Rule 1: <code>SSH</code>, Port <code>22</code>, Source <code>My IP</code>.</li>
+<li>Rule 2: <code>HTTP</code>, Port <code>80</code>, Source <code>Anywhere IPv4</code>.</li>
+<li>Rule 3: <code>HTTPS</code>, Port <code>443</code>, Source <code>Anywhere IPv4</code>.</li>
+</ul>
+</li>
+<li><code>Configure storage</code>: <code>gp3</code>, <code>30 GiB</code>.</li>
+<li><code>Summary</code>: <code>Number of instances = 1</code>.</li>
+<li>Bam <code>Launch instance</code>.</li>
+</ul>
+<h3 id="b6-gan-ip-tinh-elastic-ip" class="h h3"><a class="anchor" href="#b6-gan-ip-tinh-elastic-ip" aria-label="Link to this section">#</a>B6. Gan IP tinh (Elastic IP)</h3>
+<ul>
+<li><code>EC2</code> -&gt; <code>Elastic IPs</code> -&gt; <code>Allocate Elastic IP address</code> -&gt; <code>Allocate</code>.</li>
+<li>Chon IP vua tao -&gt; <code>Actions</code> -&gt; <code>Associate Elastic IP address</code>.</li>
+<li>Chon instance <code>nest-auth-prod</code> -&gt; <code>Associate</code>.</li>
+</ul>
+<h3 id="b7-lay-lenh-ssh-tu-aws-console" class="h h3"><a class="anchor" href="#b7-lay-lenh-ssh-tu-aws-console" aria-label="Link to this section">#</a>B7. Lay lenh SSH tu AWS Console</h3>
+<ul>
+<li><code>EC2</code> -&gt; <code>Instances</code> -&gt; chon <code>nest-auth-prod</code> -&gt; <code>Connect</code> -&gt; tab <code>SSH client</code>.</li>
+<li>Copy command mau dang:</li>
+</ul>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>ssh -i your-key.pem ubuntu@&lt;Elastic-IP&gt;</code></pre></figure>
+<h3 id="b8-tro-domain-o-nha-dang-ky-hien-tai" class="h h3"><a class="anchor" href="#b8-tro-domain-o-nha-dang-ky-hien-tai" aria-label="Link to this section">#</a>B8. Tro domain o nha dang ky hien tai</h3>
+<ul>
+<li>Vao trang DNS cua nha dang ky domain ban dang dung.</li>
+<li>Tao record:<ul>
+<li>Type: <code>A</code></li>
+<li>Host: <code>api</code> (hoac subdomain ban muon)</li>
+<li>Value: <code>&lt;Elastic-IP&gt;</code></li>
+<li>TTL: <code>300</code></li>
+</ul>
+</li>
+<li>Cho DNS propagate, sau do test HTTPS.</li>
+</ul>
+<h2 id="5-ssh-vao-server-hardening-sau-login-dau-tien" class="h h2"><a class="anchor" href="#5-ssh-vao-server-hardening-sau-login-dau-tien" aria-label="Link to this section">#</a>5) SSH vao server + hardening sau login dau tien</h2>
+<p>Tu may local:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>chmod 400 your-key.pem
+ssh -i your-key.pem ubuntu@&lt;Elastic-IP&gt;</code></pre></figure>
+<p>Hardening nhanh:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo adduser deploy
+sudo usermod -aG sudo deploy
+sudo mkdir -p /home/deploy/.ssh
+sudo cp ~/.ssh/authorized_keys /home/deploy/.ssh/
+sudo chown -R deploy:deploy /home/deploy/.ssh
+sudo chmod 700 /home/deploy/.ssh
+sudo chmod 600 /home/deploy/.ssh/authorized_keys</code></pre></figure>
+<p>Sua SSH config:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo nano /etc/ssh/sshd_config</code></pre></figure>
+<p>Set:</p>
+<ul>
+<li><code>PasswordAuthentication no</code></li>
+<li><code>PermitRootLogin no</code></li>
+</ul>
+<p>Apply:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo systemctl restart ssh</code></pre></figure>
+<h2 id="6-deploy-docker-compose-arm64" class="h h2"><a class="anchor" href="#6-deploy-docker-compose-arm64" aria-label="Link to this section">#</a>6) Deploy Docker Compose (ARM64)</h2>
+<p>Luu y:</p>
+<ul>
+<li><code>t4g.small</code> la ARM64.</li>
+<li>Cac image <code>node:22-alpine</code>, <code>mysql:8.4</code>, <code>redis:7-alpine</code> deu ho tro multi-arch, dung duoc tren ARM64.</li>
+</ul>
+<h3 id="6-1-cai-docker" class="h h3"><a class="anchor" href="#6-1-cai-docker" aria-label="Link to this section">#</a>6.1 Cai Docker</h3>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo apt update &amp;&amp; sudo apt -y upgrade
+sudo apt -y install docker.io docker-compose-v2
+sudo usermod -aG docker deploy
+newgrp docker</code></pre></figure>
+<h3 id="6-2-chuan-bi-source" class="h h3"><a class="anchor" href="#6-2-chuan-bi-source" aria-label="Link to this section">#</a>6.2 Chuan bi source</h3>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo mkdir -p /srv/nest-auth
+sudo chown -R $USER:$USER /srv/nest-auth
+cd /srv/nest-auth
+# git clone &lt;repo_url&gt; .</code></pre></figure>
+<h3 id="6-3-tao-env-prod" class="h h3"><a class="anchor" href="#6-3-tao-env-prod" aria-label="Link to this section">#</a>6.3 Tao <code>.env.prod</code></h3>
+<figure class="codeblock"><figcaption>env</figcaption><pre><code>NODE_ENV=production
+PORT=3300
+GLOBAL_PREFIX=api/v1
+
+DATABASE_URL=mysql://app_user:app_password@mysql:3306/nest_auth
+MYSQL_ROOT_PASSWORD=replace_me
+MYSQL_DATABASE=nest_auth
+MYSQL_USER=app_user
+MYSQL_PASSWORD=app_password
+
+ACCESS_TOKEN_SECRET=replace_me
+ACCESS_TOKEN_TIME=900
+REFRESH_TOKEN_SECRET=replace_me
+REFRESH_TOKEN_TIME=2592000
+OTP_TIME=300
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_USERNAME=default
+REDIS_PASSWORD=replace_me
+
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_SECURE=false
+MAIL_USER=mailer@example.com
+MAIL_PASS=replace_me
+MAIL_FROM=mailer@example.com
+
+APP_PUBLIC_URL=https://your-frontend-domain.com</code></pre></figure>
+<h3 id="6-4-dockerfile-neu-repo-chua-co" class="h h3"><a class="anchor" href="#6-4-dockerfile-neu-repo-chua-co" aria-label="Link to this section">#</a>6.4 Dockerfile (neu repo chua co)</h3>
+<figure class="codeblock"><figcaption>Dockerfile</figcaption><pre><code>FROM node:22-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npx prisma generate &amp;&amp; npm run build
+
+EXPOSE 3300
+CMD [&quot;node&quot;, &quot;dist/main&quot;]</code></pre></figure>
+<h3 id="6-5-docker-compose-prod-yml" class="h h3"><a class="anchor" href="#6-5-docker-compose-prod-yml" aria-label="Link to this section">#</a>6.5 <code>docker-compose.prod.yml</code></h3>
+<figure class="codeblock"><figcaption>YAML</figcaption><pre><code>services:
+  mysql:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: [&quot;--default-authentication-plugin=mysql_native_password&quot;]
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: [&quot;redis-server&quot;, &quot;--requirepass&quot;, &quot;${REDIS_PASSWORD}&quot;]
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    restart: always
+    env_file:
+      - .env.prod
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - &quot;127.0.0.1:3300:3300&quot;
+
+volumes:
+  mysql_data:
+  redis_data:</code></pre></figure>
+<h3 id="6-6-run-app-migration" class="h h3"><a class="anchor" href="#6-6-run-app-migration" aria-label="Link to this section">#</a>6.6 Run app + migration</h3>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy</code></pre></figure>
+<h2 id="7-nginx-reverse-proxy-ssl" class="h h2"><a class="anchor" href="#7-nginx-reverse-proxy-ssl" aria-label="Link to this section">#</a>7) Nginx reverse proxy + SSL</h2>
+<p>Cai Nginx + Certbot:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo apt -y install nginx certbot python3-certbot-nginx</code></pre></figure>
+<p>Tao file <code>/etc/nginx/sites-available/nest-auth</code>:</p>
+<figure class="codeblock"><figcaption>nginx</figcaption><pre><code>server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3300;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre></figure>
+<p>Enable + reload:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo ln -s /etc/nginx/sites-available/nest-auth /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx</code></pre></figure>
+<p>Cap SSL:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>sudo certbot --nginx -d api.yourdomain.com</code></pre></figure>
+<h2 id="8-public-api-interfaces-types" class="h h2"><a class="anchor" href="#8-public-api-interfaces-types" aria-label="Link to this section">#</a>8) Public API/interfaces/types</h2>
+<ul>
+<li>Khong thay doi API backend contract.</li>
+<li>Deployment env can co:<ul>
+<li><code>MAIL_FROM</code> (code hien dang dung).</li>
+<li><code>APP_PUBLIC_URL</code> (khuyen nghi de tao link email dung domain production).</li>
+</ul>
+</li>
+<li>Luu y hien trang code: neu chua patch logic tao link theo <code>APP_PUBLIC_URL</code>, day la viec nen lam tiep o code step.</li>
+</ul>
+<h2 id="9-test-cases-acceptance-criteria" class="h h2"><a class="anchor" href="#9-test-cases-acceptance-criteria" aria-label="Link to this section">#</a>9) Test cases / acceptance criteria</h2>
+<ul>
+<li><input disabled="" type="checkbox"> EC2 <code>running</code>, da associate Elastic IP.</li>
+<li><input disabled="" type="checkbox"> SSH thanh cong bang <code>.pem</code>, login duoc <code>ubuntu</code>, sau do su dung user <code>deploy</code>.</li>
+<li><input disabled="" type="checkbox"> Security group dung 3 rule inbound: 22 (<code>My IP</code>), 80, 443.</li>
+<li><input disabled="" type="checkbox"> <code>docker compose ps</code> thay <code>app</code>, <code>mysql</code>, <code>redis</code> dang chay.</li>
+<li><input disabled="" type="checkbox"> <code>prisma migrate deploy</code> thanh cong.</li>
+<li><input disabled="" type="checkbox"> Nginx reverse proxy hoat dong.</li>
+<li><input disabled="" type="checkbox"> Certbot cap SSL thanh cong.</li>
+<li><input disabled="" type="checkbox"> API truy cap duoc:<ul>
+<li><code>GET https://api.yourdomain.com/api/v1</code></li>
+<li><code>GET https://api.yourdomain.com/api/v1/docs</code></li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"> Billing alert + zero spend budget da tao, email canh bao da cau hinh.</li>
+<li><input disabled="" type="checkbox"> DNS resolve dung ve Elastic IP.</li>
+</ul>
+<h2 id="10-gia-dinh-va-mac-dinh-da-chot" class="h h2"><a class="anchor" href="#10-gia-dinh-va-mac-dinh-da-chot" aria-label="Link to this section">#</a>10) Gia dinh va mac dinh da chot</h2>
+<ul>
+<li>Dung AWS credit <code>$99</code>, uu tien goi re va on dinh.</li>
+<li>Region mac dinh: <code>us-east-1</code>.</li>
+<li>Instance mac dinh: <code>t4g.small</code>.</li>
+<li>DNS giu nha cung cap hien tai (khong chuyen Route 53).</li>
+<li>Kien truc 1 EC2 all-in-one trong giai doan hien tai.</li>
+<li>Khong them ALB/ASG/NAT Gateway o giai doan nay.</li>
+</ul>
+<h2 id="11-tai-lieu-aws-doi-chieu" class="h h2"><a class="anchor" href="#11-tai-lieu-aws-doi-chieu" aria-label="Link to this section">#</a>11) Tai lieu AWS doi chieu</h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-instance-wizard.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-instance-wizard.html</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-launch-parameters.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-launch-parameters.html</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html</a></li>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html</a></li>
+<li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithEIPs.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithEIPs.html</a></li>
+<li><a href="https://aws.amazon.com/vpc/pricing/" target="_blank" rel="noopener">https://aws.amazon.com/vpc/pricing/</a></li>
+<li><a href="https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-pref.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/billing-pref.html</a></li>
+<li><a href="https://docs.aws.amazon.com/cost-management/latest/userguide/budget-templates.html" target="_blank" rel="noopener">https://docs.aws.amazon.com/cost-management/latest/userguide/budget-templates.html</a></li>
+<li><a href="https://calculator.aws/" target="_blank" rel="noopener">https://calculator.aws/</a></li>
+</ul>
+<h2 id="12-ci-cd-github-actions-chi-tiet-cho-nguoi-moi-huong-production" class="h h2"><a class="anchor" href="#12-ci-cd-github-actions-chi-tiet-cho-nguoi-moi-huong-production" aria-label="Link to this section">#</a>12) CI/CD GitHub Actions (chi tiet cho nguoi moi, huong production)</h2>
+<p>Muc tieu:</p>
+<ul>
+<li>Moi Pull Request deu phai qua CI (<code>lint</code>, <code>test</code>, <code>build</code>).</li>
+<li>Moi lan merge vao <code>main</code> thi deploy tu dong len EC2.</li>
+<li>Co co che chan deploy nham (Environment <code>production</code> + concurrency).</li>
+</ul>
+<p>Cach doc phan nay:</p>
+<ul>
+<li>Moi muc deu co 2 phan: <code>lam gi</code> va <code>tai sao</code>.</li>
+<li>Ban co the copy tung khoi lenh theo thu tu, khong nen bo qua.</li>
+</ul>
+<h3 id="12-1-tong-quan-pipeline" class="h h3"><a class="anchor" href="#12-1-tong-quan-pipeline" aria-label="Link to this section">#</a>12.1 Tong quan pipeline</h3>
+<p>Luong de xuat:</p>
+<ol>
+<li>Dev push code len nhanh feature.</li>
+<li>Tao Pull Request vao <code>main</code>.</li>
+<li>Workflow <code>CI</code> chay va phai xanh.</li>
+<li>Merge PR vao <code>main</code>.</li>
+<li>Workflow <code>CD</code> tu dong deploy len EC2.</li>
+<li>Chay migration va health check sau deploy.</li>
+</ol>
+<p>Tai sao:</p>
+<ul>
+<li>Tach <code>CI</code> va <code>CD</code> giup tranh dua code loi len production.</li>
+<li>Chi deploy tu <code>main</code> de giam rui ro sai nhanh.</li>
+<li>Health check sau deploy de xac nhan app that su len duoc.</li>
+</ul>
+<h3 id="12-2-chuan-bi-1-lan-tren-ec2-de-nhan-deploy" class="h h3"><a class="anchor" href="#12-2-chuan-bi-1-lan-tren-ec2-de-nhan-deploy" aria-label="Link to this section">#</a>12.2 Chuan bi 1 lan tren EC2 de nhan deploy</h3>
+<p>Tren server, chay bang user <code>deploy</code>:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code># 1) Thu muc app
+sudo mkdir -p /srv/nest-auth
+sudo chown -R deploy:deploy /srv/nest-auth
+
+# 2) Clone repo vao server (lam 1 lan)
+cd /srv/nest-auth
+git clone &lt;repo_url&gt; .
+
+# 3) Kiem tra docker compose
+docker compose -f docker-compose.prod.yml config</code></pre></figure>
+<p>Tai sao:</p>
+<ul>
+<li>Co thu muc co dinh (<code>/srv/nest-auth</code>) giup CD script on dinh, khong phu thuoc nguoi dang nhap.</li>
+<li><code>docker compose config</code> la buoc &quot;kiem tra cu phap&quot; truoc khi deploy that.</li>
+</ul>
+<p>Neu repo private:</p>
+<ul>
+<li>Cach de nhat: tao deploy key read-only cho repo, add private key vao <code>/home/deploy/.ssh/id_ed25519</code> tren EC2.</li>
+<li>Sau do test:</li>
+</ul>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>ssh -T git@github.com
+git -C /srv/nest-auth pull --ff-only origin main</code></pre></figure>
+<p>Tai sao:</p>
+<ul>
+<li>Key read-only dam bao server chi co quyen <code>pull</code>, khong co quyen push/xoa code tren GitHub.</li>
+<li><code>--ff-only</code> tranh merge commit ngoai y muon tren server.</li>
+</ul>
+<h3 id="12-3-chuan-bi-tren-github-settings" class="h h3"><a class="anchor" href="#12-3-chuan-bi-tren-github-settings" aria-label="Link to this section">#</a>12.3 Chuan bi tren GitHub (Settings)</h3>
+<h4 id="a-tao-environment-production" class="h h4"><a class="anchor" href="#a-tao-environment-production" aria-label="Link to this section">#</a>A. Tao Environment <code>production</code></h4>
+<ol>
+<li>Vao <code>Repo -&gt; Settings -&gt; Environments -&gt; New environment</code>.</li>
+<li>Dat ten: <code>production</code>.</li>
+<li>(Khuyen nghi) bat Required reviewers de chan deploy nham.</li>
+<li>Save.</li>
+</ol>
+<p>Tai sao:</p>
+<ul>
+<li><code>Environment</code> cho phep dat gate rieng cho deploy production.</li>
+<li><code>Required reviewers</code> them 1 lop duyet an toan truoc khi CD chay.</li>
+</ul>
+<h4 id="b-tao-secrets-cho-deploy" class="h h4"><a class="anchor" href="#b-tao-secrets-cho-deploy" aria-label="Link to this section">#</a>B. Tao secrets cho deploy</h4>
+<p>Vao <code>Repo -&gt; Settings -&gt; Secrets and variables -&gt; Actions -&gt; New repository secret</code>.</p>
+<p>Tao cac secret sau:</p>
+<ul>
+<li><code>EC2_HOST</code>: Elastic IP cua EC2 (vd <code>54.xx.xx.xx</code>).</li>
+<li><code>EC2_USER</code>: <code>deploy</code>.</li>
+<li><code>EC2_SSH_PRIVATE_KEY</code>: toan bo private key PEM dung de SSH tu GitHub Actions.</li>
+<li><code>EC2_APP_DIR</code>: <code>/srv/nest-auth</code>.</li>
+<li><code>EC2_PORT</code>: <code>22</code> (neu dung port khac thi doi gia tri).</li>
+</ul>
+<p>Tai sao tung secret:</p>
+<ul>
+<li><code>EC2_HOST</code>: de workflow biet ket noi may nao.</li>
+<li><code>EC2_USER</code>: user dung de SSH va chay docker compose.</li>
+<li><code>EC2_SSH_PRIVATE_KEY</code>: xac thuc an toan, tranh hard-code key trong repo.</li>
+<li><code>EC2_APP_DIR</code>: giup script deploy khong bi sai duong dan.</li>
+<li><code>EC2_PORT</code>: linh hoat neu ban doi SSH sang port khac de hardening.</li>
+</ul>
+<p>Luu y bao mat:</p>
+<ul>
+<li>Khong paste secret vao file code.</li>
+<li>Khong log key ra workflow.</li>
+<li>Rotate key neu nghi ngoi lo.</li>
+</ul>
+<h4 id="c-bat-branch-protection-cho-main" class="h h4"><a class="anchor" href="#c-bat-branch-protection-cho-main" aria-label="Link to this section">#</a>C. Bat branch protection cho <code>main</code></h4>
+<ol>
+<li><code>Repo -&gt; Settings -&gt; Branches -&gt; Add rule</code>.</li>
+<li>Branch name pattern: <code>main</code>.</li>
+<li>Bat:<ul>
+<li><code>Require a pull request before merging</code>.</li>
+<li><code>Require status checks to pass before merging</code> -&gt; chon check <code>CI / ci</code>.</li>
+<li><code>Require branches to be up to date before merging</code>.</li>
+</ul>
+</li>
+<li>Save changes.</li>
+</ol>
+<p>Tai sao:</p>
+<ul>
+<li>Branch protection buoc team di qua PR + CI, tranh push thang gay vo production.</li>
+<li>Rule &quot;up to date&quot; dam bao code merge da qua CI tren state moi nhat cua <code>main</code>.</li>
+</ul>
+<h3 id="12-4-tao-workflow-ci-github-workflows-ci-yml" class="h h3"><a class="anchor" href="#12-4-tao-workflow-ci-github-workflows-ci-yml" aria-label="Link to this section">#</a>12.4 Tao workflow CI (<code>.github/workflows/ci.yml</code>)</h3>
+<p>Tao file:</p>
+<figure class="codeblock"><figcaption>YAML</figcaption><pre><code>name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      NODE_ENV: test
+      PORT: 3300
+      GLOBAL_PREFIX: api/v1
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/nest_auth
+      ACCESS_TOKEN_SECRET: ci_access_secret
+      ACCESS_TOKEN_TIME: &quot;900&quot;
+      REFRESH_TOKEN_SECRET: ci_refresh_secret
+      REFRESH_TOKEN_TIME: &quot;2592000&quot;
+      OTP_TIME: &quot;300&quot;
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: &quot;6379&quot;
+      REDIS_USERNAME: default
+      REDIS_PASSWORD: ci_redis_password
+      MAIL_HOST: smtp.example.com
+      MAIL_PORT: &quot;587&quot;
+      MAIL_SECURE: &quot;false&quot;
+      MAIL_USER: ci@example.com
+      MAIL_PASS: ci_password
+      MAIL_FROM: ci@example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint &quot;{src,apps,libs,test}/**/*.ts&quot;
+
+      - name: Unit test
+        run: npm run test -- --runInBand
+
+      - name: Build
+        run: npm run build</code></pre></figure>
+<p>Ghi chu:</p>
+<ul>
+<li>Job <code>CI / ci</code> la check can chon trong branch protection.</li>
+<li>Neu test hien tai phu thuoc DB/Redis that, bo sung service containers o workflow sau.</li>
+<li>Dung <code>npx eslint ...</code> thay vi <code>npm run lint</code> vi script local dang co <code>--fix</code>; trong CI production, nen kiem tra khong tu sua file.</li>
+</ul>
+<p>Giai thich nhanh file CI:</p>
+<ul>
+<li>Trigger <code>pull_request</code> de chan loi truoc merge, trigger <code>push main</code> de tiep tuc giu main &quot;xanh&quot;.</li>
+<li><code>permissions: contents: read</code> la nguyen tac it quyen nhat (least privilege).</li>
+<li><code>npm ci</code> tao moi truong dependency tai lap duoc, dung cho CI.</li>
+<li><code>--runInBand</code> giup test on dinh hon tren runner nho (doi lai co the cham hon).</li>
+</ul>
+<h3 id="12-5-tao-workflow-cd-github-workflows-cd-yml" class="h h3"><a class="anchor" href="#12-5-tao-workflow-cd-github-workflows-cd-yml" aria-label="Link to this section">#</a>12.5 Tao workflow CD (<code>.github/workflows/cd.yml</code>)</h3>
+<p>Tao file:</p>
+<figure class="codeblock"><figcaption>YAML</figcaption><pre><code>name: CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+
+      - name: Add EC2 host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p &quot;${{ secrets.EC2_PORT }}&quot; -H &quot;${{ secrets.EC2_HOST }}&quot; &gt;&gt; ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+        run: |
+          ssh -p &quot;$EC2_PORT&quot; &quot;$EC2_USER@$EC2_HOST&quot; &lt;&lt; &#39;EOF&#39;
+          set -euo pipefail
+          cd &quot;$EC2_APP_DIR&quot;
+
+          git fetch --all --prune
+          git checkout main
+          git pull --ff-only origin main
+
+          docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+          docker compose -f docker-compose.prod.yml exec -T app npx prisma migrate deploy
+
+          docker compose -f docker-compose.prod.yml ps
+          curl -fsS http://127.0.0.1:3300/api/v1/docs &gt;/dev/null
+          EOF</code></pre></figure>
+<p>Ghi chu production:</p>
+<ul>
+<li><code>concurrency</code> dam bao khong deploy chong len nhau.</li>
+<li><code>environment: production</code> cho phep them buoc phe duyet thu cong (neu ban bat rule).</li>
+<li><code>workflow_dispatch</code> de deploy manual khi can.</li>
+</ul>
+<p>Giai thich nhanh file CD:</p>
+<ul>
+<li>CD khong build tren local may ban, ma build ngay tren EC2 de giam sai khac moi truong.</li>
+<li><code>ssh-keyscan</code> de them host key vao <code>known_hosts</code>, tranh loi xac thuc host lan dau.</li>
+<li><code>git pull --ff-only</code> dam bao server dung dung commit tren <code>main</code>.</li>
+<li><code>curl .../api/v1/docs</code> la health check don gian sau deploy.</li>
+</ul>
+<h3 id="12-6-kich-hoat-va-test-ci-cd-lan-dau-tung-buoc" class="h h3"><a class="anchor" href="#12-6-kich-hoat-va-test-ci-cd-lan-dau-tung-buoc" aria-label="Link to this section">#</a>12.6 Kich hoat va test CI/CD lan dau (tung buoc)</h3>
+<ol>
+<li>Push 2 workflow file len branch moi.</li>
+<li>Tao PR vao <code>main</code>.</li>
+<li>Vao tab <code>Actions</code>, cho workflow <code>CI</code> chay xanh.</li>
+<li>Merge PR.</li>
+<li>Vao <code>Actions</code>, theo doi workflow <code>CD</code>.</li>
+<li>SSH vao EC2, check:</li>
+</ol>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>cd /srv/nest-auth
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail=100 app</code></pre></figure>
+<ol start="7">
+<li>Test API:</li>
+</ol>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>curl -i https://api.yourdomain.com/api/v1/docs</code></pre></figure>
+<p>Tai sao:</p>
+<ul>
+<li>Test ngay sau deploy giup phat hien loi som (env sai, migration loi, app khong len).</li>
+<li>Kiem tra logs sau do de xac dinh nguyen nhan neu fail.</li>
+</ul>
+<h3 id="12-7-rollback-nhanh-khi-deploy-loi" class="h h3"><a class="anchor" href="#12-7-rollback-nhanh-khi-deploy-loi" aria-label="Link to this section">#</a>12.7 Rollback nhanh khi deploy loi</h3>
+<p>Rollback theo commit truoc:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>cd /srv/nest-auth
+git log --oneline -n 5
+git checkout &lt;commit_sha_tot_cuoi&gt;
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec -T app npx prisma migrate deploy</code></pre></figure>
+<p>Khuyen nghi:</p>
+<ul>
+<li>Neu co migration nguy hiem, can chien luoc rollback DB rieng (backup truoc deploy).</li>
+</ul>
+<p>Tai sao:</p>
+<ul>
+<li>Rollback code khong tu dong rollback du lieu DB.</li>
+<li>Neu migration da thay doi schema/du lieu, phai co backup de quay lai an toan.</li>
+</ul>
+<h3 id="12-8-checklist-ci-cd-production" class="h h3"><a class="anchor" href="#12-8-checklist-ci-cd-production" aria-label="Link to this section">#</a>12.8 Checklist CI/CD production</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Branch protection da bat cho <code>main</code>.</li>
+<li><input disabled="" type="checkbox"> CI bat buoc truoc merge.</li>
+<li><input disabled="" type="checkbox"> CD chi deploy khi merge <code>main</code> (hoac manual dispatch).</li>
+<li><input disabled="" type="checkbox"> Deploy key/SSH key da luu trong GitHub Secrets.</li>
+<li><input disabled="" type="checkbox"> Environment <code>production</code> da tao va (neu can) co required reviewer.</li>
+<li><input disabled="" type="checkbox"> Co rollback runbook va backup DB.</li>
+</ul>
+<h3 id="12-9-loi-thuong-gap-nguoi-moi-hay-gap-cach-xu-ly" class="h h3"><a class="anchor" href="#12-9-loi-thuong-gap-nguoi-moi-hay-gap-cach-xu-ly" aria-label="Link to this section">#</a>12.9 Loi thuong gap (nguoi moi hay gap) + cach xu ly</h3>
+<ol>
+<li><code>Permission denied (publickey)</code> khi CD SSH vao EC2.</li>
+</ol>
+<ul>
+<li>Kiem tra secret <code>EC2_SSH_PRIVATE_KEY</code> co dung key private khong.</li>
+<li>Kiem tra public key tuong ung da co trong <code>/home/deploy/.ssh/authorized_keys</code>.</li>
+</ul>
+<ol start="2">
+<li><code>Host key verification failed</code>.</li>
+</ol>
+<ul>
+<li>Dam bao step <code>ssh-keyscan</code> chay dung <code>EC2_HOST</code> va <code>EC2_PORT</code>.</li>
+</ul>
+<ol start="3">
+<li>CD thanh cong nhung API 502/timeout.</li>
+</ol>
+<ul>
+<li>Vao EC2 check <code>docker compose ... ps</code> va <code>logs app</code>.</li>
+<li>Kiem tra Nginx config (<code>nginx -t</code>) va firewall/security group.</li>
+</ul>
+<ol start="4">
+<li><code>prisma migrate deploy</code> fail.</li>
+</ol>
+<ul>
+<li>Kiem tra <code>DATABASE_URL</code> trong <code>.env.prod</code>.</li>
+<li>Dam bao container <code>mysql</code> da healthy truoc khi migrate.</li>
+</ul>
+<ol start="5">
+<li>CI fail do test phu thuoc DB/Redis.</li>
+</ol>
+<ul>
+<li>Bo sung service containers trong workflow CI, hoac mock dependency de test don vi.</li>
+</ul>
+<h2 id="13-tai-lieu-github-actions-doi-chieu" class="h h2"><a class="anchor" href="#13-tai-lieu-github-actions-doi-chieu" aria-label="Link to this section">#</a>13) Tai lieu GitHub Actions doi chieu</h2>
+<ul>
+<li><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax" target="_blank" rel="noopener">https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax</a></li>
+<li><a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets" target="_blank" rel="noopener">https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets</a></li>
+<li><a href="https://docs.github.com/en/actions/reference/environments" target="_blank" rel="noopener">https://docs.github.com/en/actions/reference/environments</a></li>
+<li><a href="https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments" target="_blank" rel="noopener">https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments</a></li>
+<li><a href="https://docs.github.com/en/actions/concepts/workflows-and-actions/concurrency" target="_blank" rel="noopener">https://docs.github.com/en/actions/concepts/workflows-and-actions/concurrency</a></li>
+</ul>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#1-muc-tieu">1) Muc tieu</a></li><li class="lvl2"><a href="#2-dinh-huong-chi-phi-voi-credit-99">2) Dinh huong chi phi (voi credit $99)</a></li><li class="lvl2"><a href="#3-cau-hinh-da-chot-cho-du-an-nay">3) Cau hinh da chot cho du an nay</a></li><li class="lvl2"><a href="#4-luong-bam-nut-aws-console-click-by-click">4) Luong bam nut AWS Console (click-by-click)</a></li><li class="lvl3"><a href="#b1-chon-region">B1. Chon region</a></li><li class="lvl3"><a href="#b2-bat-billing-alert">B2. Bat billing alert</a></li><li class="lvl3"><a href="#b3-tao-budget-0-usd">B3. Tao budget 0 USD</a></li><li class="lvl3"><a href="#b4-launch-ec2">B4. Launch EC2</a></li><li class="lvl3"><a href="#b5-dien-form-launch-an-instance">B5. Dien form &quot;Launch an instance&quot;</a></li><li class="lvl3"><a href="#b6-gan-ip-tinh-elastic-ip">B6. Gan IP tinh (Elastic IP)</a></li><li class="lvl3"><a href="#b7-lay-lenh-ssh-tu-aws-console">B7. Lay lenh SSH tu AWS Console</a></li><li class="lvl3"><a href="#b8-tro-domain-o-nha-dang-ky-hien-tai">B8. Tro domain o nha dang ky hien tai</a></li><li class="lvl2"><a href="#5-ssh-vao-server-hardening-sau-login-dau-tien">5) SSH vao server + hardening sau login dau tien</a></li><li class="lvl2"><a href="#6-deploy-docker-compose-arm64">6) Deploy Docker Compose (ARM64)</a></li><li class="lvl3"><a href="#6-1-cai-docker">6.1 Cai Docker</a></li><li class="lvl3"><a href="#6-2-chuan-bi-source">6.2 Chuan bi source</a></li><li class="lvl3"><a href="#6-3-tao-env-prod">6.3 Tao .env.prod</a></li><li class="lvl3"><a href="#6-4-dockerfile-neu-repo-chua-co">6.4 Dockerfile (neu repo chua co)</a></li><li class="lvl3"><a href="#6-5-docker-compose-prod-yml">6.5 docker-compose.prod.yml</a></li><li class="lvl3"><a href="#6-6-run-app-migration">6.6 Run app + migration</a></li><li class="lvl2"><a href="#7-nginx-reverse-proxy-ssl">7) Nginx reverse proxy + SSL</a></li><li class="lvl2"><a href="#8-public-api-interfaces-types">8) Public API/interfaces/types</a></li><li class="lvl2"><a href="#9-test-cases-acceptance-criteria">9) Test cases / acceptance criteria</a></li><li class="lvl2"><a href="#10-gia-dinh-va-mac-dinh-da-chot">10) Gia dinh va mac dinh da chot</a></li><li class="lvl2"><a href="#11-tai-lieu-aws-doi-chieu">11) Tai lieu AWS doi chieu</a></li><li class="lvl2"><a href="#12-ci-cd-github-actions-chi-tiet-cho-nguoi-moi-huong-production">12) CI/CD GitHub Actions (chi tiet cho nguoi moi, huong production)</a></li><li class="lvl3"><a href="#12-1-tong-quan-pipeline">12.1 Tong quan pipeline</a></li><li class="lvl3"><a href="#12-2-chuan-bi-1-lan-tren-ec2-de-nhan-deploy">12.2 Chuan bi 1 lan tren EC2 de nhan deploy</a></li><li class="lvl3"><a href="#12-3-chuan-bi-tren-github-settings">12.3 Chuan bi tren GitHub (Settings)</a></li><li class="lvl3"><a href="#12-4-tao-workflow-ci-github-workflows-ci-yml">12.4 Tao workflow CI (.github/workflows/ci.yml)</a></li><li class="lvl3"><a href="#12-5-tao-workflow-cd-github-workflows-cd-yml">12.5 Tao workflow CD (.github/workflows/cd.yml)</a></li><li class="lvl3"><a href="#12-6-kich-hoat-va-test-ci-cd-lan-dau-tung-buoc">12.6 Kich hoat va test CI/CD lan dau (tung buoc)</a></li><li class="lvl3"><a href="#12-7-rollback-nhanh-khi-deploy-loi">12.7 Rollback nhanh khi deploy loi</a></li><li class="lvl3"><a href="#12-8-checklist-ci-cd-production">12.8 Checklist CI/CD production</a></li><li class="lvl3"><a href="#12-9-loi-thuong-gap-nguoi-moi-hay-gap-cach-xu-ly">12.9 Loi thuong gap (nguoi moi hay gap) + cach xu ly</a></li><li class="lvl2"><a href="#13-tai-lieu-github-actions-doi-chieu">13) Tai lieu GitHub Actions doi chieu</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/deploy-ec2-docker-production.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

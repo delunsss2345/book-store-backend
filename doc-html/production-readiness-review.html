@@ -1,0 +1,451 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookstore Backend · Production-Readiness Review</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D; --rust:#B04A3F;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--slate); font-family:var(--sans); line-height:1.55; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+
+  /* Masthead */
+  header.masthead{padding:72px 0 36px; border-bottom:1px solid var(--g200)}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--clay-d); margin:0 0 18px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.05; font-size:clamp(36px,5vw,58px); margin:0 0 18px; letter-spacing:-.01em}
+  .lede{font-size:clamp(16px,1.5vw,19px); max-width:70ch; color:var(--g700); margin:0 0 22px}
+  .lede b{color:var(--slate)}
+  .meta-row{display:flex; flex-wrap:wrap; gap:9px; margin-top:18px}
+  .chip{font-family:var(--mono); font-size:12px; padding:6px 12px; border:1px solid var(--g300); border-radius:999px; background:var(--paper); color:var(--g700)}
+  .chip.k{background:var(--slate); color:var(--ivory); border-color:var(--slate)}
+  .chip.r{background:rgba(176,74,63,.10); color:var(--rust); border-color:rgba(176,74,63,.45)}
+  .chip.c{background:rgba(217,119,87,.12); color:var(--clay-d); border-color:rgba(217,119,87,.5)}
+  .chip.o{background:rgba(120,140,93,.12); color:#4B5C39; border-color:rgba(120,140,93,.5)}
+
+  /* TOC */
+  nav.toc{display:flex; flex-wrap:wrap; gap:10px; padding:24px 0; border-bottom:1px solid var(--g200)}
+  nav.toc a{text-decoration:none; font-size:13px; padding:8px 14px; border-radius:999px; border:1px solid var(--g300); background:var(--paper); color:var(--g700); transition:all .15s ease}
+  nav.toc a:hover{background:var(--clay); color:var(--paper); border-color:var(--clay); transform:translateY(-1px)}
+
+  /* Sections */
+  section{padding:52px 0; border-bottom:1px solid var(--g200)}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:8px}
+  .sec-num{font-family:var(--mono); font-size:13px; color:var(--clay-d); padding-top:6px}
+  section h2{font-family:var(--serif); font-weight:600; font-size:clamp(25px,3vw,34px); margin:0; letter-spacing:-.01em}
+  .sec-sub{color:var(--g500); font-size:15px; margin:6px 0 28px; max-width:74ch}
+  h3.blk{font-family:var(--serif); font-weight:600; font-size:20px; margin:34px 0 14px}
+
+  /* Scorecard */
+  .scorecard{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  @media(max-width:820px){ .scorecard{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:520px){ .scorecard{grid-template-columns:1fr} }
+  .score{background:var(--paper); border:1px solid var(--g200); border-radius:12px; padding:16px 18px}
+  .score .dim{font-size:13px; color:var(--g700); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center}
+  .grade{font-family:var(--mono); font-weight:700; font-size:12px; padding:2px 9px; border-radius:6px}
+  .grade.b{background:rgba(176,74,63,.12); color:var(--rust)}
+  .grade.c{background:rgba(217,119,87,.14); color:var(--clay-d)}
+  .grade.bp{background:var(--oat); color:#7A6A4F}
+  .grade.a{background:rgba(120,140,93,.16); color:#4B5C39}
+  .score .note{font-size:12.5px; color:var(--g500); line-height:1.45}
+
+  /* Priority matrix */
+  .matrix{position:relative; background:var(--paper); border:1px solid var(--g200); border-radius:14px; padding:26px 26px 20px; margin-top:6px}
+  .quad{display:grid; grid-template-columns:1fr 1fr; grid-template-rows:200px 200px; border:1px solid var(--g200); border-radius:10px; overflow:hidden}
+  .cell{position:relative; padding:12px 14px; border:1px dashed var(--g200)}
+  .cell .ct{font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--g500)}
+  .cell.do{background:rgba(176,74,63,.05)}
+  .cell.plan{background:rgba(217,119,87,.05)}
+  .dot{position:absolute; display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:11px; background:var(--paper); border:1px solid var(--g300); border-radius:999px; padding:3px 9px; white-space:nowrap; transform:translate(-50%,-50%)}
+  .dot b{width:7px; height:7px; border-radius:50%}
+  .dot b.r{background:var(--rust)} .dot b.c{background:var(--clay)} .dot b.o{background:var(--olive)}
+  .axis{font-family:var(--mono); font-size:11px; color:var(--g500); margin-top:10px; display:flex; justify-content:space-between}
+  .axis-y{position:absolute; left:-6px; top:50%; transform:rotate(-90deg) translateX(50%); transform-origin:left; font-family:var(--mono); font-size:11px; color:var(--g500)}
+
+  /* Issue blocks */
+  .issue{background:var(--paper); border:1px solid var(--g200); border-left:4px solid var(--g300); border-radius:0 12px 12px 0; padding:20px 22px; margin:18px 0}
+  .issue.crit{border-left-color:var(--rust)}
+  .issue.high{border-left-color:var(--clay)}
+  .issue.med{border-left-color:#C2A24E}
+  .issue.low{border-left-color:var(--olive)}
+  .issue .top{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:6px}
+  .sev{font-family:var(--mono); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:3px 9px; border-radius:6px}
+  .sev.crit{background:rgba(176,74,63,.13); color:var(--rust)}
+  .sev.high{background:rgba(217,119,87,.15); color:var(--clay-d)}
+  .sev.med{background:var(--oat); color:#7A6A4F}
+  .sev.low{background:rgba(120,140,93,.16); color:#4B5C39}
+  .issue h3{font-family:var(--serif); font-size:20px; font-weight:600; margin:0; flex:1; min-width:240px}
+  .issue .id{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  .issue .path{font-family:var(--mono); font-size:11.5px; color:var(--g500); word-break:break-all}
+  .rows{margin-top:12px; display:grid; grid-template-columns:120px 1fr; gap:0}
+  @media(max-width:640px){ .rows{grid-template-columns:1fr} }
+  .rows .k{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--g500); padding:10px 0; border-top:1px solid var(--g100)}
+  .rows .v{font-size:14px; color:var(--g700); padding:10px 0; border-top:1px solid var(--g100)}
+  @media(max-width:640px){ .rows .k{padding-bottom:2px; border-top:1px solid var(--g100)} .rows .v{padding-top:2px; border-top:none} }
+  .rows .v.fix{color:var(--slate)}
+  .rows .k.fixk{color:var(--olive)}
+  code.inl{font-family:var(--mono); font-size:.86em; background:var(--g100); padding:2px 6px; border-radius:5px; color:var(--clay-d)}
+
+  /* Code */
+  pre{background:var(--slate); color:#E9E6DD; border-radius:10px; padding:14px 16px; overflow-x:auto; font-family:var(--mono); font-size:12px; line-height:1.62; margin:12px 0}
+  pre .cm{color:#8A9A78} pre .kw{color:#E0A07E} pre .st{color:#C9C2B0} pre .ad{background:rgba(120,140,93,.22); display:inline-block; width:100%} pre .rm{background:rgba(176,74,63,.18); display:inline-block; width:100%}
+
+  /* Tables */
+  table{width:100%; border-collapse:separate; border-spacing:0; margin:16px 0; font-size:13px; background:var(--paper); border:1px solid var(--g200); border-radius:12px; overflow:hidden}
+  thead th{text-align:left; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500); background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g300)}
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--g100); vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--ivory)}
+  td .tag{font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:5px}
+  td .tag.r{background:rgba(176,74,63,.12); color:var(--rust)} td .tag.c{background:rgba(217,119,87,.14); color:var(--clay-d)} td .tag.o{background:rgba(120,140,93,.16); color:#4B5C39}
+  td code{font-family:var(--mono); font-size:11.5px; color:var(--clay-d)}
+
+  /* Callout */
+  .callout{border-left:3px solid var(--clay); background:var(--g100); padding:15px 18px; border-radius:0 10px 10px 0; margin:18px 0; font-size:14px; color:var(--g700)}
+  .callout.ol{border-left-color:var(--olive)}
+  .callout b{color:var(--slate)}
+
+  /* Restructure diagram */
+  .restruct{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:8px}
+  @media(max-width:820px){ .restruct{grid-template-columns:1fr} }
+  .col h4{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500); margin:0 0 12px}
+  .ctx{background:var(--paper); border:1px solid var(--g200); border-radius:10px; padding:13px 15px; margin-bottom:10px}
+  .ctx .nm{font-family:var(--serif); font-size:16px; font-weight:600}
+  .ctx .mods{font-family:var(--mono); font-size:11.5px; color:var(--g500); margin-top:5px; line-height:1.5}
+  .scatter{display:flex; flex-wrap:wrap; gap:6px}
+  .scatter .m{font-family:var(--mono); font-size:11px; padding:4px 8px; border-radius:6px; background:var(--g100); color:var(--g700); border:1px solid var(--g200)}
+
+  footer{padding:44px 0 64px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:center}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:18px}
+  footer .mono{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  @media(max-width:640px){ section{padding:38px 0} .sec-head{flex-direction:column; gap:4px} .quad{grid-template-rows:160px 160px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <p class="eyebrow">Production-Readiness Review · Staff-level audit</p>
+    <h1>Bookstore Backend:<br>What breaks first, and what it will cost.</h1>
+    <p class="lede">
+      A critical review of the NestJS&nbsp;11 / Prisma&nbsp;7 / MariaDB backend — <b>527 files, ~50 modules, 40 tables</b> —
+      read against one goal: <b>minimum infrastructure cost</b> while staying smooth under load, horizontally scalable,
+      maintainable, and reasonably fast to build on. The foundations are good (clean layering, transactional outbox,
+      idempotent webhooks, snapshots). This document is about the <b>15 things that will bite</b> as traffic and data grow —
+      ranked by impact &times; effort, each with a concrete fix and its trade-off.
+    </p>
+    <div class="meta-row">
+      <span class="chip r">4 critical</span>
+      <span class="chip c">5 high</span>
+      <span class="chip o">6 medium / polish</span>
+      <span class="chip k">cost-first lens</span>
+      <span class="chip">verified against schema + source</span>
+    </div>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc">
+    <a href="#verdict">Scorecard</a>
+    <a href="#matrix">Priority matrix</a>
+    <a href="#cost">01 · Cost &amp; Scaling</a>
+    <a href="#money">02 · Correctness &amp; Money</a>
+    <a href="#db">03 · Database</a>
+    <a href="#arch">04 · Module Architecture</a>
+    <a href="#sec">05 · Security &amp; API</a>
+    <a href="#road">→ Roadmap</a>
+  </nav>
+
+  <!-- SCORECARD -->
+  <section id="verdict">
+    <div class="sec-head"><span class="sec-num">★</span><h2>Scorecard</h2></div>
+    <p class="sec-sub">Per-dimension posture. Grades reflect production-readiness for a cost-sensitive startup expecting growth — not code quality in isolation (which is generally solid).</p>
+    <div class="scorecard">
+      <div class="score"><div class="dim">Core module design <span class="grade bp">B−</span></div><div class="note">Clean layering, but ~50 modules over-fragment one-table concerns; god-files forming.</div></div>
+      <div class="score"><div class="dim">Database &amp; data model <span class="grade c">C</span></div><div class="note">Good snapshots/audit; but missing indexes, nullable money, a financial cascade-delete, no archival.</div></div>
+      <div class="score"><div class="dim">System architecture <span class="grade bp">B−</span></div><div class="note">Sound patterns; single DB carries OLTP + analytics; static config singleton couples the graph.</div></div>
+      <div class="score"><div class="dim">API &amp; communication <span class="grade a">B+</span></div><div class="note">Consistent envelope, global validation; offset-only pagination will hurt deep lists.</div></div>
+      <div class="score"><div class="dim">Performance <span class="grade c">C</span></div><div class="note">DB round-trip on every authenticated request; uncached hot paths; filesorts on un-indexed reads.</div></div>
+      <div class="score"><div class="dim">Scalability / reliability <span class="grade b">C−</span></div><div class="note">In-memory L1 cache blocks multi-instance; stock oversell race; unbounded tables.</div></div>
+      <div class="score"><div class="dim">Security <span class="grade c">C</span></div><div class="note">Layered auth, but unverified webhook signature, stale-perm window, plaintext TOTP secret.</div></div>
+      <div class="score"><div class="dim">Cost efficiency <span class="grade c">C</span></div><div class="note">Forced vertical scaling, oversized primary DB, a paid vector vendor for a small catalog.</div></div>
+      <div class="score"><div class="dim">Maintainability / DX <span class="grade bp">B−</span></div><div class="note">Readable and consistent; <code class="inl">any</code> in the money path, mixed-language comments, 50-module wiring tax.</div></div>
+    </div>
+    <div class="callout"><b>Bottom line.</b> Nothing here is a rewrite. The stack is appropriate and the patterns are above-average for the size. But three choices actively <i>block the cheapest scaling path</i> (add small instances behind a load balancer): the in-process cache tier, the per-request DB auth check, and an OLTP database that also stores the analytics firehose. Fix those first — they are the difference between "scale by adding $10 instances" and "scale by paying for one ever-bigger one."</div>
+  </section>
+
+  <!-- PRIORITY MATRIX -->
+  <section id="matrix">
+    <div class="sec-head"><span class="sec-num">⊞</span><h2>Priority matrix — impact &times; effort</h2></div>
+    <p class="sec-sub">Sequence by leverage. Top-left is "do this sprint": high impact, low cost. IDs map to the issue cards below.</p>
+    <div class="matrix">
+      <div class="quad">
+        <div class="cell do"><span class="ct">High impact · Low effort — DO FIRST</span>
+          <span class="dot" style="left:28%; top:34%"><b class="r"></b>C2 payment cascade</span>
+          <span class="dot" style="left:60%; top:62%"><b class="r"></b>C3 revoked-token cache</span>
+          <span class="dot" style="left:40%; top:80%"><b class="c"></b>H2 review indexes</span>
+        </div>
+        <div class="cell plan"><span class="ct">High impact · High effort — PLAN</span>
+          <span class="dot" style="left:30%; top:30%"><b class="r"></b>C1 drop L1 cache</span>
+          <span class="dot" style="left:66%; top:52%"><b class="r"></b>C4 oversell lock</span>
+          <span class="dot" style="left:42%; top:80%"><b class="c"></b>H1 event firehose</span>
+        </div>
+        <div class="cell"><span class="ct">Low impact · Low effort — QUICK WINS</span>
+          <span class="dot" style="left:34%; top:40%"><b class="c"></b>H4 paymentUrl len</span>
+          <span class="dot" style="left:64%; top:64%"><b class="o"></b>M5 slug unique</span>
+          <span class="dot" style="left:38%; top:82%"><b class="o"></b>M6 cleanup crons</span>
+        </div>
+        <div class="cell"><span class="ct">Low impact · High effort — DEFER</span>
+          <span class="dot" style="left:36%; top:46%"><b class="o"></b>M3 ID strategy</span>
+          <span class="dot" style="left:64%; top:70%"><b class="o"></b>M4 pgvector swap</span>
+        </div>
+      </div>
+      <div class="axis"><span>← lower effort / cost</span><span>higher effort / cost →</span></div>
+      <span class="axis-y">lower impact → higher impact</span>
+    </div>
+    <p class="sec-sub" style="margin-top:14px">Read the matrix top-to-bottom: the entire top row (C1–C4, H1–H2) is what stands between today's single-instance deployment and cheap horizontal scaling with intact financial data.</p>
+  </section>
+
+  <!-- 01 COST & SCALING -->
+  <section id="cost">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Cost &amp; scaling — the primary goal</h2></div>
+    <p class="sec-sub">The stated objective is minimum infra cost with easy horizontal/vertical scaling. Three design choices currently force the <i>expensive</i> direction: scaling up one big box instead of out across cheap small ones.</p>
+
+    <div class="issue crit">
+      <div class="top"><span class="sev crit">Critical</span><h3>In-process L1 cache blocks horizontal scaling</h3><span class="id">C1</span></div>
+      <div class="path">src/config/redis.config.ts:71-77 · two-tier store: CacheableMemory(lruSize 5000, ttl 60s) → Redis</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">The cache is a two-tier stack: an in-<i>process</i> memory store in front of Redis. Each Node instance keeps its own L1. Any invalidation (catalog edit, permission change, order status) only clears the local process — peers serve stale data until their 60s TTL lapses.</div>
+        <div class="k">Impact at scale</div><div class="v">The cheapest way to handle traffic is N small instances behind a load balancer. With per-process L1, those instances <i>disagree</i>: a price edit shows on the node that served the write and is stale everywhere else. To stay correct you’re pushed toward one large vertical instance — the opposite of the cost goal — or you ship visible inconsistency.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Make Redis the single cache tier (drop the memory Keyv), or keep L1 only for truly immutable data (enum/i18n lookups) with explicit pub/sub invalidation. Redis-only keeps every instance consistent and lets you scale out on $5–10 nodes.</div>
+        <div class="k">Trade-off</div><div class="v">Every cache read becomes a Redis round-trip (~0.3–1ms) instead of an in-process hit. For this workload that is negligible and worth the correctness; revisit L1 only if a profiler shows Redis as the bottleneck.</div>
+      </div>
+    </div>
+
+    <div class="issue crit">
+      <div class="top"><span class="sev crit">Critical</span><h3>A database round-trip on every authenticated request</h3><span class="id">C3</span></div>
+      <div class="path">auth.guard.ts:46 → revoked-token.repository.ts:23 — <code class="inl">findUnique</code> per request · no cleanup cron</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">Every guarded request verifies the JWT (cheap, in-memory) <i>and</i> issues <code class="inl">revokedToken.findUnique()</code> to MariaDB to check the blacklist. The deep-dive bills RBAC as “authorization without DB round-trips,” but authentication itself hits the DB on 100% of requests. The blacklist table also has <b>no cleanup job</b> — it grows forever (one row per logout), so the hottest query in the system runs against an ever-larger table.</div>
+        <div class="k">Impact at scale</div><div class="v">DB connections and QPS scale linearly with traffic on the one query you can’t cache away, forcing a bigger (pricier) DB instance and shrinking headroom for checkout. Unbounded <code class="inl">revoked_tokens</code> inflates backups and slowly raises p99 auth latency.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Move revocation to Redis: store <code class="inl">revoked:{hash}</code> with a TTL equal to the token’s remaining life — the entry self-expires, so no cleanup job and no growth. Auth becomes a sub-millisecond Redis <code class="inl">EXISTS</code>. Keep access-token TTLs short (5–15&nbsp;min) so the blacklist stays tiny.</div>
+        <div class="k">Trade-off</div><div class="v">Revocation now depends on Redis availability — but Redis is already required for cache + queue, so it adds no new dependency. If absolute durability of revocations matters, keep a DB write-through and read from Redis.</div>
+      </div>
+    </div>
+
+    <div class="issue high">
+      <div class="top"><span class="sev high">High</span><h3>One database holds OLTP <i>and</i> the analytics firehose</h3><span class="id">H1</span></div>
+      <div class="path">prisma/models/engagement.prisma · user_events / audit_logs · login_attempts (user.prisma)</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v"><code class="inl">user_events</code> records a row for every view, search, add-to-cart and payment. It is append-only, unbounded, and lives in the same MariaDB as orders and inventory, with <b>no TTL, partitioning, or archival</b>. It will become the largest table by an order of magnitude, and the recommendation engine scans it on the primary.</div>
+        <div class="k">Impact at scale</div><div class="v">The transactional DB you pay to keep fast, replicated, and backed-up is dominated by analytics rows that checkout never needs. Backups slow, storage cost climbs, and recommendation reads compete with order writes for buffer pool and IO.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Separate the firehose: range-partition <code class="inl">user_events</code> by month with a TTL/drop-old job (cheapest), or stream events to an append-only store (ClickHouse / object storage + Athena) and keep MariaDB for transactions. Same treatment for <code class="inl">audit_logs</code> and <code class="inl">login_attempts</code>.</div>
+        <div class="k">Trade-off</div><div class="v">A second store adds operational surface. Start with partition + TTL on the existing DB (near-zero new infra) and only externalize when event volume justifies it — staged by cost, not bought up-front.</div>
+      </div>
+    </div>
+
+    <div class="callout ol"><b>Cost lever, not a bug:</b> semantic search runs through <b>Pinecone</b> (a paid managed vector DB) plus a Gemini embedding per query. For a catalog likely under ~100k titles that is a fixed monthly vendor bill for a feature most queries don’t need. See <code class="inl">M4</code> — gate vector search behind cheap keyword search and consider collapsing vectors into the DB.</div>
+  </section>
+
+  <!-- 02 CORRECTNESS & MONEY -->
+  <section id="money">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Correctness &amp; money</h2></div>
+    <p class="sec-sub">Where mistakes cost real money or destroy records. These are not style issues — they change data.</p>
+
+    <div class="issue crit">
+      <div class="top"><span class="sev crit">Critical</span><h3>Stock reservation has a check-then-act race → oversell</h3><span class="id">C4</span></div>
+      <div class="path">src/modules/order/order.service.ts:86-158 (processOrderItems)</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">Availability is read via <code class="inl">catalogRepository</code> (outside the transaction’s locks), checked in JS as <code class="inl">stock - reserved</code>, and only later does <code class="inl">tx.bookVariant.update({ reserved: { increment } })</code> run. Two concurrent checkouts for the last copy both read “1 available,” both pass, both reserve → oversell. The increment is atomic; the <i>guard</i> is not.</div>
+        <div class="k">Impact at scale</div><div class="v">Under any concurrency on hot/limited titles you sell stock you don’t have — refunds, support load, and broken trust on exactly the launches that drive traffic. <code class="inl">stock</code> and <code class="inl">reserved</code> are also nullable, and the code force-unwraps (<code class="inl">variant.stock!</code>), risking a runtime error if either is null.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Make the reservation a single conditional write the DB enforces: <code class="inl">UPDATE book_variants SET reserved = reserved + :q WHERE id = :id AND (stock - reserved) &gt;= :q</code> and treat <i>0 rows affected</i> as out-of-stock. That collapses check-and-act into one atomic statement — no lock juggling, no oversell.</div>
+        <div class="k">Trade-off</div><div class="v">Slightly less ergonomic than Prisma’s typed <code class="inl">update</code> (needs <code class="inl">$executeRaw</code> or <code class="inl">updateMany</code> + affected-count check), and contended rows serialize briefly. That serialization is the point — it’s correctness on the one row that matters.</div>
+      </div>
+    </div>
+
+    <div class="issue crit">
+      <div class="top"><span class="sev crit">Critical</span><h3>Deleting an order cascade-deletes its payment records</h3><span class="id">C2</span></div>
+      <div class="path">prisma/models/commerce.prisma:165 — <code class="inl">PaymentTransaction.order onDelete: Cascade</code></div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">A <code class="inl">PaymentTransaction</code> is cascade-deleted with its <code class="inl">Order</code>. Orders have no soft-delete, so a hard delete (cleanup, admin action, GDPR erasure) silently destroys the financial ledger — including the raw gateway payloads kept for reconciliation.</div>
+        <div class="k">Impact at scale</div><div class="v">Loss of payment history is an accounting and compliance hazard: you can’t reconcile, dispute a chargeback, or prove a refund. It’s the one record class that must outlive everything around it.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Change the relation to <code class="inl">onDelete: Restrict</code> (or <code class="inl">SetNull</code> + retain). Never hard-delete orders with payments — soft-delete them. Treat <code class="inl">payment_transactions</code> and <code class="inl">webhook_inbox</code> as an immutable ledger.</div>
+        <div class="k">Trade-off</div><div class="v">Deleting an order now requires handling its payments explicitly (archive/anonymize) rather than a free cascade — which is exactly the friction you want guarding financial data.</div>
+      </div>
+    </div>
+
+    <div class="issue high">
+      <div class="top"><span class="sev high">High</span><h3>Order money &amp; status columns are nullable</h3><span class="id">H3</span></div>
+      <div class="path">prisma/models/commerce.prisma:28-33 — <code class="inl">status</code>, <code class="inl">paymentStatus</code>, <code class="inl">subtotal</code>, <code class="inl">totalAmount</code> all <code class="inl">?</code></div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">An <code class="inl">Order</code> can exist with NULL status, payment status, subtotal and total. Invariants that should be guaranteed by the schema are left to application code, so every report and admin query must defend against NULL money.</div>
+        <div class="k">Impact at scale</div><div class="v">Revenue sums silently skip NULL rows; dashboards under-count; a partial write leaves an order in an unrepresentable state. Bugs surface as “the numbers don’t add up,” which are slow and expensive to chase.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Make them NOT NULL with defaults (<code class="inl">status = PENDING_PAYMENT</code>, amounts default 0) via a backfill migration. Add DB CHECK constraints (<code class="inl">total &gt;= 0</code>, <code class="inl">rating BETWEEN 1 AND 5</code>) — MariaDB enforces them now.</div>
+        <div class="k">Trade-off</div><div class="v">A backfill + migration is required, and any code relying on NULL as “not set yet” needs an explicit initial state — a one-time cost for permanent integrity.</div>
+      </div>
+    </div>
+
+    <div class="issue high">
+      <div class="top"><span class="sev high">High</span><h3><code class="inl">paymentUrl VARCHAR(100)</code> will truncate real gateway URLs</h3><span class="id">H4</span></div>
+      <div class="path">commerce.prisma:157 — PaymentTransaction.paymentUrl <code class="inl">@db.VarChar(100)</code> (vs PaymentIntent.paymentUrl VarChar(200))</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">Gateway redirect/QR URLs (VNPAY, Stripe, MoMo) routinely exceed 100 characters with their signed query strings. The same concept is 200 on <code class="inl">PaymentIntent</code> and 100 here — inconsistent, and 100 is too short.</div>
+        <div class="k">Impact at scale</div><div class="v">On a real gateway switch this is a hard insert error (or silent truncation) in the payment path — failures land exactly where you can least afford them.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Widen to <code class="inl">VarChar(1000)</code> (or Text) and standardize URL lengths across payment tables. Trivial migration.</div>
+        <div class="k">Trade-off</div><div class="v">None worth noting; VARCHAR length costs nothing until used.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 DATABASE -->
+  <section id="db">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Database design review</h2></div>
+    <p class="sec-sub">40 tables across 8 well-organized schema files. The modeling instincts are strong — snapshots, audit log, a documented onDelete matrix, composite keys. The gaps are in indexing for real query shapes, a few constraints, and growth planning.</p>
+
+    <h3 class="blk">Indexing strategy — the biggest gap</h3>
+    <p class="sec-sub" style="margin-bottom:14px">InnoDB auto-indexes single FK columns, so simple lookups are covered. What’s missing are <b>composite indexes for the actual access patterns</b> and a few <b>uniqueness constraints</b> the app only enforces in code.</p>
+    <table>
+      <thead><tr><th style="width:24%">Table</th><th style="width:30%">Hot query</th><th style="width:20%">Today</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td><code>reviews</code> <span class="tag r">none</span></td><td>List reviews for a book, newest first; “has user reviewed?”</td><td>Zero <code>@@index</code>, zero <code>@@unique</code></td><td><code>@@index([bookId, createdAt])</code> + <code>@@unique([userId, bookVariantId])</code></td></tr>
+        <tr><td><code>book_categories</code></td><td>“Books in category X” (browse)</td><td>PK <code>(bookId, categoryId)</code> — categoryId not leftmost</td><td><code>@@index([categoryId])</code></td></tr>
+        <tr><td><code>book_authors</code></td><td>“Books by author X”</td><td>PK <code>(bookId, authorId)</code> — authorId not leftmost</td><td><code>@@index([authorId])</code></td></tr>
+        <tr><td><code>orders</code></td><td>Cleanup cron: <code>status=PENDING &amp; expiredAt&lt;now</code> every 10&nbsp;min</td><td>No index on <code>expiredAt</code></td><td><code>@@index([status, expiredAt])</code></td></tr>
+        <tr><td><code>book_translations</code></td><td>Resolve book by slug</td><td><code>@@index([languageId, slug])</code> but slug <b>not unique</b></td><td>Make <code>(languageId, slug)</code> unique → stable routing</td></tr>
+        <tr><td><code>webhook_inbox</code></td><td>Find unprocessed / failed events to retry</td><td>No index on <code>status</code></td><td><code>@@index([status, receivedAt])</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><b>Why this matters most:</b> the index-less <code class="inl">reviews</code> table is on the book-detail hot path (list + average rating). As popular titles accumulate reviews, every page view filesorts a growing table. And with no <code class="inl">@@unique([userId, bookVariantId])</code>, the “already reviewed?” check is a racy app-level guard — two fast requests create duplicate reviews.</div>
+
+    <h3 class="blk">Relationships &amp; constraints</h3>
+    <table>
+      <thead><tr><th style="width:30%">Finding</th><th>Detail &amp; fix</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag r">crit</span> Financial cascade</td><td><code>payment_transactions.order onDelete: Cascade</code> — see <code>C2</code>. Make Restrict.</td></tr>
+        <tr><td><span class="tag c">high</span> Stock triple</td><td><code>BookVariant</code> carries <code>stock?</code>, <code>reserved?</code> (both nullable) and <code>available</code> — three overlapping quantities with no DB-enforced invariant. Pick one source of truth (e.g. <code>stock</code> + derived <code>reserved</code>); make them NOT NULL with defaults; add <code>CHECK (reserved &lt;= stock)</code>.</td></tr>
+        <tr><td><span class="tag c">med</span> Guest order orphaning</td><td><code>orders.guestSessionId onDelete: SetNull</code> + a nightly guest-session cleanup. A guest order (userId NULL) whose session is purged becomes ownerless. Exclude sessions with orders from cleanup, or copy a durable contact key onto the order.</td></tr>
+        <tr><td><span class="tag o">low</span> Badge cardinality</td><td><code>BookBadge.bookId @unique</code> (1:1) but modeled as <code>BookBadge[]</code> with <code>@@index([bookId, code])</code> (implies many). Decide 1:1 vs 1:many and align.</td></tr>
+        <tr><td><span class="tag o">low</span> Soft-delete drift</td><td><code>Wishlist.deleteAt</code> (<code>delete_at</code>) breaks the <code>deletedAt</code>/<code>deleted_at</code> convention used everywhere else. Soft-delete is also enforced by hand (<code>where: { deletedAt: null }</code>) on every query — easy to forget. Centralize via a Prisma extension/middleware.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="blk">Structure, types &amp; future growth</h3>
+    <table>
+      <thead><tr><th style="width:30%">Topic</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td>Money types</td><td><span class="tag o">good</span> <code>Decimal(12,2)</code> for money (correct). Standardize precision (inventory uses <code>18,2</code>) and stop leaving <code>currencyCode</code> nullable on every table — default it or add a <code>Currency</code> reference.</td></tr>
+        <tr><td>Primary keys</td><td><span class="tag o">med</span> Mixed strategy: autoincrement <code>BigInt</code> (most), <code>cuid()</code> (PurchaseOrder, StockImport, PaymentIntent), <code>uuid</code> (sessions). Autoincrement leaks volume and is enumerable (IDOR surface if any endpoint misses an ownership check). Pick one convention per ID class and document it.</td></tr>
+        <tr><td>i18n model</td><td><span class="tag o">good/med</span> Per-entity translation tables are correct, but they force multi-join hydration on every catalog read — the root cause of the 832-line catalog repository. A denormalized read model (see §04) pays this off.</td></tr>
+        <tr><td>Growth</td><td><span class="tag c">plan</span> <code>user_events</code>, <code>audit_logs</code>, <code>login_attempts</code>, <code>revoked_tokens</code>, <code>email_outbox</code> all grow unbounded with <b>no retention</b>. Add TTL/cleanup jobs (only 2 crons exist today, neither prunes these).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 04 ARCHITECTURE -->
+  <section id="arch">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Module architecture &amp; structure</h2></div>
+    <p class="sec-sub">The controller → service → repository layering is clean and consistent — a real strength. The problem is granularity: ~50 modules where many wrap a single join table, while a few services have swollen into god-files.</p>
+
+    <div class="issue high">
+      <div class="top"><span class="sev high">High</span><h3>One-table-per-module fragmentation vs. god-files</h3><span class="id">H5</span></div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">Two opposite smells at once. <b>Anemic sprawl:</b> <code class="inl">order-item</code>, <code class="inl">cart-item</code>, <code class="inl">order-address</code>, <code class="inl">book-author</code>, <code class="inl">user-role</code>, <code class="inl">role-permission</code> are standalone modules for what are really parts of an aggregate. <b>God-files:</b> <code class="inl">catalog.repository.ts</code> (832 lines, 19 query methods), <code class="inl">order.service.ts</code> (567), <code class="inl">catalog.service.ts</code> (547), <code class="inl">admin-book.service.ts</code> (513).</div>
+        <div class="k">Impact at scale</div><div class="v">Every feature touches many tiny modules (wiring tax, hard to trace a flow), while the few files that matter most are the hardest to change safely. New engineers pay both costs. The money path (<code class="inl">order.service</code>) even uses <code class="inl">any</code> for <code class="inl">tx</code>/<code class="inl">cart</code>, discarding type safety where it’s most valuable.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Reorganize around <b>bounded contexts (aggregates)</b>, not tables. Collapse join-table modules into their owning aggregate; split god-files by use-case (read-model vs. write-model). See the map below.</div>
+        <div class="k">Trade-off</div><div class="v">A refactor with no user-visible payoff, so it competes with features. Do it incrementally — fold one join-module per PR, and carve a <code class="inl">CatalogReadModel</code> out of the catalog repository first, since that file changes most.</div>
+      </div>
+    </div>
+
+    <div class="restruct">
+      <div class="col">
+        <h4>Today — ~50 flat modules</h4>
+        <div class="scatter">
+          <span class="m">order</span><span class="m">order-item</span><span class="m">order-address</span><span class="m">cart</span><span class="m">cart-item</span><span class="m">payment</span><span class="m">payment-intent</span><span class="m">hooks</span><span class="m">book-author</span><span class="m">book-variant</span><span class="m">book-snapshot</span><span class="m">book-asset</span><span class="m">catalog</span><span class="m">category</span><span class="m">author</span><span class="m">publisher</span><span class="m">role</span><span class="m">permission</span><span class="m">role-permission</span><span class="m">user-role</span><span class="m">auth</span><span class="m">user-session</span><span class="m">revoked-token</span><span class="m">user-device</span><span class="m">login-attempt</span><span class="m">guest-session</span><span class="m">stock-import</span><span class="m">stock-import-item</span><span class="m">purchase-order</span><span class="m">supplier</span><span class="m">user-event</span><span class="m">audit-log</span><span class="m">review</span><span class="m">review-ai</span><span class="m">wishlist</span><span class="m">…</span>
+        </div>
+      </div>
+      <div class="col">
+        <h4>Proposed — ~7 bounded contexts</h4>
+        <div class="ctx"><div class="nm">Identity &amp; Access</div><div class="mods">auth · sessions · devices · tokens · login-attempts · roles · permissions (RBAC)</div></div>
+        <div class="ctx"><div class="nm">Catalog</div><div class="mods">books · variants · authors · publishers · categories · translations · assets · <b>+ read-model</b></div></div>
+        <div class="ctx"><div class="nm">Ordering</div><div class="mods">cart · order (+ items, address) · checkout</div></div>
+        <div class="ctx"><div class="nm">Payments</div><div class="mods">payment · payment-intent · webhook inbox (immutable ledger)</div></div>
+        <div class="ctx"><div class="nm">Inventory &amp; Procurement</div><div class="mods">stock · suppliers · purchase-orders · stock-imports · movements</div></div>
+        <div class="ctx"><div class="nm">Engagement &amp; Analytics</div><div class="mods">reviews · wishlist · user-events · audit-log (separate store)</div></div>
+        <div class="ctx"><div class="nm">Platform</div><div class="mods">notifications (outbox + queue) · AI (gemini/pinecone) · uploads/R2 · cache · config</div></div>
+      </div>
+    </div>
+    <div class="callout ol"><b>Same layering, fewer seams.</b> Keep controller/service/repository inside each context. Join tables (<code class="inl">order_items</code>, <code class="inl">book_authors</code>, <code class="inl">role_permissions</code>) become repositories <i>within</i> their aggregate, not top-level modules — fewer providers to wire, and a flow stays inside one context instead of hopping across ten.</div>
+  </section>
+
+  <!-- 05 SECURITY & API -->
+  <section id="sec">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Security, API &amp; developer experience</h2></div>
+
+    <h3 class="blk">Security</h3>
+    <div class="issue high">
+      <div class="top"><span class="sev high">High</span><h3>Payment webhook isn’t signature-verified</h3><span class="id">S1</span></div>
+      <div class="path">src/modules/hooks/* · only an API-key guard + idempotency today</div>
+      <div class="rows">
+        <div class="k">Problem</div><div class="v">The Sepay webhook is protected by a shared API key and idempotency, but the request body’s authenticity isn’t cryptographically verified. Anyone who learns the endpoint + key (or replays a captured call with new content) can assert a payment.</div>
+        <div class="k">Impact at scale</div><div class="v">A forged “payment success” marks an order PAID and ships goods for free. This is the highest-value attack surface in the system.</div>
+        <div class="k fixk">Proposal</div><div class="v fix">Verify the provider HMAC/checksum over the raw body before processing; reject on mismatch. Combine with the existing idempotency + amount check.</div>
+        <div class="k">Trade-off</div><div class="v">Must capture the <i>raw</i> body (bypass the JSON parser for that route) to hash correctly — a small middleware change.</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th style="width:30%">Issue</th><th>Detail &amp; fix</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag c">high</span> Stale permissions</td><td>Permission cache writes key <code>role_user:{id}:perms</code> but reads <code>role_per:{id}:perms</code> — the cache never hits (so authz silently falls back to DB), and there’s no invalidation on grant/revoke. Unify the key, add active invalidation, drop the leftover <code>console.log(userPerms)</code>. <span class="tag o">also a cost fix</span></td></tr>
+        <tr><td><span class="tag o">med</span> TOTP secret at rest</td><td><code>users.totpSecret VARCHAR(255)</code> stored plaintext. Encrypt at rest (app-level envelope or DB encryption) before MFA ships.</td></tr>
+        <tr><td><span class="tag o">med</span> Refresh rotation</td><td>Refresh tokens are hashed (good) but not rotated with reuse-detection. Rotate on each use and revoke the session family on replay.</td></tr>
+        <tr><td><span class="tag o">low</span> Enumerable IDs</td><td>Sequential <code>BigInt</code> order/user IDs are guessable; ensure every by-ID endpoint enforces ownership (defense in depth against IDOR).</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="blk">API &amp; communication</h3>
+    <table>
+      <thead><tr><th style="width:30%">Topic</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td>Response envelope</td><td><span class="tag o">good</span> Consistent <code>ResponseDto</code> via a transform interceptor; global <code>ValidationPipe</code> with whitelist/transform. Solid contract.</td></tr>
+        <tr><td>Pagination</td><td><span class="tag c">med</span> Offset/limit only. <code>OFFSET 100000</code> on catalog/orders scans-and-discards; deep pages get slow and expensive. Add keyset (cursor) pagination on the high-volume lists (catalog, orders, events).</td></tr>
+        <tr><td>BigInt serialization</td><td><span class="tag o">low</span> BigInt IDs are stringified across the boundary with manual <code>parseBigInt</code>/<code>.toString()</code> — works, but it’s a recurring footgun; centralize in one serializer and document the contract.</td></tr>
+        <tr><td>Static config</td><td><span class="tag c">med</span> <code>AppModule.CONFIGURATION</code> is read statically in 10 files (guards, mail, payment, search…). This service-locator bypasses DI, blocks isolated unit tests, and couples modules to the root (<code>search.service</code> imports <code>AppModule</code> → cycle risk). Inject <code>ConfigService</code> instead.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ROADMAP -->
+  <section id="road" style="border-bottom:none">
+    <div class="sec-head"><span class="sec-num">→</span><h2>Prioritized roadmap</h2></div>
+    <p class="sec-sub">Sequenced by impact ÷ effort, against the cost-minimization goal. Phase 1 unlocks cheap horizontal scaling and protects money; nothing here is a rewrite.</p>
+    <table>
+      <thead><tr><th style="width:16%">Phase</th><th style="width:30%">Do</th><th style="width:18%">Why now</th><th>Effort</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag r">P0 · this sprint</span></td><td>C2 payment <code>onDelete: Restrict</code>; H2 review index + unique; H4 widen <code>paymentUrl</code>; M6 add cleanup/TTL crons</td><td>One-line/one-migration fixes that protect data &amp; bound growth</td><td>Hours each</td></tr>
+        <tr><td><span class="tag r">P0 · this sprint</span></td><td>C3 move revocation to Redis (TTL); fix permission-cache key + invalidation</td><td>Removes the per-request DB hit; correct authz</td><td>1–2 days</td></tr>
+        <tr><td><span class="tag c">P1 · next</span></td><td>C1 make cache Redis-only; C4 atomic conditional stock update; H3 NOT-NULL money + CHECKs; S1 webhook HMAC</td><td>Unlocks horizontal scaling; stops oversell &amp; forgery</td><td>3–6 days</td></tr>
+        <tr><td><span class="tag c">P1 · next</span></td><td>H1 partition + TTL <code>user_events</code> (then externalize); keyset pagination on hot lists</td><td>Shrinks the primary DB you pay for</td><td>1 week</td></tr>
+        <tr><td><span class="tag o">P2 · steady</span></td><td>H5 fold join-modules into bounded contexts; carve <code>CatalogReadModel</code>; replace static config with DI; encrypt TOTP; evaluate pgvector vs Pinecone (M4)</td><td>Maintainability, DX, vendor cost</td><td>Incremental</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><b>One-paragraph verdict.</b> This is a well-built application carrying a few decisions that quietly force the expensive scaling path and put financial data at risk. Spend one sprint on the P0 list — a handful of migrations and moving two checks to Redis — and you convert “scale by buying a bigger box” into “scale by adding cheap instances,” with the payment ledger and inventory made trustworthy. Everything after that is steady, incremental hardening, not heroics.</div>
+  </section>
+
+  <footer>
+    <span class="acc">Bookstore Backend — production-readiness review</span>
+    <span class="mono">NestJS · Prisma · MariaDB · Redis · BullMQ · 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>

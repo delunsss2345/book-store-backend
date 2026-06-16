@@ -61,3 +61,4 @@ generated
 docker
 .env.*
 terraform
+nginx

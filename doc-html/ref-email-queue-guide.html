@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/nestjs-email-queue-guide.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NestJS Email Queue Guide (BullMQ + Outbox) · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>BullMQ + outbox</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Queue</p>
+    <h1>NestJS Email Queue Guide (BullMQ + Outbox)</h1>
+    <p class="lede">Cap nhat: 2026-02-08.</p>
+  </header>
+
+  <main>
+<p>Muc tieu: huong dan tich hop queue gui email vao du an nay, dung BullMQ theo docs NestJS, va tan dung bang <code>email_outbox</code> de tang do tin cay.</p>
+<h2 id="1-hien-trang-trong-du-an" class="h h2"><a class="anchor" href="#1-hien-trang-trong-du-an" aria-label="Link to this section">#</a>1. Hien trang trong du an</h2>
+<p>Trong du an da co outbox:</p>
+<ul>
+<li>Bang <code>email_outbox</code> trong Prisma (co <code>status</code>, <code>attempts</code>, <code>lastError</code>, <code>scheduledAt</code>, <code>sentAt</code>).</li>
+<li><code>EmailOutboxService</code> chi tao record <code>PENDING</code>.</li>
+<li><code>VerificationCodeService</code> da goi <code>EmailOutboxService.createOtpRegisterEmail()</code>.</li>
+</ul>
+<p>Y nghia: ta chi can noi them queue + worker de lay record tu outbox va gui email.</p>
+<h2 id="2-kien-truc-de-xuat-production" class="h h2"><a class="anchor" href="#2-kien-truc-de-xuat-production" aria-label="Link to this section">#</a>2. Kien truc de xuat (production)</h2>
+<p>Luong co ban:</p>
+<ol>
+<li>API nhan request (register/forgot password...).</li>
+<li>Tao record trong <code>email_outbox</code> (status = <code>PENDING</code>).</li>
+<li>Enqueue job <code>send-email</code> vao BullMQ (payload co <code>outboxId</code>).</li>
+<li>Worker doc job, load record, gui email qua mailer (Nodemailer/SES/Sendgrid...).</li>
+<li>Cap nhat <code>status</code> -&gt; <code>SENT</code> hoac <code>FAILED</code>, luu <code>sentAt</code>, <code>lastError</code>, tang <code>attempts</code>.</li>
+</ol>
+<p>Vi sao can queue:</p>
+<ul>
+<li>Tach tac vu gui email ra khoi request realtime.</li>
+<li>Co the retry/backoff, va scale worker rieng.</li>
+<li>Redis luu job, worker co the chay doc lap.</li>
+</ul>
+<h2 id="3-cai-dat-bullmq-theo-nestjs-docs" class="h h2"><a class="anchor" href="#3-cai-dat-bullmq-theo-nestjs-docs" aria-label="Link to this section">#</a>3. Cai dat BullMQ (theo NestJS docs)</h2>
+<p>Cai package:</p>
+<figure class="codeblock"><figcaption>Bash</figcaption><pre><code>npm install --save @nestjs/bullmq bullmq</code></pre></figure>
+<p><strong>Luu y</strong>: NestJS docs ghi Bull dang maintenance, BullMQ la lua chon duoc phat trien tich cuc, nen uu tien BullMQ.</p>
+<h2 id="4-module-queue-goi-y-theo-cau-truc-du-an" class="h h2"><a class="anchor" href="#4-module-queue-goi-y-theo-cau-truc-du-an" aria-label="Link to this section">#</a>4. Module queue (goi y theo cau truc du an)</h2>
+<p>Tao module <code>JobsModule</code> (hoac <code>EmailQueueModule</code>), dang ky queue va processor.</p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// src/jobs/jobs.module.ts
+import { Module } from &#39;@nestjs/common&#39;;
+import { BullModule } from &#39;@nestjs/bullmq&#39;;
+import { ConfigModule, ConfigService } from &#39;@nestjs/config&#39;;sendVerifyEmail
+import { EmailProcessor } from &#39;./processors/email.processor&#39;;
+import { EmailProducer } from &#39;./producers/email.producer&#39;;
+sendVerifyEmail
+@Module({
+  imports: [
+    ConfigModule,
+    BullModule.forRootAsync({
+      useFactory: (config: ConfigService) =&gt; ({
+        connection: {
+          host: config.get&lt;string&gt;(&#39;REDIS_HOST&#39;),
+          port: config.get&lt;number&gt;(&#39;REDIS_PORT&#39;),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({ name: &#39;email&#39; }),
+  ],
+  providers: [EmailProcessor, EmailProducer],
+  exports: [EmailProducer],
+})
+export class JobsModule {}</code></pre></figure>
+<h2 id="5-producer-enqueue-job-tu-outbox" class="h h2"><a class="anchor" href="#5-producer-enqueue-job-tu-outbox" aria-label="Link to this section">#</a>5. Producer: enqueue job tu outbox</h2>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// src/jobs/producers/email.producer.ts
+import { Injectable } from &#39;@nestjs/common&#39;;
+import { InjectQueue } from &#39;@nestjs/bullmq&#39;;
+import { Queue } from &#39;bullmq&#39;;
+
+@Injectable()
+export class EmailProducer {
+  constructor(@InjectQueue(&#39;email&#39;) private readonly emailQueue: Queue) {}
+
+  async enqueueOutboxEmail(outboxId: string) {
+    await this.emailQueue.add(
+      &#39;send-email&#39;,
+      { outboxId },
+      {
+        attempts: 3,
+        backoff: { type: &#39;exponential&#39;, delay: 3000 },
+        removeOnComplete: true,
+        jobId: `email:${outboxId}`,
+      },
+    );
+  }
+}</code></pre></figure>
+<p><strong>Goi y</strong>: dung <code>jobId</code> theo outbox id de tranh enqueue trung lap.</p>
+<h2 id="6-processor-worker-gui-email" class="h h2"><a class="anchor" href="#6-processor-worker-gui-email" aria-label="Link to this section">#</a>6. Processor: worker gui email</h2>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// src/jobs/processors/email.processor.ts
+import { Processor, WorkerHost } from &#39;@nestjs/bullmq&#39;;
+import { Job } from &#39;bullmq&#39;;
+import { EmailOutboxService } from &#39;@/modules/email-outbox/email-outbox.service&#39;;
+import { MailService } from &#39;@/modules/mail/mail.service&#39;;
+
+@Processor(&#39;email&#39;)
+export class EmailProcessor extends WorkerHost {
+  constructor(
+    private readonly emailOutbox: EmailOutboxService,
+    private readonly mailService: MailService,
+  ) {
+    super();
+  }
+
+  async process(job: Job&lt;{ outboxId: string }&gt;): Promise&lt;void&gt; {
+    const { outboxId } = job.data;
+    // 1) load outbox record
+    // 2) mark SENDING
+    // 3) send email via mailService
+    // 4) update SENT or FAILED
+  }
+}</code></pre></figure>
+<p>Trong <code>MailService</code>, ban co the dung Nodemailer (SMTP/SES/Sendmail...).</p>
+<h2 id="7-noi-queue-vao-flow-hien-tai" class="h h2"><a class="anchor" href="#7-noi-queue-vao-flow-hien-tai" aria-label="Link to this section">#</a>7. Noi queue vao flow hien tai</h2>
+<p>Trong <code>VerificationCodeService.createRegisterVerification(...)</code>:</p>
+<ul>
+<li>Sau khi <code>EmailOutboxService.createOtpRegisterEmail()</code>, goi <code>EmailProducer.enqueueOutboxEmail(outboxId)</code>.</li>
+<li>Luu y: can tra ve <code>outboxId</code> tu <code>EmailOutboxService</code>.</li>
+</ul>
+<h2 id="8-production-thay-cho-file-chay-queue-lien-tuc-express" class="h h2"><a class="anchor" href="#8-production-thay-cho-file-chay-queue-lien-tuc-express" aria-label="Link to this section">#</a>8. Production: thay cho &quot;file chay queue lien tuc&quot; (Express)</h2>
+<p>Trong NestJS, khong can tu tao vong lap chay mai. Dung queue + worker:</p>
+<ul>
+<li><strong>API process</strong>: chi enqueue job.</li>
+<li><strong>Worker process</strong>: chay <code>@Processor()</code> de xu ly job.</li>
+</ul>
+<p>Co 2 cach pho bien:</p>
+<ol>
+<li>Chay chung trong 1 app (nho) -&gt; ok cho dev.</li>
+<li><strong>Tach process</strong> (production) -&gt; worker doc lap, scale theo queue.</li>
+</ol>
+<p>Neu muon tach worker, co the:</p>
+<ul>
+<li>Tao entrypoint rieng (vd <code>main.worker.ts</code>) dung <code>NestFactory.createApplicationContext()</code> va chi import <code>JobsModule</code>.</li>
+<li>Hoac dung <code>manualRegistration</code> + <code>BullRegistrar</code> de bat processor theo dieu kien (ENV <code>WORKER=true</code>).</li>
+</ul>
+<h2 id="9-cau-hinh-can-thiet" class="h h2"><a class="anchor" href="#9-cau-hinh-can-thiet" aria-label="Link to this section">#</a>9. Cau hinh can thiet</h2>
+<p>Toi thieu:</p>
+<ul>
+<li><code>REDIS_HOST</code>, <code>REDIS_PORT</code></li>
+<li><code>MAIL_HOST</code>, <code>MAIL_PORT</code>, <code>MAIL_USER</code>, <code>MAIL_PASS</code> (neu dung SMTP)</li>
+</ul>
+<h2 id="10-goi-y-van-hanh" class="h h2"><a class="anchor" href="#10-goi-y-van-hanh" aria-label="Link to this section">#</a>10. Goi y van hanh</h2>
+<ul>
+<li>Retry/backoff cho email loai PENDING/FAILED.</li>
+<li>Idempotency: dung <code>jobId</code> theo outbox id.</li>
+<li>Monitoring: log job fail + alert.</li>
+<li>Test local: Nodemailer + Ethereal account.</li>
+</ul>
+<h2 id="11-references-docs-goc" class="h h2"><a class="anchor" href="#11-references-docs-goc" aria-label="Link to this section">#</a>11. References (docs goc)</h2>
+<ul>
+<li>NestJS Queues (BullMQ/Bull): <a href="https://docs.nestjs.com/techniques/queues" target="_blank" rel="noopener">https://docs.nestjs.com/techniques/queues</a></li>
+<li>BullMQ Queues: <a href="https://docs.bullmq.io/guide/queues" target="_blank" rel="noopener">https://docs.bullmq.io/guide/queues</a></li>
+<li>BullMQ Workers: <a href="https://docs.bullmq.io/guide/workers" target="_blank" rel="noopener">https://docs.bullmq.io/guide/workers</a></li>
+<li>BullMQ Job Ids: <a href="https://docs.bullmq.io/guide/jobs/job-ids" target="_blank" rel="noopener">https://docs.bullmq.io/guide/jobs/job-ids</a></li>
+<li>Nodemailer: <a href="https://nodemailer.com/" target="_blank" rel="noopener">https://nodemailer.com/</a></li>
+<li>Nodemailer SMTP: <a href="https://nodemailer.com/smtp" target="_blank" rel="noopener">https://nodemailer.com/smtp</a></li>
+<li>Nodemailer Testing (Ethereal): <a href="https://nodemailer.com/usage/testing-with-ethereal" target="_blank" rel="noopener">https://nodemailer.com/usage/testing-with-ethereal</a></li>
+</ul>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#1-hien-trang-trong-du-an">1. Hien trang trong du an</a></li><li class="lvl2"><a href="#2-kien-truc-de-xuat-production">2. Kien truc de xuat (production)</a></li><li class="lvl2"><a href="#3-cai-dat-bullmq-theo-nestjs-docs">3. Cai dat BullMQ (theo NestJS docs)</a></li><li class="lvl2"><a href="#4-module-queue-goi-y-theo-cau-truc-du-an">4. Module queue (goi y theo cau truc du an)</a></li><li class="lvl2"><a href="#5-producer-enqueue-job-tu-outbox">5. Producer: enqueue job tu outbox</a></li><li class="lvl2"><a href="#6-processor-worker-gui-email">6. Processor: worker gui email</a></li><li class="lvl2"><a href="#7-noi-queue-vao-flow-hien-tai">7. Noi queue vao flow hien tai</a></li><li class="lvl2"><a href="#8-production-thay-cho-file-chay-queue-lien-tuc-express">8. Production: thay cho &quot;file chay queue lien tuc&quot; (Express)</a></li><li class="lvl2"><a href="#9-cau-hinh-can-thiet">9. Cau hinh can thiet</a></li><li class="lvl2"><a href="#10-goi-y-van-hanh">10. Goi y van hanh</a></li><li class="lvl2"><a href="#11-references-docs-goc">11. References (docs goc)</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/nestjs-email-queue-guide.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

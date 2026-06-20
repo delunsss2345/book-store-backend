@@ -3,7 +3,7 @@ import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable, Logger } from '@nestjs/common';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 
 
 export type OrderByUserRow = {
@@ -245,6 +245,64 @@ export class OrderRepository {
         return this.prisma.$transaction(async (prismaTx) => {
             return updateOrderAndVariant(prismaTx);
         })
+    }
+
+    findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+        return tx.order.findFirst({
+            where: { cartHash },
+            include: {
+                payments: {
+                    where: { status: PaymentStatus.PENDING },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
+            },
+        });
+    }
+
+    findOrderNotSuccessByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+        return tx.order.findFirst({
+            where: { cartHash },
+            include: {
+                payments: {
+                    where: {
+                        status: {
+                            in: [
+                                PaymentStatus.PENDING,
+                                PaymentStatus.PAYMENT_OVERAGE,
+                                PaymentStatus.PAYMENT_SHORTFALL,
+                            ],
+                        },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
+            },
+        });
+    }
+
+    create(data: Prisma.OrderUncheckedCreateInput, tx: PrismaClientTransaction) {
+        return tx.order.create({ data });
+    }
+
+    createWithGuest(
+        data: {
+            guestSessionId: string;
+            cartHash: string;
+            orderCode: string;
+            status: OrderStatus;
+            paymentStatus: PaymentStatus;
+            currencyCode: string;
+            shippingFee: number;
+            expiredAt: Date;
+        },
+        tx: PrismaClientTransaction,
+    ) {
+        return tx.order.create({ data });
+    }
+
+    updateById(id: number, data: Prisma.OrderUncheckedUpdateInput, tx: PrismaClientTransaction) {
+        return tx.order.update({ where: { id }, data });
     }
 }
 

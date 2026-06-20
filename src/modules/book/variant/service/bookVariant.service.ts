@@ -1,3 +1,4 @@
+import { PrismaClientTransaction } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BookVariantRepository } from '../repository/bookVariant.repository';
@@ -41,6 +42,10 @@ export class BookVariantService {
       },
       tx,
     );
+  }
+
+  updateReservedById(id: number, quantity: number, tx: PrismaClientTransaction) {
+    return this.bookVariantRepository.updateReservedById(id, quantity, tx);
   }
 
   private toDecimalNumber(value: Prisma.Decimal | number | null | undefined) {

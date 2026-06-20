@@ -33,10 +33,9 @@ export class OrderController {
   createOrders(
     @Body() body: CreateGuestOrdersAndPaymentDTO,
     @Req() req: Request,
-    @GetLanguageId() langId: number,
   ) {
     const guestSessionId = req['guestSessionId'] as string;
-    return this.orderService.createOrdersGuest(guestSessionId, body, langId);
+    return this.orderService.createOrdersGuest(guestSessionId, body);
   }
 
   @Get('/')
@@ -87,14 +86,13 @@ export class OrderController {
   @Post('/user/checkout')
   createOrdersUser(
     @Body() body: CreateUserOrdersAndPaymentDTO,
-    @GetLanguageId() langId: number,
     @GetUser() user: User,
   ) {
     if (!user?.id) {
       throw new ForbiddenException(OrderMessage.USER_NOT_AUTHENTICATED);
     }
     const userId = Number(user.id);
-    return this.orderService.createOrdersUser(userId, body, langId);
+    return this.orderService.createOrdersUser(userId, body);
   }
 
 

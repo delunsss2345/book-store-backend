@@ -1,4 +1,5 @@
 import { CartMessage, JwtPayload } from '@/common';
+import { PrismaClientTransaction } from '@/database';
 import { AuthService } from '@/modules/auth/service/auth.service';
 import {
   AddCartItemRequestDto,
@@ -47,6 +48,14 @@ export class CartService {
   // Cho phép domain khác (vd OrderService) xoá cart theo userId qua service thay vì repository
   deleteByUserId(userId: number) {
     return this.cartRepository.deleteByUserId(userId);
+  }
+
+  findByGuestSessionId(guestSessionId: string, tx: PrismaClientTransaction) {
+    return this.cartRepository.findByGuestSessionIdForOrder(guestSessionId, tx);
+  }
+
+  findByCartIdAndUserId(cartId: number, userId: number, tx: PrismaClientTransaction) {
+    return this.cartRepository.findByCartIdAndUserId(cartId, userId, tx);
   }
 
   async addCartItem(

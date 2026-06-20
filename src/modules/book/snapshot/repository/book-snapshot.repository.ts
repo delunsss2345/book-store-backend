@@ -1,4 +1,4 @@
-import { PrismaService } from "@/database";
+import { PrismaClientTransaction, PrismaService } from "@/database";
 import { CreateBookSnapshotDto } from "@/modules/book/snapshot/dto/request/create-book-snapshot.dto";
 import { Injectable } from '@nestjs/common';
 
@@ -48,6 +48,25 @@ export class BookSnapshotRepository {
         return this.prisma.bookVariantSnapshot.findFirst({
             where: { contentHash },
             select: { id: true, priceSnapshot: true },
+        });
+    }
+
+    upsertByContentHash(contentHash: string, dto: CreateBookSnapshotDto, tx: PrismaClientTransaction) {
+        return tx.bookVariantSnapshot.upsert({
+            where: { contentHash },
+            update: {},
+            create: {
+                bookVariantId: Number(dto.bookVariantId),
+                contentHash,
+                coverImageUrlSnapshot: dto.coverImageUrlSnapshot ?? null,
+                titleSnapshot: dto.titleSnapshot ?? null,
+                skuSnapshot: dto.skuSnapshot,
+                priceSnapshot: dto.priceSnapshot,
+                currencyCodeSnapshot: dto.currencyCodeSnapshot ?? null,
+                formatSnapshot: dto.formatSnapshot,
+                editionSnapshot: dto.editionSnapshot ?? null,
+                isbnSnapshot: dto.isbnSnapshot ?? null,
+            },
         });
     }
 }

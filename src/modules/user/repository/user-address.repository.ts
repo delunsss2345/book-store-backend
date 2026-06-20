@@ -1,5 +1,5 @@
 import { UserAddressMessage } from '@/common';
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, UserAddress } from '@prisma/client';
 import { CreateUserAddressRequestDto } from '../dto/request/create-user-address.request.dto';
@@ -204,6 +204,12 @@ export class UserAddressRepository {
       }
 
       return { deleteId: target.id, success: true };
+    });
+  }
+
+  findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction) {
+    return tx.userAddress.findFirst({
+      where: { id: addressId, userId, deletedAt: null },
     });
   }
 }

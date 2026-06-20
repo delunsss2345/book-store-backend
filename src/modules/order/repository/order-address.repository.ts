@@ -1,4 +1,4 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { CreateOrderAddressDTO } from '@/modules/order/dto/request/create-order-address.dto';
 import { Injectable } from '@nestjs/common';
 import { OrderAddress, Prisma } from '@prisma/client';
@@ -37,6 +37,26 @@ export class OrderAddressRepository {
         }
 
         return this.prisma.orderAddress.create({ data });
+    }
+
+    createGuestAddressInTx(orderId: number, body: CreateOrderAddressDTO, note: string | undefined, tx: PrismaClientTransaction): Promise<OrderAddress> {
+        const data: Prisma.OrderAddressUncheckedCreateInput = {
+            orderId,
+            recipientName: this.buildRecipientName(body),
+            phoneNumber: body.phoneNumber,
+            addressLine: body.addressLine,
+            city: body.city,
+        };
+
+        const countryCode = body.countryCode ?? body.country;
+        if (countryCode) data.countryCode = countryCode;
+        if (body.ward) data.ward = body.ward;
+        if (body.district) data.district = body.district;
+
+        const resolvedNote = body.note ?? note;
+        if (resolvedNote) data.note = resolvedNote;
+
+        return tx.orderAddress.create({ data });
     }
 
     private buildRecipientName(body: CreateOrderAddressDTO): string {

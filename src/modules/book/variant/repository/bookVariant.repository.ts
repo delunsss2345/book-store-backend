@@ -1,4 +1,4 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { bookVariantInventorySelect } from '../select';
@@ -37,6 +37,13 @@ export class BookVariantRepository {
         ...(typeof params.price === 'number' ? { price: params.price } : {}),
       },
       select: bookVariantInventorySelect,
+    });
+  }
+
+  updateReservedById(id: number, quantity: number, tx: PrismaClientTransaction) {
+    return tx.bookVariant.update({
+      where: { id },
+      data: { reserved: { increment: quantity } },
     });
   }
 

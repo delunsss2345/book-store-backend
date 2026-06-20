@@ -619,14 +619,10 @@ model BookVariantSnapshot {
   bookVariantId Int  @map("book_variant_id")
   contentHash   String? @unique @map("content_hash") @db.VarChar(255)
 
-  coverImageUrlSnapshot String? @map("cover_image_url_snapshot") @db.Text
-  titleSnapshot         String? @map("title_snapshot") @db.VarChar(255)
-
   skuSnapshot          String     @map("sku_snapshot") @db.VarChar(50)
   priceSnapshot        Decimal    @map("price_snapshot") @db.Decimal(12, 2)
   currencyCodeSnapshot String?    @map("currency_code_snapshot") @db.VarChar(3)
   formatSnapshot       BookFormat @map("format_snapshot")
-  editionSnapshot      Int?       @map("edition_snapshot")
   isbnSnapshot         String?    @map("isbn_snapshot") @db.VarChar(20)
   createdAt            DateTime   @default(now()) @map("created_at")
 

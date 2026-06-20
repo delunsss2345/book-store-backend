@@ -1,4 +1,4 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Cart, Prisma } from '@prisma/client';
 
@@ -102,7 +102,55 @@ export class CartRepository {
         });
     }
 
+    findByGuestSessionIdForOrder(guestSessionId: string, tx: PrismaClientTransaction) {
+        return tx.cart.findFirst({
+            where: { guestSessionId },
+            include: {
+                items: {
+                    select: {
+                        id: true,
+                        cartId: true,
+                        bookVariantId: true,
+                        quantity: true,
+                        addedAt: true,
+                        variant: {
+                            include: {
+                                book: {
+                                    include: {
+                                        translations: { select: { title: true, slug: true } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 
-
-
+    findByCartIdAndUserId(cartId: number, userId: number, tx: PrismaClientTransaction) {
+        return tx.cart.findFirst({
+            where: { id: cartId, userId },
+            include: {
+                items: {
+                    select: {
+                        id: true,
+                        cartId: true,
+                        bookVariantId: true,
+                        quantity: true,
+                        addedAt: true,
+                        variant: {
+                            include: {
+                                book: {
+                                    include: {
+                                        translations: { select: { title: true, slug: true } },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 }

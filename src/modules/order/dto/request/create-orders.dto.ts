@@ -60,8 +60,7 @@ export class CreateUserOrdersAndPaymentDTO {
     @ApiPropertyOptional({ example: 1 })
     @IsNumber()
     @Type(() => Number)
-    @IsOptional()
-    addressId?: number
+    addressId: number
 
     @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.VNPAY })
     @IsEnum(PaymentGateway)

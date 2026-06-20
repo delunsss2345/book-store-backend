@@ -109,8 +109,8 @@ export class CatalogService {
   }
 
   // Cho phép domain khác (vd OrderService) lấy variant theo ids qua service thay vì repository
-  findBookVariantByIds(ids: number[], languageId: number) {
-    return this.repo.findBookVariantByIds(ids, languageId);
+  findBookVariantByIds(ids: number[]) {
+    return this.repo.findBookVariantByIds(ids);
   }
 
   // Cho phép domain khác (vd PineconeService) lấy variant đầu tiên của sách active qua service

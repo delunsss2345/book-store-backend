@@ -149,7 +149,7 @@ export class CatalogRepository {
         });
     }
 
-    findBookVariantByIds(bookVariantId: number[], languageId: number) {
+    findBookVariantByIds(bookVariantId: number[]) {
         return this.prisma.bookVariant.findMany({
             where: { id: { in: bookVariantId } },
             select: {
@@ -160,14 +160,13 @@ export class CatalogRepository {
                 format: true,
                 bookId: true,
                 reserved: true,
+                isbn: true,
                 book: {
                     select: {
                         id: true,
                         coverImageUrl: true,
                         translations: {
-                            where: { languageId },
                             select: {
-                                title: true,
                                 slug: true,
                             },
                             take: 1,
@@ -677,7 +676,7 @@ export class CatalogRepository {
     // Gom review lại sau đó tính trung bình rate của review là bao nhiêu sao 
     // Điểm số lượng sách được review 
     async groupBookRatings(limit = 10) {
-        const rows = await this.prisma.$queryRaw<{ bookId: number | string | number; bookVariantId: number | string | number; avgRating: number | number }[]>(Prisma.sql`
+        const rows = await this.prisma.$queryRaw<{ bookId: number | string; bookVariantId: number | string; avgRating: number }[]>(Prisma.sql`
         SELECT reviews.book_id as bookId, reviews.book_variant_id as bookVariantId , AVG(reviews.rating) as avgRating FROM reviews 
         GROUP BY reviews.book_id , reviews.book_variant_id
         ORDER BY AVG(reviews.rating) DESC LIMIT ${limit}
@@ -693,7 +692,7 @@ export class CatalogRepository {
     // biến thể được bán đó là có sách gốc là gì
     async groupBookSales(limit = 10) {
         const rows = await this.prisma.$queryRaw<
-            { bookId: number | string | number; bookVariantId: string | number | number, soldQty: number | string | number }[]
+            { bookId: number | string; bookVariantId: string | number, soldQty: number | string }[]
         >(Prisma.sql`
     SELECT bv.book_id AS bookId, bvs.book_variant_id as bookVariantId , SUM(oi.quantity) AS soldQty
     FROM order_items oi

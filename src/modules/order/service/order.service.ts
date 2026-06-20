@@ -1,6 +1,8 @@
 import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
+import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
+import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
 import { CartService } from '@/modules/cart/service/cart.service';
 import { CatalogService } from '@/modules/catalog/service/catalog.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
@@ -11,20 +13,24 @@ import {
 } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
+import { OrderAddressService } from '@/modules/order/service/order-address.service';
+import { OrderItemService } from '@/modules/order/service/order-item.service';
 import { PaymentIntentService } from '@/modules/payment/service/payment-intent.service';
 import { PaymentService } from '@/modules/payment/service/payment.service';
+import { TransactionService } from '@/modules/transaction/service/transaction.service';
+import { UserAddressService } from '@/modules/user/service/user-address.service';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { generateSKU } from '@/utils/generateSku.util';
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
   OrderStatus,
   PaymentGateway,
   PaymentStatus,
-  UserAddress
+  Prisma,
 } from '@prisma/client';
 import crypto from 'crypto';
+
 @Injectable()
 export class OrderService {
   constructor(
@@ -36,7 +42,13 @@ export class OrderService {
     private readonly orderItemRepository: OrderItemRepository,
     private readonly emailProducer: EmailProducer,
     private readonly emailOutbox: EmailOutboxService,
-    private readonly paymentIntent: PaymentIntentService
+    private readonly paymentIntent: PaymentIntentService,
+    private readonly transactionService: TransactionService,
+    private readonly userAddressService: UserAddressService,
+    private readonly bookVariantSnapshotService: BookVariantSnapshotService,
+    private readonly orderItemService: OrderItemService,
+    private readonly bookVariantService: BookVariantService,
+    private readonly orderAddressService: OrderAddressService,
   ) { }
 
   /**
@@ -63,12 +75,43 @@ export class OrderService {
       .digest('hex');
   }
 
+  findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+    return this.orderRepository.findByCartHash(cartHash, tx);
+  }
+
+  findOrderNotSuccessByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+    return this.orderRepository.findOrderNotSuccessByCartHash(cartHash, tx);
+  }
+
+  create(data: Prisma.OrderUncheckedCreateInput, tx: PrismaClientTransaction) {
+    return this.orderRepository.create(data, tx);
+  }
+
+  createWithGuest(
+    data: {
+      guestSessionId: string;
+      cartHash: string;
+      orderCode: string;
+      status: OrderStatus;
+      paymentStatus: PaymentStatus;
+      currencyCode: string;
+      shippingFee: number;
+      expiredAt: Date;
+    },
+    tx: PrismaClientTransaction,
+  ) {
+    return this.orderRepository.createWithGuest(data, tx);
+  }
+
+  updateById(id: number, data: Prisma.OrderUncheckedUpdateInput, tx: PrismaClientTransaction) {
+    return this.orderRepository.updateById(id, data, tx);
+  }
+
   // Xử lí orderItems
   // Optimize from N + 1 queries to 5 queries
   private async processOrderItems(
     tx: any,
     cart: any,
-    languageId: number,
     orderId: number,
   ) {
     const mapBookVariant = new Map<
@@ -85,7 +128,6 @@ export class OrderService {
 
     const bookVariants = await this.catalogService.findBookVariantByIds(
       [...mapBookVariant.keys()].map((id) => Number(id)),
-      languageId,
     );
 
     const variantMap = new Map(bookVariants.map((v) => [v.id.toString(), v]));
@@ -103,7 +145,7 @@ export class OrderService {
         );
         throw new ForbiddenException(
           OrderMessage.BOOK_OUT_OF_STOCK(
-            v.book.translations?.[0]?.title || 'Không rõ',
+            "Sản phẩm vừa hết hàng"
           ),
         );
       }
@@ -124,38 +166,32 @@ export class OrderService {
 
         const contentHash = generateContentHash(bookVariant);
 
-        const snapshot = await tx.bookVariantSnapshot.upsert({
-          where: { contentHash },
-          update: {},
-          create: {
-            bookVariantId: bookVariant.id,
+        const snapshot = await this.bookVariantSnapshotService.upsertByContentHash(
+          contentHash,
+          {
+            bookVariantId: bookVariant.id.toString(),
             contentHash,
             priceSnapshot: unitPrice,
             formatSnapshot: bookVariant.format,
-            skuSnapshot: generateSKU(bookVariant),
-            titleSnapshot:
-              bookVariant.book.translations?.[0]?.title ??
-              item.variant.book.translations[0].title,
+            skuSnapshot: bookVariant.isbn,
             coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? '',
-            currencyCodeSnapshot: 'VND',
+            currencyCodeSnapshot: bookVariant.currencyCode,
           },
-        });
+          tx,
+        );
 
-        await tx.orderItem.create({
-          data: {
+        await this.orderItemService.create(
+          {
             orderId,
             bookVariantSnapshotId: snapshot.id,
             quantity: item.quantity,
             unitPrice,
             lineTotal,
           },
-        });
-        await tx.bookVariant.update({
-          where: { id: bookVariant.id },
-          data: {
-            reserved: { increment: item.quantity },
-          },
-        });
+          tx,
+        );
+
+        await this.bookVariantService.updateReservedById(bookVariant.id, item.quantity, tx);
       }),
     );
     await this.cartService.deleteByUserId(cart.userId);
@@ -173,60 +209,16 @@ export class OrderService {
   async createOrdersGuest(
     guestSessionId: string,
     body: CreateGuestOrdersAndPaymentDTO,
-    langId: number,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      // tìm cart đầu tiên để thứ nhất vừa tính lại tiền
-      // vừa hash cart để chặn không cho order tạo lại nhiều lần nếu cart ko thay đổi
-      const cart = await tx.cart.findFirst({
-        where: { guestSessionId },
-        include: {
-          items: {
-            select: {
-              id: true,
-              cartId: true,
-              bookVariantId: true,
-              quantity: true,
-              addedAt: true,
-              variant: {
-                include: {
-                  book: {
-                    include: {
-                      translations: { select: { title: true, slug: true } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
+    return this.transactionService.doInTransaction(async (tx) => {
+      const cart = await this.cartService.findByGuestSessionId(guestSessionId, tx);
 
       if (!cart || cart.items.length === 0) {
         throw new ForbiddenException(OrderMessage.CART_NOT_FOUND);
       }
 
-      // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
       const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-      console.log(cartHash);
-      const existing = await tx.order.findFirst({
-        where: { cartHash },
-        include: {
-          payments: {
-            where: {
-              status: {
-                in: [
-                  PaymentStatus.PENDING,
-                  PaymentStatus.PAYMENT_OVERAGE,
-                  PaymentStatus.PAYMENT_SHORTFALL,
-                ],
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-        },
-      });
+      const existing = await this.findOrderNotSuccessByCartHash(cartHash, tx);
 
       if (cartHash === existing?.cartHash) {
         // Nếu bấm mà chưa tạo payment chỉ toàn kiểu tạo order (ko thanh toán) thì mình tiếng hành gửi lại cái mã mới mà không phải tạo lại order
@@ -282,13 +274,11 @@ export class OrderService {
           id: existing.id,
           payment: gatewayResp,
           orderCode: existing.orderCode,
-
         };
       }
 
-      // 3) Tạo order trước (chưa có subtotal chính xác cũng được, lát update)
-      const order = await tx.order.create({
-        data: {
+      const order = await this.createWithGuest(
+        {
           guestSessionId,
           status: OrderStatus.PENDING_PAYMENT,
           paymentStatus: PaymentStatus.PENDING,
@@ -298,37 +288,24 @@ export class OrderService {
           shippingFee: SHIPPING_FEE,
           expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
         },
-      });
+        tx,
+      );
 
-      // 4) address
-      await tx.orderAddress.create({
-        data: {
-          orderId: order.id,
-          recipientName:
-            body.orderAddress.firstName + ' ' + body.orderAddress.lastName,
-          phoneNumber: body.orderAddress.phoneNumber,
-          addressLine: body.orderAddress.addressLine,
-          ward: body.orderAddress.ward,
-          district: body.orderAddress.district,
-          city: body.orderAddress.city,
-          note: body.note,
-        },
-      });
+      await this.orderAddressService.createWithGuest(order.id, body.orderAddress, body.note, tx);
 
-      const subtotal = await this.processOrderItems(tx, cart, langId, order.id);
-
-      // 6) update totals
+      const subtotal = await this.processOrderItems(tx, cart, order.id);
       const totalAmount = subtotal + SHIPPING_FEE;
 
-      const updatedOrder = await tx.order.update({
-        where: { id: order.id },
-        data: {
+      const updatedOrder = await this.updateById(
+        order.id,
+        {
           subtotal,
           totalAmount,
           discountAmount: 0,
           shippingFee: SHIPPING_FEE,
         },
-      });
+        tx,
+      );
 
       if (body.paymentGateway === PaymentGateway.COD) {
         if (body.guestEmail) {
@@ -349,9 +326,6 @@ export class OrderService {
       }
       Logger.log(`Đã tạo order: ${JSON.stringify(updatedOrder)}`);
 
-      // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout)
-      // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền
-      // 8) gọi gateway tạo transaction
       const gatewayResp = this.paymentService.createTransactionUrl({
         orderId: updatedOrder.id,
         gateway: body.paymentGateway,
@@ -375,50 +349,18 @@ export class OrderService {
   async createOrdersUser(
     userId: number,
     body: CreateUserOrdersAndPaymentDTO,
-    langId: number,
   ) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.transactionService.doInTransaction(async (tx) => {
       const cartId = Number(body.cartId);
-      const cart = await tx.cart.findFirst({
-        where: { id: cartId, userId },
-        include: {
-          items: {
-            select: {
-              id: true,
-              cartId: true,
-              bookVariantId: true,
-              quantity: true,
-              addedAt: true,
-              variant: {
-                include: {
-                  book: {
-                    include: {
-                      translations: { select: { title: true, slug: true } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
+      const cart = await this.cartService.findByCartIdAndUserId(cartId, userId, tx);
+
       if (!cart || cart.items.length === 0) {
         throw new ForbiddenException(OrderMessage.CART_NOT_FOUND);
       }
 
       // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
       const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-      console.log(cartHash);
-      const existing = await tx.order.findFirst({
-        where: { cartHash },
-        include: {
-          payments: {
-            where: { status: PaymentStatus.PENDING },
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-        },
-      });
+      const existing = await this.findByCartHash(cartHash, tx);
 
       if (cartHash === existing?.cartHash) {
         return {
@@ -430,28 +372,17 @@ export class OrderService {
         };
       }
 
-      let address: UserAddress | null = null;
-      if (body.addressId !== undefined && body.addressId !== null) {
-        address = await tx.userAddress.findFirst({
-          where: { id: Number(body.addressId), userId, deletedAt: null },
-        });
-      } else {
-        address = await tx.userAddress.findFirst({
-          where: { userId, isDefault: true, deletedAt: null },
-        });
-        if (!address) {
-          address = await tx.userAddress.findFirst({
-            where: { userId, deletedAt: null },
-            orderBy: { createdAt: 'desc' },
-          });
-        }
-      }
+      const address = await this.userAddressService.findByAddressIdAndUserId(
+        Number(body.addressId),
+        userId,
+        tx,
+      );
 
       if (!address)
         throw new ForbiddenException(OrderMessage.ADDRESS_NOT_FOUND);
 
-      const order = await tx.order.create({
-        data: {
+      const order = await this.create(
+        {
           userId,
           addressId: address.id,
           status: OrderStatus.PENDING_PAYMENT,
@@ -462,20 +393,22 @@ export class OrderService {
           shippingFee: SHIPPING_FEE,
           expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
         },
-      });
+        tx,
+      );
 
-      const subtotal = await this.processOrderItems(tx, cart, langId, order.id);
+      const subtotal = await this.processOrderItems(tx, cart, order.id);
       const totalAmount = subtotal + SHIPPING_FEE;
 
-      const updatedOrder = await tx.order.update({
-        where: { id: order.id },
-        data: {
+      const updatedOrder = await this.updateById(
+        order.id,
+        {
           subtotal,
           totalAmount,
           discountAmount: 0,
           shippingFee: SHIPPING_FEE,
         },
-      });
+        tx,
+      );
 
       if (body.paymentGateway === PaymentGateway.COD) {
         console.log('Đã tạo order với phương thức COD');
@@ -544,6 +477,7 @@ export class OrderService {
       langId,
     );
   }
+
   async cleanOrder(orderSecondMinutes: number) {
     Logger.debug(`Bắt đầu dọn dẹp order đã hết hạn trước ${orderSecondMinutes} giây`, 'OrderService');
 

@@ -1,4 +1,4 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 
 export type OrderItemByUserRow = {
@@ -89,6 +89,13 @@ export class OrderItemRepository {
                 unitPrice: price,
             }
         })
+    }
+
+    create(
+        data: { orderId: number; bookVariantSnapshotId: number; quantity: number; unitPrice: number; lineTotal: number },
+        tx: PrismaClientTransaction,
+    ) {
+        return tx.orderItem.create({ data });
     }
     /// Chưa fix bổ sug userId vào tìm chưa ra
     findOrderItemsByOrderId(orderId: number, userId: number, langId: number) {

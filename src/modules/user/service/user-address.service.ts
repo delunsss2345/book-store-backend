@@ -1,3 +1,4 @@
+import { PrismaClientTransaction } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { CreateUserAddressRequestDto } from '../dto/request/create-user-address.request.dto';
 import { UpdateUserAddressRequestDto } from '../dto/request/update-user-address.request.dto';
@@ -25,5 +26,9 @@ export class UserAddressService {
 
     softDeleteByIdAndUserId(id: number, userId: number) {
         return this.userAddressRepository.softDeleteByIdAndUserId(id, userId);
+    }
+
+    findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction) {
+        return this.userAddressRepository.findByAddressIdAndUserId(addressId, userId, tx);
     }
 }

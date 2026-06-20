@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - dev
+      - production
 concurrency:
   group: production-workflows-dev
   cancel-in-progress: false

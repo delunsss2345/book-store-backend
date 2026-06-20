@@ -57,7 +57,7 @@ export class OrderController {
     }
 
     return this.orderService.getOrderUser(
-      BigInt(user.id),
+      Number(user.id),
       query.page ?? 1,
       query.limit ?? 12,
     );
@@ -74,12 +74,12 @@ export class OrderController {
   ) {
     const guestSessionId = req['guestSessionId'] as string;
     if (guestSessionId) {
-      return this.orderService.getOrderDetailGuest(BigInt(orderId), guestSessionId, langId);
+      return this.orderService.getOrderDetailGuest(Number(orderId), guestSessionId, langId);
     }
 
     return this.orderService.getOrderDetailUser(
-      BigInt(orderId),
-      BigInt(user.id),
+      Number(orderId),
+      Number(user.id),
       langId,
     );
   }
@@ -93,7 +93,7 @@ export class OrderController {
     if (!user?.id) {
       throw new ForbiddenException(OrderMessage.USER_NOT_AUTHENTICATED);
     }
-    const userId = BigInt(user.id);
+    const userId = Number(user.id);
     return this.orderService.createOrdersUser(userId, body, langId);
   }
 

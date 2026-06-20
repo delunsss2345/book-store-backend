@@ -4,8 +4,8 @@ import {
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
 import { BookVariantService } from '@/modules/book/variant';
-import { StockImportService } from '@/modules/stock-import';
-import { TransactionService } from '@/modules/transaction/transaction.service';
+import { StockImportService } from '@/modules/stock-import/service/stock-import.service';
+import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import {
   BadRequestException,
   Injectable,
@@ -36,7 +36,7 @@ export class PurchaseOrderService {
   ) { }
 
   async createPurchaseOrder(
-    createdById: bigint,
+    createdById: number,
     body: CreatePurchaseOrderRequestDto,
   ): Promise<PurchaseOrderCreateResponse> {
     const createdOrder = await this.transactionService.doInTransaction(
@@ -122,7 +122,7 @@ export class PurchaseOrderService {
 
   async approvePurchaseOrder(
     purchaseOrderId: string,
-    approvedById: bigint,
+    approvedById: number,
     body: ApprovePurchaseOrderRequestDto,
   ): Promise<PurchaseOrderCreateResponse> {
     if (

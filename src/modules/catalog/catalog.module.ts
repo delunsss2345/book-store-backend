@@ -1,8 +1,8 @@
 import { CacheProvider } from '@/config/redis.config';
 import { Module } from '@nestjs/common';
-import { CatalogController } from './catalog.controller';
-import { CatalogRepository } from './catalog.repository';
-import { CatalogService } from './catalog.service';
+import { CatalogController } from './controller/catalog.controller';
+import { CatalogRepository } from './repository/catalog.repository';
+import { CatalogService } from './service/catalog.service';
 
 @Module({
     imports: [CacheProvider],

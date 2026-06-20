@@ -9,7 +9,7 @@ export class CreatePaymentTransactionDto {
         example: '123456789012345678'
     })
     @IsNotEmpty()
-    orderId: bigint;
+    orderId: number;
 
     @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.VNPAY })
     @IsEnum(PaymentGateway)

@@ -10,5 +10,5 @@ export class UploadBookAssetRequestDto {
 
   @ApiProperty({ required: true, example: '1' })
   @IsNotEmpty()
-  bookId: bigint;
+  bookId: number;
 }

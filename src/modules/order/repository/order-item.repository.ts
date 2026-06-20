@@ -3,16 +3,16 @@ import { Injectable } from '@nestjs/common';
 
 export type OrderItemByUserRow = {
     quantity: number;
-    bookVariantSnapshotId: bigint | null;
-    bookVariantId: bigint | null;
-    bookId: bigint | null;
+    bookVariantSnapshotId: number | null;
+    bookVariantId: number | null;
+    bookId: number | null;
 };
 
 @Injectable()
 export class OrderItemRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findByUserId(userId: bigint): Promise<OrderItemByUserRow[]> {
+    async findByUserId(userId: number): Promise<OrderItemByUserRow[]> {
         const rows = await this.prisma.orderItem.findMany({
             where: {
                 order: {
@@ -43,7 +43,7 @@ export class OrderItemRepository {
         }));
     }
 
-    async findOrderIdsBySnapshotIds(snapshotIds: bigint[]) {
+    async findOrderIdsBySnapshotIds(snapshotIds: number[]) {
         const rows = await this.prisma.orderItem.findMany({
             where: { bookVariantSnapshotId: { in: snapshotIds } },
             select: { orderId: true },
@@ -51,14 +51,14 @@ export class OrderItemRepository {
         return rows.map(r => r.orderId);
     }
 
-    async findSnapshotIdsByOrderIds(orderIds: bigint[]) {
+    async findSnapshotIdsByOrderIds(orderIds: number[]) {
         const rows = await this.prisma.orderItem.findMany({
             where: { orderId: { in: orderIds } },
             select: { bookVariantSnapshotId: true },
         });
         return rows.map(r => r.bookVariantSnapshotId);
     }
-    async groupAlsoBoughtSnapshotCandidates(orderIds: bigint[], excludeSnapshotIds: bigint[], take = 200) {
+    async groupAlsoBoughtSnapshotCandidates(orderIds: number[], excludeSnapshotIds: number[], take = 200) {
         return this.prisma.orderItem.groupBy({
             by: ['bookVariantSnapshotId'],
             where: {
@@ -71,7 +71,7 @@ export class OrderItemRepository {
         });
     }
 
-    async findPurchasedSnapshotIdsByUser(userId: bigint) {
+    async findPurchasedSnapshotIdsByUser(userId: number) {
         const rows = await this.prisma.orderItem.findMany({
             where: { order: { userId } },
             select: { bookVariantSnapshotId: true },
@@ -79,7 +79,7 @@ export class OrderItemRepository {
         return rows.map(r => r.bookVariantSnapshotId);
     }
 
-    createOrderItem(orderId: bigint, bookVariantSnapshotId: bigint, quantity: number, price: number) {
+    createOrderItem(orderId: number, bookVariantSnapshotId: number, quantity: number, price: number) {
         return this.prisma.orderItem.create({
             data: {
                 orderId,
@@ -91,7 +91,7 @@ export class OrderItemRepository {
         })
     }
     /// Chưa fix bổ sug userId vào tìm chưa ra
-    findOrderItemsByOrderId(orderId: bigint, userId: bigint, langId: number) {
+    findOrderItemsByOrderId(orderId: number, userId: number, langId: number) {
         return this.prisma.orderItem.findMany({
             where: {
                 orderId,
@@ -130,7 +130,7 @@ export class OrderItemRepository {
             orderBy: { createdAt: 'desc' }
         });
     }
-    findOrderDetailBySessionGuestId(orderId: bigint, sessionGuestId: string, langId: number) {
+    findOrderDetailBySessionGuestId(orderId: number, sessionGuestId: string, langId: number) {
         return this.prisma.orderItem.findMany({
             where: {
                 orderId,

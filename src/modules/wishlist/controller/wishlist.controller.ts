@@ -4,7 +4,6 @@ import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
     Body,
     Controller,
@@ -63,7 +62,7 @@ export class WishlistController {
         @GetUser() user: JwtPayload | null,
     ) {
         const { guestSessionId, userId } = this.resolveActor(request, user);
-        const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
+        const parsedItemId = Number(itemKey);
         return this.wishlistService.deleteWishItem(
             guestSessionId,
             userId,
@@ -86,8 +85,8 @@ export class WishlistController {
     private resolveActor(
         request: Request,
         user: JwtPayload | null,
-    ): { guestSessionId: string | null; userId: bigint | null } {
-        const userId = user?.sub ? BigInt(user.sub) : null;
+    ): { guestSessionId: string | null; userId: number | null } {
+        const userId = user?.sub ? Number(user.sub) : null;
         const guestSessionId = userId
             ? null
             : ((request['guestSessionId'] as string | undefined) ?? null);

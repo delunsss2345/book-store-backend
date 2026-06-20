@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateLoginAttemptRequestDto {
     @ApiProperty({ type: String, required: false, nullable: true })
-    userId?: bigint | null;
+    userId?: number | null;
 
     @ApiProperty({ required: false, nullable: true })
     ip?: string | null;

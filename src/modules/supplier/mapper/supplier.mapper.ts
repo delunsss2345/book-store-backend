@@ -1,5 +1,5 @@
 import { SupplierItemResponseDto } from '../dto/response/supplier-item.response.dto';
-import { SupplierRepository } from '../supplier.repository';
+import { SupplierRepository } from '../repository/supplier.repository';
 
 type SupplierRow = Awaited<
   ReturnType<SupplierRepository['findSuppliers']>

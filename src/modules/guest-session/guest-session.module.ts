@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { GuestSessionCleanupJob } from './guest-session.cleanup.job';
-import { GuestSessionController } from './guest-session.controller';
-import { GuestSessionRepository } from './guest-session.repository';
-import { GuestSessionService } from './guest-session.service';
+import { GuestSessionCleanupJob } from './job/guest-session.cleanup.job';
+import { GuestSessionController } from './controller/guest-session.controller';
+import { GuestSessionRepository } from './repository/guest-session.repository';
+import { GuestSessionService } from './service/guest-session.service';
 
 @Module({
     controllers: [GuestSessionController],

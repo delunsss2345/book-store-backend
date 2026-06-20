@@ -61,7 +61,7 @@ export class AdminOrderService {
     );
   }
 
-  async getOrderDetail(orderId: bigint): Promise<AdminOrderDetailResponseDto> {
+  async getOrderDetail(orderId: number): Promise<AdminOrderDetailResponseDto> {
     const row = await this.adminOrderRepository.findOrderDetailById(orderId);
     if (!row) {
       throw new NotFoundException(AdminOrderMessage.ORDER_NOT_FOUND);
@@ -71,7 +71,7 @@ export class AdminOrderService {
   }
 
   async updateOrderStatus(
-    orderId: bigint,
+    orderId: number,
     body: AdminOrderStatusDto,
   ): Promise<{ message: string }> {
     const order = await this.adminOrderRepository.findOrderStatusById(orderId);

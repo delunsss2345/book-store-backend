@@ -3,33 +3,26 @@ services:
     image: mysql:8.4
     restart: unless-stopped
     env_file:
-      - .env.testing.local
+      - .env
     volumes:
-      - mysql_data:/var/lib/mysql
+      - /docker/mysql_data:/var/lib/mysql
     ports:
-      - '127.0.0.1:3306:3306'
-    healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD || exit 1',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+      - '127.0.0.1:3308:3306'
+  redis:
+    image: redis:7.2
+    restart: unless-stopped
     env_file:
-      - .env.testing.local
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - .env
     ports:
-      - '3301:3301'
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - /docker/redis_data:/data
+  redis-insight:
+    image: redislabs/redisinsight:2.6.0
+    restart: unless-stopped
+    ports:
+      - '5540:5540'
 
 volumes:
-  # Khai báo volume chính thức
   mysql_data:
+  redis_data:

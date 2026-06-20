@@ -19,7 +19,7 @@ export class WishlistService {
 
   async getWishlist(
     guestSessionId: string | null,
-    userId: bigint | null,
+    userId: number | null,
     langId: number,
   ) {
     const wishlist = await this.resolveWishlistByActor(
@@ -36,12 +36,12 @@ export class WishlistService {
 
   async addWishItem(
     guestSessionId: string | null,
-    userId: bigint | null,
+    userId: number | null,
     body: AddWishItemRequestDto,
     langId: number,
   ) {
     const wishlist = await this.getWishlist(guestSessionId, userId, langId);
-    const bookVariantId = BigInt(body.bookVariantId);
+    const bookVariantId = Number(body.bookVariantId);
 
     const existed =
       await this.wishlistItemService.findByWishlistIdAndBookVariantId(
@@ -76,8 +76,8 @@ export class WishlistService {
 
   async deleteWishItem(
     guestSessionId: string | null,
-    userId: bigint | null,
-    itemId: bigint,
+    userId: number | null,
+    itemId: number,
     langId: number,
   ) {
     const wishlist = await this.resolveWishlistByActor(
@@ -103,7 +103,7 @@ export class WishlistService {
 
   async deleteWishlist(
     guestSessionId: string | null,
-    userId: bigint | null,
+    userId: number | null,
     langId: number,
   ) {
     const wishlist = await this.resolveWishlistByActor(
@@ -122,7 +122,7 @@ export class WishlistService {
 
   private async resolveWishlistByActor(
     guestSessionId: string | null,
-    userId: bigint | null,
+    userId: number | null,
     createIfMissing: boolean,
     languageId: number,
   ) {

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { LoginAttemptController } from './login-attempt.controller';
-import { LoginAttemptRepository } from './login-attempt.repository';
-import { LoginAttemptService } from './login-attempt.service';
+import { LoginAttemptController } from './controller/login-attempt.controller';
+import { LoginAttemptRepository } from './repository/login-attempt.repository';
+import { LoginAttemptService } from './service/login-attempt.service';
 
 @Module({
     controllers: [LoginAttemptController],

@@ -7,8 +7,8 @@ export class WishlistItemRepository {
     constructor(private readonly prisma: PrismaService) { }
 
     findByWishlistIdAndBookVariantId(
-        wishlistId: bigint,
-        bookVariantId: bigint,
+        wishlistId: number,
+        bookVariantId: number,
     ): Promise<WishlistItem | null> {
         return this.prisma.wishlistItem.findFirst({
             where: { wishlistId, bookVariantId },
@@ -16,8 +16,8 @@ export class WishlistItemRepository {
     }
 
     createByWishlistIdAndBookVariantId(
-        wishlistId: bigint,
-        bookVariantId: bigint,
+        wishlistId: number,
+        bookVariantId: number,
     ): Promise<WishlistItem> {
         return this.prisma.wishlistItem.create({
             data: {
@@ -27,7 +27,7 @@ export class WishlistItemRepository {
         });
     }
 
-    deleteByIdAndWishlistId(id: bigint, wishlistId: bigint): Promise<number> {
+    deleteByIdAndWishlistId(id: number, wishlistId: number): Promise<number> {
         return this.prisma.wishlistItem
             .deleteMany({
                 where: {

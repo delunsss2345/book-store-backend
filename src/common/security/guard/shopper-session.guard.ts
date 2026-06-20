@@ -1,5 +1,5 @@
-import { AuthRepository } from '@/modules/auth/repository/auth.repository';
-import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
+import { AuthService } from '@/modules/auth/service/auth.service';
+import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
@@ -10,7 +10,7 @@ export class ShopperSessionGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly guestSessionService: GuestSessionService,
-        private readonly authRepository: AuthRepository
+        private readonly authService: AuthService,
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -31,7 +31,7 @@ export class ShopperSessionGuard implements CanActivate {
                 return true;
             }
 
-            const user = await this.authRepository.findUserById(userId);
+            const user = await this.authService.findUserById(userId);
 
             if (!user) {
                 await this.attachGuestSession(request, response);
@@ -51,11 +51,11 @@ export class ShopperSessionGuard implements CanActivate {
         return type === 'Bearer' ? token : undefined;
     }
 
-    private parseUserId(value: string | undefined): bigint | null {
+    private parseUserId(value: string | undefined): number | null {
         if (!value) return null;
 
         try {
-            return BigInt(value);
+            return Number(value);
         } catch {
             return null;
         }

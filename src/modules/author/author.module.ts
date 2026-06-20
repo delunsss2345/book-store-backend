@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BookAuthorModule } from '../book/author/book-author.module';
-import { AuthorController } from './author.controller';
-import { AuthorRepository } from './author.repository';
-import { AuthorService } from './author.service';
+import { AuthorController } from './controller/author.controller';
+import { AuthorRepository } from './repository/author.repository';
+import { AuthorService } from './service/author.service';
 
 @Module({
     imports: [BookAuthorModule],

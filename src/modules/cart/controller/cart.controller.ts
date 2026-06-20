@@ -7,7 +7,6 @@ import {
     AddCartItemRequestDto,
     UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
     Body,
     Controller,
@@ -40,7 +39,7 @@ export class CartController {
         }
 
         if (user) {
-            return this.cartService.getCartUser(BigInt(user.sub), langId);
+            return this.cartService.getCartUser(Number(user.sub), langId);
         }
 
         throw new Error('Guest session or user is required');
@@ -65,7 +64,7 @@ export class CartController {
         @Body() body: UpdateCartItemDeltaRequestDto,
     ) {
         const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-        const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
+        const parsedItemId = Number(itemKey);
 
         return this.cartService.updateCartItemDelta(
             guestSessionId,
@@ -82,7 +81,7 @@ export class CartController {
         @Param('itemKey') itemKey: string,
     ) {
         const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-        const parsedItemId = parseBigIntRequired(itemKey, 'itemKey');
+        const parsedItemId = Number(itemKey);
 
         return this.cartService.removeCartItem(parsedItemId, guestSessionId, user);
     }

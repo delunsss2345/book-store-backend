@@ -4,7 +4,7 @@ import { IsNumber, IsOptional, IsString } from "class-validator";
 export class CreateUserDeviceRequestDto {
     @ApiProperty()
     @IsNumber()
-    userId: bigint;
+    userId: number;
     @ApiProperty()
     @IsString()
     deviceFingerprint: string;

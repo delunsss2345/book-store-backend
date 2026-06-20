@@ -6,7 +6,7 @@ import { Injectable } from '@nestjs/common';
 export class BookSnapshotRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findSnapshotIdsByVariantIds(variantIds: bigint[]) {
+    async findSnapshotIdsByVariantIds(variantIds: number[]) {
         const rows = await this.prisma.bookVariantSnapshot.findMany({
             where: { bookVariantId: { in: variantIds } },
             select: { id: true },
@@ -14,7 +14,7 @@ export class BookSnapshotRepository {
         return rows.map(r => r.id);
     }
 
-    async findVariantIdsBySnapshotIds(snapshotIds: bigint[]) {
+    async findVariantIdsBySnapshotIds(snapshotIds: number[]) {
         const rows = await this.prisma.bookVariantSnapshot.findMany({
             where: { id: { in: snapshotIds } },
             select: { id: true, bookVariantId: true },
@@ -26,7 +26,7 @@ export class BookSnapshotRepository {
         return this.prisma.bookVariantSnapshot.upsert({
             where: { contentHash },
             create: {
-                bookVariantId: BigInt(dto.bookVariantId),
+                bookVariantId: Number(dto.bookVariantId),
                 contentHash,
                 coverImageUrlSnapshot: dto.coverImageUrlSnapshot ?? null,
                 titleSnapshot: dto.titleSnapshot ?? null,

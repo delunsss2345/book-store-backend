@@ -9,8 +9,8 @@ import { RolePermissionResponseDto } from '../dto/response/role-permission.respo
 import { toRolePermissionResponse } from '../mapper';
 
 export type CreateRolePermissionParams = {
-  roleId: bigint;
-  permissionId: bigint;
+  roleId: number;
+  permissionId: number;
 };
 
 @Injectable()
@@ -54,14 +54,14 @@ export class RolePermissionService {
     return toRolePermissionResponse(created);
   }
 
-  async getByRoleId(roleId: bigint) {
+  async getByRoleId(roleId: number) {
     const rows = await this.rolePermissionRepository.findByRoleId(roleId);
     console.log(rows);
     return rows.map((row) => row.permission.code);
   }
 
   async getByPermissionId(
-    permissionId: bigint,
+    permissionId: number,
   ): Promise<RolePermissionResponseDto[]> {
     const rows =
       await this.rolePermissionRepository.findByPermissionId(permissionId);

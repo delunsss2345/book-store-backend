@@ -1,6 +1,6 @@
 import { CacheProvider } from '@/config/redis.config';
-import { AdminBookVariantsRepository } from '@/modules/admin/bookVariant/admin-book-variant.repository';
-import { AdminBookVariantsService } from '@/modules/admin/bookVariant/admin-book-variant.service';
+import { AdminBookVariantsRepository } from '@/modules/admin/book-variant/admin-book-variant.repository';
+import { AdminBookVariantsService } from '@/modules/admin/book-variant/admin-book-variant.service';
 import { AdminBookVariantController } from '@/modules/admin/controllers/admin-book-variants.controller';
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';

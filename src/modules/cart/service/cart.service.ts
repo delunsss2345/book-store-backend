@@ -15,7 +15,7 @@ import {
 import { CartRepository } from '../repository/cart.repository';
 
 type CartRequestUser = {
-  id?: bigint | string;
+  id?: number | string;
 };
 
 @Injectable()
@@ -26,7 +26,7 @@ export class CartService {
     private readonly authService: AuthService,
   ) { }
 
-  async getCartUser(userId: bigint, langId: number) {
+  async getCartUser(userId: number, langId: number) {
     const result = await this.cartRepository.findByUserId(userId, langId);
     if (result) return result;
     return this.cartRepository.createCartByUserId(userId, langId);
@@ -45,7 +45,7 @@ export class CartService {
   }
 
   // Cho phép domain khác (vd OrderService) xoá cart theo userId qua service thay vì repository
-  deleteByUserId(userId: bigint) {
+  deleteByUserId(userId: number) {
     return this.cartRepository.deleteByUserId(userId);
   }
 
@@ -54,7 +54,7 @@ export class CartService {
     user: JwtPayload | null,
     body: AddCartItemRequestDto,
   ) {
-    const bookVariantId = BigInt(body.bookVariantId);
+    const bookVariantId = Number(body.bookVariantId);
     const quantity = body.quantity ?? 1;
     if (guestSessionId) {
       let guestCart = await this.cartRepository.findByGuestSessionId(guestSessionId);
@@ -105,7 +105,7 @@ export class CartService {
     }
 
     if (user) {
-      const userId = BigInt(user.sub);
+      const userId = Number(user.sub);
       const foundUser = await this.authService.findUserById(userId);
 
       if (!foundUser) {
@@ -160,7 +160,7 @@ export class CartService {
   async updateCartItemDelta(
     guestSessionId: string | null,
     user: JwtPayload | null,
-    itemId: bigint,
+    itemId: number,
     body: UpdateCartItemDeltaRequestDto,
   ) {
     if (guestSessionId) {
@@ -206,7 +206,7 @@ export class CartService {
     }
 
     if (user) {
-      const userId = BigInt(user.sub);
+      const userId = Number(user.sub);
       const foundUser = await this.authService.findUserById(userId);
 
       if (!foundUser) {
@@ -258,7 +258,7 @@ export class CartService {
   }
 
   async removeCartItem(
-    itemId: bigint,
+    itemId: number,
     guestSessionId?: string | null,
     user?: JwtPayload | null,
   ) {
@@ -275,7 +275,7 @@ export class CartService {
       return { success: true };
     }
     if (user) {
-      const foundUser = await this.authService.findUserById(BigInt(user.sub));
+      const foundUser = await this.authService.findUserById(Number(user.sub));
       if (!foundUser) {
         throw new ForbiddenException();
       }
@@ -305,7 +305,7 @@ export class CartService {
     }
 
     if (user?.sub) {
-      const foundUser = await this.authService.findUserById(BigInt(user.sub));
+      const foundUser = await this.authService.findUserById(Number(user.sub));
       if (!foundUser) {
         throw new ForbiddenException();
       }
@@ -325,9 +325,9 @@ export class CartService {
   // Điều chỉnh giá 
   private async resolveAdjustedQuantity(
     guestSessionId: string | undefined,
-    userId: bigint | undefined,
-    itemId: bigint,
-    bookVariantId: bigint,
+    userId: number | undefined,
+    itemId: number,
+    bookVariantId: number,
     currentQuantity: number,
     delta: number,
   ): Promise<number> {

@@ -1,6 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { CreateRolePermissionRequestDto } from '../dto/request';
 import { RolePermissionService } from '../service/role-permission.service';
@@ -12,8 +11,8 @@ export class RolePermissionController {
     @Post()
     @RequirePermissions(PermissionCode.ROLE_PERMISSION_GRANT)
     createRolePermission(@Body() body: CreateRolePermissionRequestDto) {
-        const roleId = parseBigIntRequired(body.roleId, 'roleId');
-        const permissionId = parseBigIntRequired(body.permissionId, 'permissionId');
+        const roleId = Number(body.roleId);
+        const permissionId = Number(body.permissionId);
 
         return this.rolePermissionService.createRolePermission({
             roleId,
@@ -23,13 +22,13 @@ export class RolePermissionController {
 
     @Get('role/:roleId')
     getByRoleId(@Param('roleId') roleId: string) {
-        const parsedRoleId = parseBigIntRequired(roleId, 'roleId');
+        const parsedRoleId = Number(roleId);
         return this.rolePermissionService.getByRoleId(parsedRoleId);
     }
 
     @Get('permission/:permissionId')
     getByPermissionId(@Param('permissionId') permissionId: string) {
-        const parsedPermissionId = parseBigIntRequired(permissionId, 'permissionId');
+        const parsedPermissionId = Number(permissionId);
         return this.rolePermissionService.getByPermissionId(parsedPermissionId);
     }
 }

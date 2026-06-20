@@ -1,7 +1,7 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { AdminBookVariantsService } from '@/modules/admin/bookVariant/admin-book-variant.service';
+import { AdminBookVariantsService } from '@/modules/admin/book-variant/admin-book-variant.service';
 import {
     Controller,
     Get,

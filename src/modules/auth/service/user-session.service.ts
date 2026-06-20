@@ -12,10 +12,10 @@ export class UserSessionService {
     ) { }
 
     async createSession(params: {
-        userId: bigint;
+        userId: number;
         refreshToken: string;
         userAgent?: string;
-        deviceId?: bigint | null;
+        deviceId?: number | null;
     }) {
 
         const refreshTokenHash = hashToken(params.refreshToken);

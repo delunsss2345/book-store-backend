@@ -8,16 +8,16 @@ import { OrderStatus, PaymentStatus } from '@prisma/client';
 
 export type OrderByUserRow = {
     quantity: number;
-    bookVariantSnapshotId: bigint | null;
-    bookVariantId: bigint | null;
-    bookId: bigint | null;
+    bookVariantSnapshotId: number | null;
+    bookVariantId: number | null;
+    bookId: number | null;
 };
 
 export type OrderWithItemsRow = {
-    id: bigint;
+    id: number;
     items: {
-        id: bigint;
-        bookVariantSnapshotId: bigint | null;
+        id: number;
+        bookVariantSnapshotId: number | null;
         quantity: number;
         createdAt: Date;
     }[];
@@ -28,7 +28,7 @@ export type OrderWithItemsRow = {
 export class OrderRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findOrderItemsByOrderId(orderIds: bigint[]): Promise<OrderWithItemsRow[]> {
+    async findOrderItemsByOrderId(orderIds: number[]): Promise<OrderWithItemsRow[]> {
         if (!orderIds.length) {
             return [];
         }
@@ -50,7 +50,7 @@ export class OrderRepository {
 
     }
 
-    async updateStatusByOrderId(orderId: bigint, status: OrderStatus) {
+    async updateStatusByOrderId(orderId: number, status: OrderStatus) {
         return this.prisma.order.update({
             where: { id: orderId },
             data: { status }
@@ -58,7 +58,7 @@ export class OrderRepository {
     }
 
     async findOrderItemWWithParentVariantByOrderId(
-        orderId: bigint,
+        orderId: number,
         tx?: PrismaClientTransaction,
     ) {
         const db = tx ?? this.prisma;
@@ -87,7 +87,7 @@ export class OrderRepository {
 
     }
 
-    createOrdersByUserId(userId: bigint) {
+    createOrdersByUserId(userId: number) {
         const orderCode = generateOrderCode();
         return this.prisma.order.create({
             data: {
@@ -126,7 +126,7 @@ export class OrderRepository {
         })
     }
 
-    findOrderByUserId(userId: bigint, page: number, limit: number) {
+    findOrderByUserId(userId: number, page: number, limit: number) {
         return this.prisma.order.findMany({
             take: limit,
             skip: (page - 1) * limit,
@@ -152,7 +152,7 @@ export class OrderRepository {
     }
 
 
-    findOrderDetailByUserId(userId: bigint, page: number, limit: number) {
+    findOrderDetailByUserId(userId: number, page: number, limit: number) {
         return this.prisma.order.findMany({
             take: limit,
             skip: (page - 1) * limit,
@@ -194,7 +194,7 @@ export class OrderRepository {
         return this.prisma.$transaction(async (tx) => {
             for (const [key, value] of variantMap) {
                 await tx.bookVariant.updateMany({
-                    where: { id: BigInt(key) },
+                    where: { id: Number(key) },
                     data: {
                         stock: { increment: value },
                         reserved: { decrement: value }
@@ -215,13 +215,13 @@ export class OrderRepository {
 
     updateOrderDone(
         variantMap: Map<string, number>,
-        orderId: bigint,
+        orderId: number,
         tx?: PrismaClientTransaction,
     ) {
         const updateOrderAndVariant = async (db: PrismaClientTransaction) => {
             for (const [key, value] of variantMap) {
                 await db.bookVariant.updateMany({
-                    where: { id: BigInt(key) },
+                    where: { id: Number(key) },
                     data: {
                         stock: { decrement: value },
                         reserved: { decrement: value }

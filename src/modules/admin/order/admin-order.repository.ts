@@ -56,7 +56,7 @@ export class AdminOrderRepository {
     });
   }
 
-  findOrderDetailById(orderId: bigint) {
+  findOrderDetailById(orderId: number) {
     return this.prisma.order.findUnique({
       where: {
         id: orderId,
@@ -65,7 +65,7 @@ export class AdminOrderRepository {
     });
   }
 
-  findOrderStatusById(orderId: bigint) {
+  findOrderStatusById(orderId: number) {
     return this.prisma.order.findUnique({
       where: {
         id: orderId,
@@ -74,7 +74,7 @@ export class AdminOrderRepository {
     });
   }
 
-  updateOrderStatus(orderId: bigint, status: OrderStatus, note: string | null) {
+  updateOrderStatus(orderId: number, status: OrderStatus, note: string | null) {
     return this.prisma.order.update({
       where: {
         id: orderId,

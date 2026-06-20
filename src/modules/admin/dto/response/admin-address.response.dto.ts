@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class OrderAddressDto {
     @ApiProperty({ example: '13', description: 'ID của bản ghi' })
-    id: bigint;
+    id: number;
 
     @ApiProperty({ example: '37', description: 'ID đơn hàng' })
-    orderId: bigint;
+    orderId: number;
 
     @ApiProperty({ example: 'Phạm Thanh Huy Phạm Thanh', description: 'Tên người nhận' })
     recipientName: string;

@@ -4,13 +4,12 @@ import { PrismaService } from '@/database';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
-import { AuditLogService } from '@/modules/audit-log/audit-log.service';
-import { AuthorService } from '@/modules/author/author.service';
-import { LanguageService } from '@/modules/language/language.service';
-import { PublisherService } from '@/modules/publisher/publisher.service';
-import { SupplierService } from '@/modules/supplier/supplier.service';
+import { AuditLogService } from '@/modules/audit-log/service/audit-log.service';
+import { AuthorService } from '@/modules/author/service/author.service';
+import { LanguageService } from '@/modules/language/service/language.service';
+import { PublisherService } from '@/modules/publisher/service/publisher.service';
+import { SupplierService } from '@/modules/supplier/service/supplier.service';
 import { generateSlug } from '@/utils/generateSlug.util';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
@@ -62,7 +61,7 @@ export class AdminBookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
-  async getDetail(bookId: bigint): Promise<AdminBookDetailResponseDto> {
+  async getDetail(bookId: number): Promise<AdminBookDetailResponseDto> {
     const book = await this.adminBookRepository.findBookById(bookId);
     if (!book || book.deletedAt) {
       throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
@@ -72,7 +71,7 @@ export class AdminBookService {
   // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
   async createBookAll(
     body: CreateAdminBookAllRequestDto,
-    actorUserId: bigint,
+    actorUserId: number,
     ip?: string,
   ) {
     // Kiem tra publisher
@@ -127,10 +126,10 @@ export class AdminBookService {
         normalizedAuthors.map((author) => author.name),
       );
 
-      const authorIdByName = new Map<string, bigint>(
+      const authorIdByName = new Map<string, number>(
         createdAuthors.map((author) => [
           author.name.trim().toLowerCase(),
-          parseBigIntRequired(author.id, 'author.id'),
+          Number(author.id),
         ]),
       );
 
@@ -223,9 +222,9 @@ export class AdminBookService {
   }
 
   async createBookTranslation(
-    bookId: bigint,
+    bookId: number,
     body: CreateAdminBookTranslationRequestDto,
-    actorUserId: bigint,
+    actorUserId: number,
     ip?: string,
   ): Promise<AdminBookTranslationResponseDto> {
     const language = await this.languageService.resolveLanguage(body.lang);
@@ -289,9 +288,9 @@ export class AdminBookService {
   }
 
   async updateBook(
-    bookId: bigint,
+    bookId: number,
     body: UpdateAdminBookRequestDto,
-    actorUserId: bigint,
+    actorUserId: number,
     ip?: string,
   ): Promise<AdminBookItemUpdateResponseDto> {
     return this.prisma.$transaction(async (tx) => {
@@ -358,8 +357,8 @@ export class AdminBookService {
   }
 
   async deleteBook(
-    bookId: bigint,
-    actorUserId: bigint,
+    bookId: number,
+    actorUserId: number,
     ip?: string,
   ): Promise<AdminBookItemResponseDto> {
     return this.prisma.$transaction(async (tx) => {
@@ -478,12 +477,12 @@ export class AdminBookService {
     );
   }
 
-  private parsePublisherId(value?: string): bigint | undefined {
+  private parsePublisherId(value?: string): number | undefined {
     if (value === undefined) {
       return undefined;
     }
 
-    return parseBigIntRequired(value, 'publisherId');
+    return Number(value);
   }
 
   private async buildUniqueSlug(

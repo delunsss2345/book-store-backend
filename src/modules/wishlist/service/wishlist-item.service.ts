@@ -5,21 +5,21 @@ import { WishlistItemRepository } from '../repository/wishlist-item.repository';
 export class WishlistItemService {
     constructor(private readonly wishlistItemRepository: WishlistItemRepository) { }
 
-    findByWishlistIdAndBookVariantId(wishlistId: bigint, bookVariantId: bigint) {
+    findByWishlistIdAndBookVariantId(wishlistId: number, bookVariantId: number) {
         return this.wishlistItemRepository.findByWishlistIdAndBookVariantId(
             wishlistId,
             bookVariantId,
         );
     }
 
-    createByWishlistIdAndBookVariantId(wishlistId: bigint, bookVariantId: bigint) {
+    createByWishlistIdAndBookVariantId(wishlistId: number, bookVariantId: number) {
         return this.wishlistItemRepository.createByWishlistIdAndBookVariantId(
             wishlistId,
             bookVariantId,
         );
     }
 
-    deleteByIdAndWishlistId(id: bigint, wishlistId: bigint) {
+    deleteByIdAndWishlistId(id: number, wishlistId: number) {
         return this.wishlistItemRepository.deleteByIdAndWishlistId(id, wishlistId);
     }
 }

@@ -1,6 +1,5 @@
 import type { JwtPayload } from '@/common';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CreateUserAddressRequestDto } from '../dto/request/create-user-address.request.dto';
 import { UpdateUserAddressRequestDto } from '../dto/request/update-user-address.request.dto';
@@ -12,7 +11,7 @@ export class UserAddressController {
 
     @Get('user')
     getUserAddressByUserId(@GetUser() user: JwtPayload) {
-        const parsedUserId = parseBigIntRequired(user.sub, 'userId');
+        const parsedUserId = Number(user.sub);
         return this.userAddressService.getUserAddressByUserId(parsedUserId);
     }
 
@@ -21,7 +20,7 @@ export class UserAddressController {
         @GetUser() user: JwtPayload,
         @Body() body: CreateUserAddressRequestDto,
     ) {
-        const parsedUserId = parseBigIntRequired(user.sub, 'userId');
+        const parsedUserId = Number(user.sub);
         return this.userAddressService.createUserAddressByUserId(parsedUserId, body);
     }
 
@@ -31,23 +30,23 @@ export class UserAddressController {
         @GetUser() user: JwtPayload,
         @Body() body: UpdateUserAddressRequestDto,
     ) {
-        const parsedId = parseBigIntRequired(id, 'id');
-        const parsedUserId = parseBigIntRequired(user.sub, 'userId');
+        const parsedId = Number(id);
+        const parsedUserId = Number(user.sub);
         return this.userAddressService.updateUserAddressByIdAndUserId(parsedId, parsedUserId, body);
     }
 
     @Patch('user/:id/set-default')
     setDefaultByIdAndUserId(@Param('id') id: string, @GetUser() user: JwtPayload) {
         console.log('id')
-        const parsedId = parseBigIntRequired(id, 'id');
-        const parsedUserId = parseBigIntRequired(user.sub, 'userId');
+        const parsedId = Number(id);
+        const parsedUserId = Number(user.sub);
         return this.userAddressService.setDefaultByIdAndUserId(parsedId, parsedUserId);
     }
 
     @Delete('user/:id')
     softDeleteByIdAndUserId(@Param('id') id: string, @GetUser() user: JwtPayload) {
-        const parsedId = parseBigIntRequired(id, 'id');
-        const parsedUserId = parseBigIntRequired(user.sub, 'userId');
+        const parsedId = Number(id);
+        const parsedUserId = Number(user.sub);
         return this.userAddressService.softDeleteByIdAndUserId(parsedId, parsedUserId);
     }
 }

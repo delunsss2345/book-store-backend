@@ -1,6 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { AdminOrderListQueryDto, AdminOrderStatusDto } from '../dto/request';
@@ -40,7 +39,7 @@ export class AdminOrderController {
     @Param('orderId') orderId: string,
     @Body() body: AdminOrderStatusDto,
   ) {
-    const parsedOrderId = parseBigIntRequired(orderId, 'orderId');
+    const parsedOrderId = Number(orderId);
     return this.adminOrderService.updateOrderStatus(parsedOrderId, body);
   }
 }

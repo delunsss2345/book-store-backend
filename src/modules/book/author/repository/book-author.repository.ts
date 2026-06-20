@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export class BookAuthorRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    countBooksByAuthor(authorId: bigint, languageId: number) {
+    countBooksByAuthor(authorId: number, languageId: number) {
         return this.prisma.bookAuthor.count({
             where: {
                 authorId,
@@ -20,7 +20,7 @@ export class BookAuthorRepository {
         });
     }
 
-    findBooksByAuthor(authorId: bigint, languageId: number, page: number, limit: number) {
+    findBooksByAuthor(authorId: number, languageId: number, page: number, limit: number) {
         return this.prisma.bookAuthor.findMany({
             where: {
                 authorId,

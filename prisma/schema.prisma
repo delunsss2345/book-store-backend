@@ -154,7 +154,7 @@ enum VerificationType {
 // =============================================================================
 
 model User {
-  id                BigInt    @id @default(autoincrement())
+  id                Int    @id @default(autoincrement())
   email             String    @unique @db.VarChar(255)
   phoneNumber       String?   @map("phone_number") @db.VarChar(30)
   firstName         String?   @map("first_name") @db.VarChar(100)
@@ -208,8 +208,8 @@ model User {
 }
 
 model VerificationCode {
-  id        BigInt           @id @default(autoincrement())
-  userId    BigInt?          @map("user_id")
+  id        Int           @id @default(autoincrement())
+  userId    Int?          @map("user_id")
   email     String?          @db.VarChar(200)
   type      VerificationType
   codeHash  String?          @map("code_hash") @db.VarChar(200)
@@ -224,8 +224,8 @@ model VerificationCode {
 }
 
 model LoginAttempt {
-  id            BigInt   @id @default(autoincrement())
-  userId        BigInt?  @map("user_id")
+  id            Int   @id @default(autoincrement())
+  userId        Int?  @map("user_id")
   ip            String?  @db.VarChar(64)
   userAgent     String?  @map("user_agent") @db.VarChar(1000)
   success       Boolean?
@@ -238,8 +238,8 @@ model LoginAttempt {
 }
 
 model UserDevice {
-  id                BigInt          @id @default(autoincrement())
-  userId            BigInt          @map("user_id")
+  id                Int          @id @default(autoincrement())
+  userId            Int          @map("user_id")
   deviceFingerprint String          @map("device_fingerprint") @db.VarChar(255) // FE gửi chuỗi ngẫu nhiên hoặc BE tự tạo, đây là id của thiết bị
   deviceName        String?         @map("device_name") @db.VarChar(200) //  Tên thiết bị
   platform          DevicePlatform? //Nền tảng thiết bị
@@ -259,8 +259,8 @@ model UserDevice {
 
 model UserSession {
   id               String        @id @default(uuid()) @db.Char(36)
-  userId           BigInt        @map("user_id")
-  deviceId         BigInt?       @map("device_id")
+  userId           Int        @map("user_id")
+  deviceId         Int?       @map("device_id")
   status           SessionStatus @default(ACTIVE)
   refreshTokenHash String        @unique @map("refresh_token_hash") @db.VarChar(255)
   userAgent        String?       @map("user_agent") @db.VarChar(150)
@@ -291,8 +291,8 @@ model RevokedToken {
 }
 
 model UserAddress {
-  id            BigInt    @id @default(autoincrement())
-  userId        BigInt    @map("user_id")
+  id            Int    @id @default(autoincrement())
+  userId        Int    @map("user_id")
   addressType   String?   @map("address_type") @db.VarChar(50) // mặc định là không có
   recipientName String    @map("recipient_name") @db.VarChar(200) // mặc định là tên thật, thích thì điền không thôi
   phoneNumber   String    @map("phone_number") @db.VarChar(30) // buộc phải có số
@@ -317,7 +317,7 @@ model GuestSession {
   userAgentHash   String?   @map("user_agent_hash") @db.VarChar(255)
   createdAt       DateTime  @default(now()) @map("created_at")
   lastSeenAt      DateTime? @map("last_seen_at")
-  convertedUserId BigInt?   @map("converted_user_id")
+  convertedUserId Int?   @map("converted_user_id")
   convertedAt     DateTime? @map("converted_at")
 
   // Relations
@@ -335,7 +335,7 @@ model GuestSession {
 // =============================================================================
 
 model Role {
-  id          BigInt   @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   code        RoleCode @unique @map("code")
   name        String   @unique @map("name") @db.VarChar(255)
   description String?  @db.VarChar(255)
@@ -345,9 +345,9 @@ model Role {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  createById BigInt? @map("created_by_id")
-  updateById BigInt? @map("updated_by_id")
-  deletedBy  BigInt? @map("deleted_by")
+  createById Int? @map("created_by_id")
+  updateById Int? @map("updated_by_id")
+  deletedBy  Int? @map("deleted_by")
 
   userRoles UserRole[]
   roles     RolePermission[]
@@ -359,16 +359,16 @@ model Role {
 }
 
 model UserRole {
-  userId BigInt @map("user_id")
-  roleId BigInt @map("role_id")
+  userId Int @map("user_id")
+  roleId Int @map("role_id")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  createdBy BigInt? @map("created_by")
-  updatedBy BigInt? @map("updated_by")
-  deletedBy BigInt? @map("deleted_by")
+  createdBy Int? @map("created_by")
+  updatedBy Int? @map("updated_by")
+  deletedBy Int? @map("deleted_by")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -379,7 +379,7 @@ model UserRole {
 }
 
 model Permission {
-  id          BigInt     @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   code        String     @unique @db.VarChar(100)
   description String?    @db.Text
   method      HTTPMethod
@@ -390,8 +390,8 @@ model Permission {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  createdById BigInt? @map("created_by_id")
-  updatedById BigInt? @map("updated_by_id")
+  createdById Int? @map("created_by_id")
+  updatedById Int? @map("updated_by_id")
 
   createdBy User? @relation("PermissionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: NoAction)
   updatedBy User? @relation("PermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -403,8 +403,8 @@ model Permission {
 }
 
 model RolePermission {
-  roleId       BigInt @map("role_id")
-  permissionId BigInt @map("permission_id")
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -434,15 +434,15 @@ model Language {
 }
 
 model Category {
-  id        BigInt    @id @default(autoincrement())
-  parentId  BigInt?   @map("parent_id")
+  id        Int    @id @default(autoincrement())
+  parentId  Int?   @map("parent_id")
   isActive  Boolean   @default(true) @map("is_active")
   sortOrder Int       @default(0) @map("sort_order")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
-  createdBy BigInt?   @map("created_by")
-  updatedBy BigInt?   @map("updated_by")
+  createdBy Int?   @map("created_by")
+  updatedBy Int?   @map("updated_by")
 
   // Relations
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -457,8 +457,8 @@ model Category {
 }
 
 model CategoryTranslation {
-  id          BigInt   @id @default(autoincrement())
-  categoryId  BigInt   @map("category_id")
+  id          Int   @id @default(autoincrement())
+  categoryId  Int   @map("category_id")
   languageId  Int      @map("language_id")
   name        String   @db.VarChar(300)
   description String?  @db.Text
@@ -476,7 +476,7 @@ model CategoryTranslation {
 }
 
 model Author {
-  id          BigInt   @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   defaultName String   @unique @map("default_name") @db.VarChar(300)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -488,7 +488,7 @@ model Author {
 }
 
 model Publisher {
-  id          BigInt   @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   defaultName String   @unique @map("default_name") @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -499,8 +499,8 @@ model Publisher {
 }
 
 model Book {
-  id              BigInt    @id @default(autoincrement())
-  publisherId     BigInt?   @map("publisher_id")
+  id              Int    @id @default(autoincrement())
+  publisherId     Int?   @map("publisher_id")
   publicationYear Int?      @map("publication_year")
   weightGrams     Int?      @map("weight_grams")
   pageCount       Int?      @map("page_count")
@@ -509,8 +509,8 @@ model Book {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-  createdBy       BigInt?   @map("created_by")
-  updatedBy       BigInt?   @map("updated_by")
+  createdBy       Int?   @map("created_by")
+  updatedBy       Int?   @map("updated_by")
 
   // Relations
   creator           User?              @relation("BookCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -529,8 +529,8 @@ model Book {
 }
 
 model BookTranslation {
-  id          BigInt  @id @default(autoincrement())
-  bookId      BigInt  @map("book_id")
+  id          Int  @id @default(autoincrement())
+  bookId      Int  @map("book_id")
   languageId  Int     @map("language_id")
   title       String  @db.VarChar(500)
   description String? @db.Text
@@ -546,8 +546,8 @@ model BookTranslation {
 }
 
 model BookAuthor {
-  bookId    BigInt  @map("book_id")
-  authorId  BigInt  @map("author_id")
+  bookId    Int  @map("book_id")
+  authorId  Int  @map("author_id")
   isPrimary Boolean @default(false) @map("is_primary")
 
   // Relations
@@ -559,7 +559,7 @@ model BookAuthor {
 }
 
 model BookSpec {
-  bookId      BigInt   @id @map("book_id")
+  bookId      Int   @id @map("book_id")
   widthCm     Decimal? @map("width_cm") @db.Decimal(6, 2)
   heightCm    Decimal? @map("height_cm") @db.Decimal(6, 2)
   thicknessCm Decimal? @map("thickness_cm") @db.Decimal(6, 2)
@@ -571,8 +571,8 @@ model BookSpec {
 }
 
 model BookCategory {
-  bookId     BigInt @map("book_id")
-  categoryId BigInt @map("category_id")
+  bookId     Int @map("book_id")
+  categoryId Int @map("category_id")
 
   // Relations
   book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
@@ -583,8 +583,8 @@ model BookCategory {
 }
 
 model BookBadge {
-  id     BigInt @id @default(autoincrement())
-  bookId BigInt @unique @map("book_id")
+  id     Int @id @default(autoincrement())
+  bookId Int @unique @map("book_id")
   code   Badge
   book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -593,8 +593,8 @@ model BookBadge {
 }
 
 model BookVariant {
-  id           BigInt     @id @default(autoincrement())
-  bookId       BigInt     @map("book_id")
+  id           Int     @id @default(autoincrement())
+  bookId       Int     @map("book_id")
   format       BookFormat
   edition      Int?
   isbn         String?    @unique @db.VarChar(20)
@@ -607,7 +607,7 @@ model BookVariant {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
   reserved     Int?       @default(0)
-  supplierId   BigInt?
+  supplierId   Int?
 
   // Relations
   book                 Book                  @relation(fields: [bookId], references: [id], onDelete: Cascade)
@@ -624,8 +624,8 @@ model BookVariant {
 }
 
 model BookVariantSnapshot {
-  id            BigInt  @id @default(autoincrement())
-  bookVariantId BigInt  @map("book_variant_id")
+  id            Int  @id @default(autoincrement())
+  bookVariantId Int  @map("book_variant_id")
   contentHash   String? @unique @map("content_hash") @db.VarChar(255)
 
   coverImageUrlSnapshot String? @map("cover_image_url_snapshot") @db.Text
@@ -649,8 +649,8 @@ model BookVariantSnapshot {
 }
 
 model BookVariantAsset {
-  id        BigInt  @id @default(autoincrement())
-  bookId    BigInt  @map("book_id")
+  id        Int  @id @default(autoincrement())
+  bookId    Int  @map("book_id")
   url       String  @db.VarChar(1000)
   assetType String? @map("asset_type") @db.VarChar(50)
   sortOrder Int?    @map("sort_order")
@@ -666,8 +666,8 @@ model BookVariantAsset {
 // =============================================================================
 
 model Cart {
-  id             BigInt   @id @default(autoincrement())
-  userId         BigInt?  @map("user_id")
+  id             Int   @id @default(autoincrement())
+  userId         Int?  @map("user_id")
   guestSessionId String?  @map("guest_session_id") @db.Char(36)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -683,9 +683,9 @@ model Cart {
 }
 
 model CartItem {
-  id            BigInt   @id @default(autoincrement())
-  cartId        BigInt   @map("cart_id")
-  bookVariantId BigInt   @map("book_variant_id")
+  id            Int   @id @default(autoincrement())
+  cartId        Int   @map("cart_id")
+  bookVariantId Int   @map("book_variant_id")
   quantity      Int
   addedAt       DateTime @default(now()) @map("added_at")
 
@@ -698,8 +698,8 @@ model CartItem {
 }
 
 model Wishlist {
-  id             BigInt    @id @default(autoincrement())
-  userId         BigInt?   @map("user_id")
+  id             Int    @id @default(autoincrement())
+  userId         Int?   @map("user_id")
   guestSessionId String?   @map("guest_session_id") @db.Char(36)
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -716,9 +716,9 @@ model Wishlist {
 }
 
 model WishlistItem {
-  id            BigInt   @id @default(autoincrement())
-  wishlistId    BigInt   @map("wishlist_id")
-  bookVariantId BigInt   @map("book_variant_id")
+  id            Int   @id @default(autoincrement())
+  wishlistId    Int   @map("wishlist_id")
+  bookVariantId Int   @map("book_variant_id")
   addedAt       DateTime @default(now()) @map("added_at")
 
   // Relations
@@ -730,10 +730,10 @@ model WishlistItem {
 }
 
 model Order {
-  id             BigInt         @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   orderCode      String         @unique @map("order_code") @db.VarChar(50)
-  userId         BigInt?        @map("user_id")
-  addressId      BigInt?        @map("address_id")
+  userId         Int?        @map("user_id")
+  addressId      Int?        @map("address_id")
   cartHash       String?        @unique @map("cart_hash")
   guestSessionId String?        @map("guest_session_id") @db.Char(36)
   guestEmail     String?        @map("guest_email") @db.VarChar(320)
@@ -750,8 +750,8 @@ model Order {
   createdAt      DateTime       @default(now()) @map("created_at")
   expiredAt      DateTime       @map("expired_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
-  createdBy      BigInt?        @map("created_by")
-  updatedBy      BigInt?        @map("updated_by")
+  createdBy      Int?        @map("created_by")
+  updatedBy      Int?        @map("updated_by")
 
   // Relations
   user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -770,10 +770,10 @@ model Order {
 }
 
 model OrderItem {
-  id      BigInt @id @default(autoincrement())
-  orderId BigInt @map("order_id")
+  id      Int @id @default(autoincrement())
+  orderId Int @map("order_id")
 
-  bookVariantSnapshotId BigInt              @map("book_variant_snapshot_id")
+  bookVariantSnapshotId Int              @map("book_variant_snapshot_id")
   bookVariantSnapshot   BookVariantSnapshot @relation(fields: [bookVariantSnapshotId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   quantity  Int
@@ -789,8 +789,8 @@ model OrderItem {
 }
 
 model OrderAddress {
-  id            BigInt  @id @default(autoincrement())
-  orderId       BigInt  @unique @map("order_id")
+  id            Int  @id @default(autoincrement())
+  orderId       Int  @unique @map("order_id")
   recipientName String  @map("recipient_name") @db.VarChar(200) // Nối lastname firstname
   phoneNumber   String  @map("phone_number") @db.VarChar(30)
   addressLine   String  @map("address_line") @db.VarChar(500)
@@ -807,9 +807,9 @@ model OrderAddress {
 }
 
 model PaymentTransaction {
-  id      BigInt  @id @default(autoincrement())
-  orderId BigInt? @map("order_id")
-  userId  BigInt? @map("user_id")
+  id      Int  @id @default(autoincrement())
+  orderId Int? @map("order_id")
+  userId  Int? @map("user_id")
 
   gateway PaymentGateway
   status  PaymentStatus?
@@ -839,7 +839,7 @@ model PaymentTransaction {
 
 model PaymentIntent {
   id         String         @id @default(cuid())
-  orderId    BigInt         @map("order_id")
+  orderId    Int         @map("order_id")
   orderCode  String         @map("order_code") @db.VarChar(50)
   content    String?        @unique @map("content") @db.VarChar(100)
   gateway    PaymentGateway
@@ -863,7 +863,7 @@ model PaymentIntent {
 // =============================================================================
 
 model Supplier {
-  id        BigInt   @id @default(autoincrement())
+  id        Int   @id @default(autoincrement())
   code      String   @unique
   name      String
   createdAt DateTime @default(now()) @map("created_at")
@@ -880,8 +880,8 @@ model Supplier {
 model StockImport {
   id              String   @id @default(cuid())
   purchaseOrderId String?  @unique @map("purchase_order_id")
-  supplierId      BigInt   @map("supplier_id")
-  createdBy       BigInt   @map("created_by")
+  supplierId      Int   @map("supplier_id")
+  createdBy       Int   @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   note            String?
   totalAmount     Decimal  @db.Decimal(18, 2)
@@ -898,7 +898,7 @@ model StockImport {
 model StockImportItem {
   id            String  @id @default(cuid())
   stockImportId String  @map("stock_import_id")
-  bookVariantId BigInt  @map("variant_id")
+  bookVariantId Int  @map("variant_id")
   quantity      Int
   importPrice   Decimal @map("import_price") @db.Decimal(12, 2)
 
@@ -911,9 +911,9 @@ model StockImportItem {
 model PurchaseOrder {
   id           String              @id @default(cuid())
   code         String              @unique
-  supplierId   BigInt
-  createdById  BigInt
-  approvedById BigInt?
+  supplierId   Int
+  createdById  Int
+  approvedById Int?
   status       PurchaseOrderStatus @default(PENDING)
   note         String?
   totalAmount  Decimal             @db.Decimal(18, 2)
@@ -933,7 +933,7 @@ model PurchaseOrder {
 model PurchaseOrderItem {
   id              String   @id @default(cuid())
   purchaseOrderId String
-  bookVariantId   BigInt
+  bookVariantId   Int
   quantity        Int
   unitPrice       Decimal  @db.Decimal(18, 2)
   totalPrice      Decimal  @db.Decimal(18, 2)
@@ -951,10 +951,10 @@ model PurchaseOrderItem {
 // =============================================================================
 
 model Review {
-  id            BigInt @id @default(autoincrement())
-  userId        BigInt @map("user_id")
-  bookVariantId BigInt @map("book_variant_id")
-  bookId        BigInt @map("book_id")
+  id            Int @id @default(autoincrement())
+  userId        Int @map("user_id")
+  bookVariantId Int @map("book_variant_id")
+  bookId        Int @map("book_id")
 
   rating    Int
   content   String?  @db.Text
@@ -970,8 +970,8 @@ model Review {
 }
 
 model UserEvent {
-  id             BigInt    @id @default(autoincrement())
-  userId         BigInt?   @map("user_id")
+  id             Int    @id @default(autoincrement())
+  userId         Int?   @map("user_id")
   guestSessionId String?   @map("guest_session_id") @db.Char(36)
   sessionId      String?   @map("session_id") @db.Char(36)
   eventType      EventType @map("event_type")
@@ -996,8 +996,8 @@ model UserEvent {
 }
 
 model AuditLog {
-  id          BigInt   @id @default(autoincrement())
-  actorUserId BigInt   @map("actor_user_id")
+  id          Int   @id @default(autoincrement())
+  actorUserId Int   @map("actor_user_id")
   action      String   @db.VarChar(200)
   entityType  String   @map("entity_type") @db.VarChar(100)
   entityId    String   @map("entity_id") @db.VarChar(100)
@@ -1018,7 +1018,7 @@ model AuditLog {
 // =============================================================================
 
 model EmailOutbox {
-  id          BigInt       @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   toEmail     String       @map("to_email") @db.VarChar(320)
   toName      String?      @map("to_name") @db.VarChar(200)
   subject     String?      @db.VarChar(500)
@@ -1037,7 +1037,7 @@ model EmailOutbox {
 }
 
 model WebhookInbox {
-  id      BigInt         @id @default(autoincrement())
+  id      Int         @id @default(autoincrement())
   gateway PaymentGateway
 
   providerEventId String   @map("provider_event_id") @db.VarChar(200)

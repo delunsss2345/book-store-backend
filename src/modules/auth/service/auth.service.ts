@@ -16,17 +16,17 @@ import {
   VerifyEmailRequestDto,
 } from '@/modules/auth/dto/request';
 import { AuthRepository } from '@/modules/auth/repository/auth.repository';
-import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
-import { GuestSessionService } from '@/modules/guest-session/guest-session.service';
+import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
+import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
-import { LoginAttemptService } from '@/modules/login-attempt/login-attempt.service';
+import { LoginAttemptService } from '@/modules/login-attempt/service/login-attempt.service';
 import { RevokedTokenService } from '@/modules/auth/service/revoked-token.service';
 import { RoleService } from '@/modules/role/service/role.service';
-import { UserDeviceService } from '@/modules/user-device/user-device.service';
+import { UserDeviceService } from '@/modules/user-device/service/user-device.service';
 import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { UserRoleService } from '@/modules/user/service/user-role.service';
-import { OTP_TIME_SECONDS } from '@/modules/verification-code/verification-code.constants';
-import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
+import { OTP_TIME_SECONDS } from '@/modules/verification-code/constants/verification-code.constants';
+import { VerificationCodeService } from '@/modules/verification-code/service/verification-code.service';
 import { hashToken, tokenHash } from '@/utils/hashToken.util';
 import { randomKey } from '@/utils/randomKey.util';
 import {
@@ -63,12 +63,12 @@ export class AuthService {
     private readonly guestSessionService: GuestSessionService,
   ) { }
 
-  getMe(id: bigint) {
+  getMe(id: number) {
     return this.authRepository.findUserById(id);
   }
 
   // Cho phép domain khác (Cart, Wishlist) lấy user theo id qua service thay vì repository
-  findUserById(id: bigint) {
+  findUserById(id: number) {
     return this.authRepository.findUserById(id);
   }
 
@@ -358,7 +358,7 @@ export class AuthService {
     return { success: true };
   }
 
-  async changePassword(userId: bigint, body: ChangePasswordRequestDto) {
+  async changePassword(userId: number, body: ChangePasswordRequestDto) {
     if (body.newPassword !== body.confirmNewPassword) {
       throw new BadRequestException(
         ChangePasswordMessage.NEW_PASSWORD_CONFIRM_MISMATCH,

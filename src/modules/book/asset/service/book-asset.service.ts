@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { R2ServiceService } from '../../../r2-service/r2-service.service';
+import { R2ServiceService } from '../../../r2-service/service/r2-service.service';
 import { ConfirmBookAssetRequestDto } from '../dto/request/confirm-book-asset.request.dto';
 import { UploadBookAssetRequestDto } from '../dto/request/upload-book-asset.request.dto';
 import BookAssetRepository from '../repository/book-asset.repository';
@@ -37,13 +37,13 @@ export class BookAssetService {
   async uploadBookAsset(body: UploadBookAssetRequestDto) {
     const uploadResult = await this.uploadFile(body.file);
     const bookAsset = await this.bookAssetRepository.createBookAsset({
-      bookId: BigInt(body.bookId),
+      bookId: Number(body.bookId),
       url: uploadResult.cdnUrl,
     });
     return bookAsset;
   }
 
-  async confirmBookAsset(bookId: bigint, body: ConfirmBookAssetRequestDto) {
+  async confirmBookAsset(bookId: number, body: ConfirmBookAssetRequestDto) {
     const book = await this.bookAssetRepository.findBookById(bookId);
     if (!book) {
       throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);

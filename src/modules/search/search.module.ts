@@ -1,9 +1,9 @@
 import { CacheProvider } from '@/config/redis.config';
-import { CatalogModule } from '@/modules/catalog';
+import { CatalogModule } from '@/modules/catalog/catalog.module';
 import { GeminiModule } from '@/modules/gemini/gemini.module';
 import { PineconeModule } from '@/modules/pinecone/pinecone.module';
-import { SearchController } from '@/modules/search/search.controller';
-import { SearchService } from '@/modules/search/search.service';
+import { SearchController } from '@/modules/search/controller/search.controller';
+import { SearchService } from '@/modules/search/service/search.service';
 import { Module } from '@nestjs/common';
 
 @Module({

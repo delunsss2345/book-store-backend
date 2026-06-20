@@ -8,7 +8,7 @@ export class BookVariantService {
 
   async applyStockImport(
     params: {
-      bookVariantId: bigint;
+      bookVariantId: number;
       quantity: number;
       costPrice: number;
     },

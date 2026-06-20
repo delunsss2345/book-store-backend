@@ -39,7 +39,7 @@ export class CatalogBookCardDto {
     isOutOfStock?: boolean;
 
     @ApiPropertyOptional({ example: 1 })
-    bookVariantId?: bigint;
+    bookVariantId?: number;
 
     @ApiPropertyOptional({ example: 'PAPERBACK' })
     format?: string | null;

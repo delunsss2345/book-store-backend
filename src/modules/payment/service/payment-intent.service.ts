@@ -61,14 +61,14 @@ export class PaymentIntentService {
     return new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS);
   }
 
-  async markPaymentIntentAsExpire(orderId: bigint) {
+  async markPaymentIntentAsExpire(orderId: number) {
     await this.paymentIntentRepository.updateStatus(
       orderId,
       PaymentStatus.EXPIRED,
     );
   }
 
-  async markPaymentIntentAsNotFound(orderId: bigint) {
+  async markPaymentIntentAsNotFound(orderId: number) {
     await this.paymentIntentRepository.updateStatus(
       orderId,
       PaymentStatus.NOT_FOUND_ORDER_CODE,

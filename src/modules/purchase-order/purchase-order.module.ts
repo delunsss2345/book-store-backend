@@ -1,5 +1,5 @@
 import { BookVariantModule } from '@/modules/book/variant';
-import { StockImportModule } from '@/modules/stock-import';
+import { StockImportModule } from '@/modules/stock-import/stock-import.module';
 import { Module } from '@nestjs/common';
 import { PurchaseOrderController } from './controller/purchase-order.controller';
 import { PurchaseOrderItemRepository } from './repository/purchase-order-item.repository';

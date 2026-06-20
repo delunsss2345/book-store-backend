@@ -4,9 +4,9 @@ export class OrderCheckoutResponse {
     @ApiProperty({
         type: String,
         example: '123456789',
-        description: 'Order ID (bigint as string)',
+        description: 'Order ID (number as string)',
     })
-    orderId: bigint;
+    orderId: number;
 
     @ApiProperty({
         type: String,

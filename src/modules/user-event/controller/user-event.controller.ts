@@ -1,0 +1,30 @@
+import type { JwtPayload } from '@/common';
+import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
+import { GetUser } from '@/common/decorators/getUser.decorator';
+import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
+import { CatalogHomeResponseDto } from '@/modules/catalog/dto/response';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { UserEventService } from '../service/user-event.service';
+
+@Controller('user-events')
+export class UserEventController {
+    constructor(private readonly userEventService: UserEventService) { }
+
+
+    @Get('hyper-recommend/books')
+    @ApiOkResponse({ type: CatalogHomeResponseDto })
+    @ApiBearerAuth('access-token')
+    async listBooksByCategory(
+        @GetUser() user: JwtPayload,
+        @Query() query: CatalogHomeQueryDto,
+        @GetLanguageId() langId: number,
+    ) {
+        return this.userEventService.getHyperRecommendHome(
+            Number(user.sub),
+            query,
+            langId,
+        );
+    }
+
+}

@@ -1,4 +1,4 @@
-import { PaymentController } from '@/modules/payment/payment.controller';
+import { PaymentController } from '@/modules/payment/controller/payment.controller';
 import { Module } from '@nestjs/common';
 import { PaymentIntentRepository } from './repository/payment-intent.repository';
 import { PaymentRepository } from './repository/payment.repository';

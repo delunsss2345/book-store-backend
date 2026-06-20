@@ -1,6 +1,5 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { imageFileFilter } from '@/utils/upload.util';
 import {
   Body,
@@ -48,14 +47,14 @@ export class BookAssetController {
     return this.bookAssetService.uploadBookAsset({ ...body, file });
   }
 
-  @Post([':bookId/confirm'])  
+  @Post([':bookId/confirm'])
   @ApiOkResponse({ type: ConfirmBookAssetResponseDto })
   confirmBookAsset(
     @Param('bookId') bookId: string,
     @Body() body: ConfirmBookAssetRequestDto,
   ) {
     return this.bookAssetService.confirmBookAsset(
-      parseBigIntRequired(bookId, 'bookId'),
+      Number(bookId),
       body,
     );
   }

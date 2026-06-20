@@ -1,7 +1,6 @@
 import type { JwtPayload } from '@/common';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
@@ -23,7 +22,7 @@ export class PurchaseOrderController {
     @Body() body: CreatePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
   ) {
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    const actorUserId = Number(user?.sub);
     return this.purchaseOrderService.createPurchaseOrder(actorUserId, body);
   }
 
@@ -53,7 +52,7 @@ export class PurchaseOrderController {
     @Body() body: ApprovePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
   ) {
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    const actorUserId = Number(user?.sub);
     return this.purchaseOrderService.approvePurchaseOrder(
       purchaseOrderId,
       actorUserId,

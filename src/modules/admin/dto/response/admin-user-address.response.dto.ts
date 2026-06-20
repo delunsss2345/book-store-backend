@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UserAddressResponseDto {
     @ApiProperty({ example: '2', description: 'ID của địa chỉ' })
-    id: bigint;
+    id: number;
 
     @ApiProperty({ example: '25', description: 'ID của người dùng sở hữu địa chỉ' })
-    userId: bigint;
+    userId: number;
 
     @ApiProperty({ example: 'Phạm Thanh Huy Phạm Thanh', description: 'Tên người nhận' })
     recipientName: string;

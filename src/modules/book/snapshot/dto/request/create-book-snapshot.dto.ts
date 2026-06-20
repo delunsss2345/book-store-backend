@@ -6,7 +6,7 @@ import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } 
 
 export class CreateBookSnapshotDto {
     @ApiProperty({
-        description: 'ID của book variant (bigint). Nên gửi dạng string để tránh mất chính xác.',
+        description: 'ID của book variant (number). Nên gửi dạng string để tránh mất chính xác.',
         example: '1234567890123456789',
         type: String,
     })

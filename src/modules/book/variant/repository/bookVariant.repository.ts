@@ -9,7 +9,7 @@ type DbClient = Prisma.TransactionClient | PrismaService;
 export class BookVariantRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findBookVariantInventoryById(bookVariantId: bigint, tx?: DbClient) {
+  findBookVariantInventoryById(bookVariantId: number, tx?: DbClient) {
     const db = this.getDb(tx);
 
     return db.bookVariant.findUnique({
@@ -20,7 +20,7 @@ export class BookVariantRepository {
 
   updateBookVariantInventory(
     params: {
-      bookVariantId: bigint;
+      bookVariantId: number;
       stock: number;
       costPrice: number;
       price?: number;

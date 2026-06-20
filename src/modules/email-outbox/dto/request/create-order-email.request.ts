@@ -17,5 +17,5 @@ export class CreateOrderEmailRequestDto {
 
     @ApiProperty()
     @IsString()
-    orderId: bigint;
+    orderId: number;
 }

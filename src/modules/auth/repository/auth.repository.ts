@@ -17,21 +17,21 @@ export class AuthRepository {
             where: { email }
         });
     }
-    findUserById(id: bigint): Promise<AuthMe | null> {
+    findUserById(id: number): Promise<AuthMe | null> {
         return this.prisma.user.findFirst({
             select: authUserSelect,
             where: { id },
         });
     }
 
-    findUserPasswordById(id: bigint): Promise<{ id: bigint; password: string } | null> {
+    findUserPasswordById(id: number): Promise<{ id: number; password: string } | null> {
         return this.prisma.user.findUnique({
             where: { id },
             select: { id: true, password: true },
         });
     }
 
-    findUserPasswordByEmail(email: string): Promise<{ id: bigint; email: string; password: string } | null> {
+    findUserPasswordByEmail(email: string): Promise<{ id: number; email: string; password: string } | null> {
         return this.prisma.user.findUnique({
             where: { email },
             select: {
@@ -42,7 +42,7 @@ export class AuthRepository {
         });
     }
 
-    findUserRoleById(id: bigint) {
+    findUserRoleById(id: number) {
         return this.prisma.userRole.findMany({
             where: { userId: id },
             select: {
@@ -64,14 +64,14 @@ export class AuthRepository {
             .then(Boolean);
     }
 
-    updateLastLogin(userId: bigint): Promise<User> {
+    updateLastLogin(userId: number): Promise<User> {
         return this.prisma.user.update({
             where: { id: userId },
             data: { lastLoginAt: new Date() },
         });
     }
 
-    markEmailVerified(userId: bigint): Promise<User> {
+    markEmailVerified(userId: number): Promise<User> {
         return this.prisma.user.update({
             where: { id: userId },
             data: {
@@ -81,7 +81,7 @@ export class AuthRepository {
         });
     }
 
-    updatePassword(userId: bigint, password: string): Promise<User> {
+    updatePassword(userId: number, password: string): Promise<User> {
         return this.prisma.user.update({
             where: { id: userId },
             data: {
@@ -92,7 +92,7 @@ export class AuthRepository {
     }
 
     updateProfile(
-        userId: bigint,
+        userId: number,
         data: Pick<Prisma.UserUpdateInput, 'firstName' | 'lastName' | 'gender' | 'avatarUrl' | 'phoneNumber'>,
     ): Promise<User> {
         return this.prisma.user.update({

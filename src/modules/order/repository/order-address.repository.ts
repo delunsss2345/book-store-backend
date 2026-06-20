@@ -7,7 +7,7 @@ import { OrderAddress, Prisma } from '@prisma/client';
 export class OrderAddressRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    createGuestAddress(orderId: bigint, body: CreateOrderAddressDTO, orderNote?: string): Promise<OrderAddress> {
+    createGuestAddress(orderId: number, body: CreateOrderAddressDTO, orderNote?: string): Promise<OrderAddress> {
         const recipientName = this.buildRecipientName(body);
 
         const data: Prisma.OrderAddressUncheckedCreateInput = {

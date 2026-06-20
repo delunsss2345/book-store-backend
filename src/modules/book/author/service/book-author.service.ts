@@ -5,11 +5,11 @@ import { BookAuthorRepository } from '../repository/book-author.repository';
 export class BookAuthorService {
     constructor(private readonly bookAuthorRepository: BookAuthorRepository) { }
 
-    countBooksByAuthor(authorId: bigint, languageId: number) {
+    countBooksByAuthor(authorId: number, languageId: number) {
         return this.bookAuthorRepository.countBooksByAuthor(authorId, languageId);
     }
 
-    findBooksByAuthor(authorId: bigint, languageId: number, page: number, limit: number) {
+    findBooksByAuthor(authorId: number, languageId: number, page: number, limit: number) {
         return this.bookAuthorRepository.findBooksByAuthor(authorId, languageId, page, limit);
     }
 }

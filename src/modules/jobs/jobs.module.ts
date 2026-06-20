@@ -5,7 +5,7 @@ import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { MailModule } from '@/modules/mail/mail.module';
 import { VerificationCodeModule } from '@/modules/verification-code/verification-code.module';
 import { Module } from '@nestjs/common';
-import { JobsService } from './jobs.service';
+import { JobsService } from './service/jobs.service';
 
 @Module({
   imports: [RedisProvider, EmailQueueProvider, EmailOutboxModule, MailModule, VerificationCodeModule],

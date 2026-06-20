@@ -5,8 +5,8 @@ import { PaymentGateway, PaymentStatus, Prisma } from "@prisma/client";
 
 type CreateWebhookSepayTransactionParams = {
     amount: number;
-    orderId?: bigint | null;
-    userId?: bigint | null;
+    orderId?: number | null;
+    userId?: number | null;
     providerEventId: string;
     referenceNumber?: string | null;
     requestId?: string | null;
@@ -22,7 +22,7 @@ export class PaymentRepository {
     constructor(private readonly prisma: PrismaService) {
     }
 
-    createPaymentTransaction(userId: bigint, payment: CreatePaymentTransactionDto) {
+    createPaymentTransaction(userId: number, payment: CreatePaymentTransactionDto) {
         return this.prisma.paymentTransaction.create({
             data: {
                 userId,

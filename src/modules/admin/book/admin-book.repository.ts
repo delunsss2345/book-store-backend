@@ -17,13 +17,13 @@ import {
 type DbClient = Prisma.TransactionClient | PrismaService;
 
 export type CreateAdminBookParams = {
-  publisherId?: bigint;
+  publisherId?: number;
   publicationYear?: number;
   pageCount?: number;
   weightGrams?: number;
   coverImageUrl?: string;
-  actorUserId: bigint;
-  supplerId: bigint;
+  actorUserId: number;
+  supplerId: number;
 };
 
 export type UpdateAdminBookTranslationParams = {
@@ -40,7 +40,7 @@ export type UpdateAdminBookMain = {
 };
 
 export type CreateAdminBookTranslationParams = {
-  bookId: bigint;
+  bookId: number;
   languageId: number;
   title: string;
   description?: string;
@@ -48,7 +48,7 @@ export type CreateAdminBookTranslationParams = {
 };
 
 export type CreateBookAuthorLinkInput = {
-  authorId: bigint;
+  authorId: number;
   isPrimary?: boolean;
 };
 
@@ -56,7 +56,7 @@ export type CreateBookAuthorLinkInput = {
 export class AdminBookRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findPublisherById(publisherId: bigint) {
+  findPublisherById(publisherId: number) {
     return this.prisma.publisher.findUnique({
       where: { id: publisherId },
       select: { id: true },
@@ -82,7 +82,7 @@ export class AdminBookRepository {
   }
 
   createBookAuthor(
-    bookId: bigint,
+    bookId: number,
     body: CreateBookAuthorLinkInput,
     tx?: Prisma.TransactionClient,
   ) {
@@ -97,7 +97,7 @@ export class AdminBookRepository {
   }
 
   createVariantById(
-    bookId: bigint,
+    bookId: number,
     body: CreateBookVariantDto,
     tx?: Prisma.TransactionClient,
   ) {
@@ -116,7 +116,7 @@ export class AdminBookRepository {
   }
 
   createBookSpecById(
-    bookId: bigint,
+    bookId: number,
     body: CreateBookSpecDto,
     tx?: Prisma.TransactionClient,
   ) {
@@ -133,7 +133,7 @@ export class AdminBookRepository {
   }
 
   createBookAuthors(
-    bookId: bigint,
+    bookId: number,
     bodies: CreateBookAuthorLinkInput[],
     tx?: Prisma.TransactionClient,
   ) {
@@ -150,7 +150,7 @@ export class AdminBookRepository {
   }
 
   createVariantsByBookId(
-    bookId: bigint,
+    bookId: number,
     bodies: CreateBookVariantDto[],
     tx?: Prisma.TransactionClient,
   ) {
@@ -171,7 +171,7 @@ export class AdminBookRepository {
   }
 
   createBookSpecsById(
-    bookId: bigint,
+    bookId: number,
     body: CreateBookSpecDto,
     tx?: Prisma.TransactionClient,
   ) {
@@ -194,7 +194,7 @@ export class AdminBookRepository {
     });
   }
 
-  findBookById(bookId: bigint, tx?: Prisma.TransactionClient) {
+  findBookById(bookId: number, tx?: Prisma.TransactionClient) {
     const db: DbClient = tx ?? this.prisma;
     return db.book.findFirst({
       where: { id: bookId },
@@ -202,7 +202,7 @@ export class AdminBookRepository {
     });
   }
 
-  findBookDetailById(bookId: bigint, tx?: Prisma.TransactionClient) {
+  findBookDetailById(bookId: number, tx?: Prisma.TransactionClient) {
     const db: DbClient = tx ?? this.prisma;
 
     return db.book.findFirst({
@@ -212,9 +212,9 @@ export class AdminBookRepository {
   }
 
   updateBook(
-    bookId: bigint,
+    bookId: number,
     params: UpdateAdminBookMain,
-    actorUserId: bigint,
+    actorUserId: number,
     tx?: Prisma.TransactionClient,
   ) {
     const db: DbClient = tx ?? this.prisma;
@@ -230,7 +230,7 @@ export class AdminBookRepository {
   }
 
   updateTranslationBook(
-    bookId: bigint,
+    bookId: number,
     params: UpdateAdminBookTranslationParams,
     tx?: Prisma.TransactionClient,
   ) {
@@ -251,7 +251,7 @@ export class AdminBookRepository {
   }
 
   updateVariantById(
-    bookId: bigint,
+    bookId: number,
     variants: UpdateAdminBookVariantRequestDto[],
     tx?: Prisma.TransactionClient,
   ) {
@@ -271,8 +271,8 @@ export class AdminBookRepository {
   }
 
   softDeleteBook(
-    bookId: bigint,
-    actorUserId: bigint,
+    bookId: number,
+    actorUserId: number,
     tx?: Prisma.TransactionClient,
   ) {
     const db: DbClient = tx ?? this.prisma;
@@ -356,7 +356,7 @@ export class AdminBookRepository {
   }
 
   findBookTranslationByBookIdAndLanguage(
-    bookId: bigint,
+    bookId: number,
     languageId: number,
     tx?: Prisma.TransactionClient,
   ) {

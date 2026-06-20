@@ -2,7 +2,7 @@ import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 
 type CreateBookAssetParams = {
-  bookId: bigint;
+  bookId: number;
   url: string;
   assetType?: string;
   sortOrder?: number;
@@ -12,7 +12,7 @@ type CreateBookAssetParams = {
 class BookAssetRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findBookById(bookId: bigint) {
+  findBookById(bookId: number) {
     return this.prisma.book.findFirst({
       where: {
         id: bookId,
@@ -24,7 +24,7 @@ class BookAssetRepository {
     });
   }
 
-  countByBookId(bookId: bigint) {
+  countByBookId(bookId: number) {
     return this.prisma.bookVariantAsset.count({
       where: {
         bookId,

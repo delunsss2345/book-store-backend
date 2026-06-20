@@ -4,23 +4,23 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 export type UserRoleAuditOptions = {
-    userIdBy?: bigint;
+    userIdBy?: number;
 };
 
 export type CreateUserRoleParams = {
-    userId: bigint;
-    roleId: bigint;
+    userId: number;
+    roleId: number;
 };
 
 export type UpdateUserRoleParams = {
-    userId: bigint;
-    roleId: bigint;
+    userId: number;
+    roleId: number;
     data?: Prisma.UserRoleUpdateInput;
 };
 
 export type DeleteUserRoleParams = {
-    userId: bigint;
-    roleId: bigint;
+    userId: number;
+    roleId: number;
 };
 
 @Injectable()
@@ -69,7 +69,7 @@ export class UserRoleRepository {
         });
     }
 
-    findRolesByUserId(userId: bigint) {
+    findRolesByUserId(userId: number) {
         return this.prisma.userRole.findMany({
             where: { userId, deletedAt: null },
             select: {
@@ -79,7 +79,7 @@ export class UserRoleRepository {
     }
 
 
-    findUserRolesByUserId(userId: bigint) {
+    findUserRolesByUserId(userId: number) {
         return this.prisma.userRole.findMany({
             where: { userId, deletedAt: null },
             select: userRoleWithUserAndRoleSelect,

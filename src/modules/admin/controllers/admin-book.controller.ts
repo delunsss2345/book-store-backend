@@ -6,7 +6,6 @@ import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
-import { parseBigIntRequired } from '@/utils/parseBigInt.util';
 import {
   Body,
   Controller,
@@ -51,7 +50,7 @@ export class AdminBookController {
   getDetail(
     @Param('bookId') bookId: string
   ) {
-    const parsedBookId = parseBigIntRequired(bookId, 'bookId');
+    const parsedBookId = Number(bookId);
     return this.adminBookService.getDetail(parsedBookId);
   }
 
@@ -65,7 +64,7 @@ export class AdminBookController {
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    const actorUserId = Number(user?.sub);
     return this.adminBookService.createBookAll(body, actorUserId, ip);
   }
 
@@ -79,8 +78,8 @@ export class AdminBookController {
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
-    const parsedBookId = parseBigIntRequired(bookId, 'bookId');
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    const parsedBookId = Number(bookId);
+    const actorUserId = Number(user?.sub);
     return this.adminBookService.updateBook(
       parsedBookId,
       body,
@@ -98,8 +97,8 @@ export class AdminBookController {
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
-    const parsedBookId = parseBigIntRequired(bookId, 'bookId');
-    const actorUserId = parseBigIntRequired(user?.sub, 'user.sub');
+    const parsedBookId = Number(bookId);
+    const actorUserId = Number(user?.sub);
     return this.adminBookService.deleteBook(parsedBookId, actorUserId, ip);
   }
 

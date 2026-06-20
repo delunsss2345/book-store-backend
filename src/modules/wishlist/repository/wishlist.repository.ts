@@ -42,7 +42,7 @@ const buildWishlistWithItemsInclude = (languageId?: number): Prisma.WishlistIncl
 export class WishlistRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findByUserId(userId: bigint, languageId?: number) {
+    async findByUserId(userId: number, languageId?: number) {
         const rows = await this.prisma.wishlist.findMany({
             where: {
                 userId,
@@ -68,7 +68,7 @@ export class WishlistRepository {
         return rows[0] ?? null;
     }
 
-    createByUserId(userId: bigint, languageId?: number) {
+    createByUserId(userId: number, languageId?: number) {
         return this.prisma.wishlist.create({
             data: { userId },
             include: buildWishlistWithItemsInclude(languageId),
@@ -82,7 +82,7 @@ export class WishlistRepository {
         });
     }
 
-    softDeleteById(id: bigint) {
+    softDeleteById(id: number) {
         return this.prisma.wishlist.update({
             where: { id },
             data: {

@@ -10,7 +10,7 @@ export class CreatePaymentIntentRequestDto {
     example: '123456789012345678',
   })
   @IsNotEmpty()
-  orderId: bigint;
+  orderId: number;
 
   @ApiProperty({
     enum: PaymentGateway,

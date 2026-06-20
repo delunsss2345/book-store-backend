@@ -1,4 +1,4 @@
-import { LanguageService } from '@/modules/language/language.service';
+import { LanguageService } from '@/modules/language/service/language.service';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 

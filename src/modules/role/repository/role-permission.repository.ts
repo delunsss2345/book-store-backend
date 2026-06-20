@@ -5,21 +5,21 @@ import { Injectable } from '@nestjs/common';
 export class RolePermissionRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findRoleById(roleId: bigint) {
+    findRoleById(roleId: number) {
         return this.prisma.role.findUnique({
             where: { id: roleId },
             select: { id: true },
         });
     }
 
-    findPermissionById(permissionId: bigint) {
+    findPermissionById(permissionId: number) {
         return this.prisma.permission.findUnique({
             where: { id: permissionId },
             select: { id: true },
         });
     }
 
-    findByComposite(roleId: bigint, permissionId: bigint) {
+    findByComposite(roleId: number, permissionId: number) {
         return this.prisma.rolePermission.findUnique({
             where: {
                 roleId_permissionId: {
@@ -30,7 +30,7 @@ export class RolePermissionRepository {
         });
     }
 
-    createRolePermission(roleId: bigint, permissionId: bigint) {
+    createRolePermission(roleId: number, permissionId: number) {
         return this.prisma.rolePermission.create({
             data: {
                 roleId,
@@ -39,7 +39,7 @@ export class RolePermissionRepository {
         });
     }
 
-    findByRoleId(roleId: bigint) {
+    findByRoleId(roleId: number) {
         return this.prisma.rolePermission.findMany({
             where: { roleId },
             orderBy: { createdAt: 'desc' },
@@ -51,7 +51,7 @@ export class RolePermissionRepository {
         });
     }
 
-    findByPermissionId(permissionId: bigint) {
+    findByPermissionId(permissionId: number) {
         return this.prisma.rolePermission.findMany({
             where: { permissionId },
             orderBy: { createdAt: 'desc' },

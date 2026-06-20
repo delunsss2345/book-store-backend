@@ -2,8 +2,8 @@ import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
 import { CartService } from '@/modules/cart/service/cart.service';
-import { CatalogService } from '@/modules/catalog/catalog.service';
-import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
+import { CatalogService } from '@/modules/catalog/service/catalog.service';
+import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import {
   CreateGuestOrdersAndPaymentDTO,
@@ -46,7 +46,7 @@ export class OrderService {
    * @param cartId Cart id to generate the hash string from.
    * @returns A hash string representing the given cart items and cartId.
    */
-  getCartHash(items: CartItem[], cartId: bigint) {
+  getCartHash(items: CartItem[], cartId: number) {
     // Clone để tránh đổi array
     const sortedItems = [...items].sort((a, b) =>
       a.id.toString().localeCompare(b.id.toString()),
@@ -69,7 +69,7 @@ export class OrderService {
     tx: any,
     cart: any,
     languageId: number,
-    orderId: bigint,
+    orderId: number,
   ) {
     const mapBookVariant = new Map<
       string,
@@ -84,7 +84,7 @@ export class OrderService {
     );
 
     const bookVariants = await this.catalogService.findBookVariantByIds(
-      [...mapBookVariant.keys()].map((id) => BigInt(id)),
+      [...mapBookVariant.keys()].map((id) => Number(id)),
       languageId,
     );
 
@@ -373,12 +373,12 @@ export class OrderService {
   }
 
   async createOrdersUser(
-    userId: bigint,
+    userId: number,
     body: CreateUserOrdersAndPaymentDTO,
     langId: number,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      const cartId = BigInt(body.cartId);
+      const cartId = Number(body.cartId);
       const cart = await tx.cart.findFirst({
         where: { id: cartId, userId },
         include: {
@@ -433,7 +433,7 @@ export class OrderService {
       let address: UserAddress | null = null;
       if (body.addressId !== undefined && body.addressId !== null) {
         address = await tx.userAddress.findFirst({
-          where: { id: BigInt(body.addressId), userId, deletedAt: null },
+          where: { id: Number(body.addressId), userId, deletedAt: null },
         });
       } else {
         address = await tx.userAddress.findFirst({
@@ -529,15 +529,15 @@ export class OrderService {
     );
   }
 
-  async getOrderDetailGuest(orderId: bigint, sessionGuestId: string, langId: number) {
+  async getOrderDetailGuest(orderId: number, sessionGuestId: string, langId: number) {
     return this.orderItemRepository.findOrderDetailBySessionGuestId(orderId, sessionGuestId, langId);
   }
 
-  async getOrderUser(userId: bigint, page: number, limit: number) {
+  async getOrderUser(userId: number, page: number, limit: number) {
     return this.orderRepository.findOrderByUserId(userId, page, limit);
   }
 
-  async getOrderDetailUser(orderId: bigint, userId: bigint, langId: number) {
+  async getOrderDetailUser(orderId: number, userId: number, langId: number) {
     return this.orderItemRepository.findOrderItemsByOrderId(
       orderId,
       userId,
@@ -568,7 +568,7 @@ export class OrderService {
   // Cho phép domain khác (vd HooksService) truy cập order qua service thay vì repository.
   // Nhận tx để giữ nguyên transaction của bên gọi.
   findOrderItemWWithParentVariantByOrderId(
-    orderId: bigint,
+    orderId: number,
     tx?: PrismaClientTransaction,
   ) {
     return this.orderRepository.findOrderItemWWithParentVariantByOrderId(
@@ -579,7 +579,7 @@ export class OrderService {
 
   updateOrderDone(
     variantMap: Map<string, number>,
-    orderId: bigint,
+    orderId: number,
     tx?: PrismaClientTransaction,
   ) {
     return this.orderRepository.updateOrderDone(variantMap, orderId, tx);

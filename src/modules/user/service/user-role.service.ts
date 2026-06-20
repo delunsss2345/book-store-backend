@@ -23,18 +23,18 @@ export class UserRoleService {
         return this.userRoleRepository.softDeleteUserRole(params, options);
     }
 
-    async getRolesByUserId(userId: bigint) {
+    async getRolesByUserId(userId: number) {
         const rows = await this.userRoleRepository.findRolesByUserId(userId);
         return rows.map((row) => row.role.code);
     }
 
-    async getRoleIdsByUserId(userId: bigint) {
+    async getRoleIdsByUserId(userId: number) {
         const rows = await this.userRoleRepository.findRolesByUserId(userId);
         Logger.debug('role user')
         return rows.map((row) => row.role.id);
     }
 
-    getUserRolesByUserId(userId: bigint) {
+    getUserRolesByUserId(userId: number) {
         return this.userRoleRepository.findUserRolesByUserId(userId);
     }
 }

@@ -7,23 +7,23 @@ export class CartItemService {
 
     ) { }
 
-    findByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint) {
+    findByCartIdAndBookVariantId(cartId: number, bookVariantId: number) {
         return this.cartItemRepository.findByCartIdAndBookVariantId(cartId, bookVariantId);
     }
 
-    findByIdAndGuestSessionId(id: bigint, guestSessionId: string) {
+    findByIdAndGuestSessionId(id: number, guestSessionId: string) {
         return this.cartItemRepository.findByIdAndGuestSessionId(id, guestSessionId);
     }
 
-    findByIdAndUserId(id: bigint, userId: bigint) {
+    findByIdAndUserId(id: number, userId: number) {
         return this.cartItemRepository.findByIdAndUserId(id, userId);
     }
 
-    updateQuantityById(id: bigint, quantity: number) {
+    updateQuantityById(id: number, quantity: number) {
         return this.cartItemRepository.updateQuantityById(id, quantity);
     }
 
-    async createByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint, quantity: number) {
+    async createByCartIdAndBookVariantId(cartId: number, bookVariantId: number, quantity: number) {
         const bookVariant = await this.cartItemRepository.getStockByBookVariantId(bookVariantId);
         if (bookVariant === null) {
             throw new Error('Book variant not found');
@@ -35,15 +35,15 @@ export class CartItemService {
         return this.cartItemRepository.createByCartIdAndBookVariantId(cartId, bookVariantId, quantity);
     }
 
-    deleteByIdAndGuestSessionId(id: bigint, guestSessionId: string) {
+    deleteByIdAndGuestSessionId(id: number, guestSessionId: string) {
         return this.cartItemRepository.deleteByIdAndGuestSessionId(id, guestSessionId);
     }
 
-    deleteByIdAndUserId(id: bigint, userId: bigint) {
+    deleteByIdAndUserId(id: number, userId: number) {
         return this.cartItemRepository.deleteByIdAndUserId(id, userId);
     }
 
-    getStockByBookVariantId(bookVariantId: bigint) {
+    getStockByBookVariantId(bookVariantId: number) {
         return this.cartItemRepository.getStockByBookVariantId(bookVariantId);
     }
 }

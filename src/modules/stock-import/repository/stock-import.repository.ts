@@ -13,8 +13,8 @@ export class StockImportRepository {
   createStockImportFromPurchaseOrder(
     params: {
       purchaseOrderId: string;
-      supplierId: bigint;
-      createdById: bigint;
+      supplierId: number;
+      createdById: number;
       note?: string | null;
       totalAmount: number;
       taxAmount: number;
@@ -41,7 +41,7 @@ export class StockImportRepository {
   createStockImportItemsFromPurchaseOrder(
     stockImportId: string,
     items: Array<{
-      bookVariantId: bigint;
+      bookVariantId: number;
       quantity: number;
       importPrice: number;
     }>,

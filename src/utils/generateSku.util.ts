@@ -1,11 +1,11 @@
 import { BookFormat } from "@prisma/client";
 
 export const generateSKU = (variant: {
-    id: bigint;
-    bookId: bigint;
+    id: number;
+    bookId: number;
     format: BookFormat;
     book: {
-        id: bigint;
+        id: number;
         translations: {
             title: string;
             slug: string | null;

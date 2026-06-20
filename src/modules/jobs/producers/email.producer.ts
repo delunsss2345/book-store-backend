@@ -6,7 +6,7 @@ import { Queue } from 'bullmq';
 export class EmailProducer {
     constructor(@InjectQueue('email') private readonly emailQueue: Queue) { }
 
-    async enqueueOutboxEmail(outboxId: bigint, verificationCodeId: bigint) {
+    async enqueueOutboxEmail(outboxId: number, verificationCodeId: number) {
         await this.emailQueue.add(
             'send-email',
             { outboxId, verificationCodeId },
@@ -19,7 +19,7 @@ export class EmailProducer {
         );
     }
 
-    async enqueueOrderEmail(outboxId: bigint) {
+    async enqueueOrderEmail(outboxId: number) {
         await this.emailQueue.add(
             'send-order-email',
             { outboxId },

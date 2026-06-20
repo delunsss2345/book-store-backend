@@ -31,10 +31,10 @@ export class PermissionsGuard implements CanActivate {
         const roleIds = await this.userRoleService.getRoleIdsByUserId(user.sub);
 
         // hàm tạo key cache theo roleId, có thể dùng chung cho tất cả cache liên quan đến roleId, tránh việc tạo nhiều key khác nhau cho cùng 1 data
-        const keyOf = (id: bigint) => `role_user:${id}:perms`; // key roles
+        const keyOf = (id: number) => `role_user:${id}:perms`; // key roles
 
         //  get cache theo key, nếu có trả về, nếu không có thì get từ db và cache lại
-        const keys = roleIds.map((id: bigint) => `role_per:${id}:perms`); // return mảng key
+        const keys = roleIds.map((id: number) => `role_per:${id}:perms`); // return mảng key
         const cached = await Promise.all(keys.map(k => this.cacheManager.get<string[]>(k))); // get cache xem có ko
 
         const permsByRole: any = await Promise.all(

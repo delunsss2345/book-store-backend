@@ -7,23 +7,23 @@ import { UserAddressRepository } from '../repository/user-address.repository';
 export class UserAddressService {
     constructor(private readonly userAddressRepository: UserAddressRepository) { }
 
-    getUserAddressByUserId(userId: bigint) {
+    getUserAddressByUserId(userId: number) {
         return this.userAddressRepository.getUserAddressByUserId(userId);
     }
 
-    createUserAddressByUserId(userId: bigint, body: CreateUserAddressRequestDto) {
+    createUserAddressByUserId(userId: number, body: CreateUserAddressRequestDto) {
         return this.userAddressRepository.createUserAddressByUserId(userId, body);
     }
 
-    updateUserAddressByIdAndUserId(id: bigint, userId: bigint, body: UpdateUserAddressRequestDto) {
+    updateUserAddressByIdAndUserId(id: number, userId: number, body: UpdateUserAddressRequestDto) {
         return this.userAddressRepository.updateUserAddressByIdAndUserId(id, userId, body);
     }
 
-    setDefaultByIdAndUserId(id: bigint, userId: bigint) {
+    setDefaultByIdAndUserId(id: number, userId: number) {
         return this.userAddressRepository.setDefaultByIdAndUserId(id, userId);
     }
 
-    softDeleteByIdAndUserId(id: bigint, userId: bigint) {
+    softDeleteByIdAndUserId(id: number, userId: number) {
         return this.userAddressRepository.softDeleteByIdAndUserId(id, userId);
     }
 }

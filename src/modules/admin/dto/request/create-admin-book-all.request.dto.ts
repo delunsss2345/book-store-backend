@@ -89,7 +89,7 @@ export class CreateBookAuthorDto {
 }
 
 export class CreateCategoriesDto {
-    categoryId: bigint
+    categoryId: number
 }
 
 export class CreateBookVariantAndSupplierImportDto {
@@ -267,7 +267,7 @@ export class CreateAdminBookAllRequestDto {
     @Type(() => CreateCategoriesDto)
     categories!: CreateCategoriesDto[]
 
-    supplierId: bigint
+    supplierId: number
 }
 
 

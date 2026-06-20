@@ -6,13 +6,13 @@ import { CartItem } from '@prisma/client';
 export class CartItemRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint): Promise<CartItem | null> {
+    findByCartIdAndBookVariantId(cartId: number, bookVariantId: number): Promise<CartItem | null> {
         return this.prisma.cartItem.findFirst({
             where: { cartId, bookVariantId },
         });
     }
 
-    findByIdAndGuestSessionId(id: bigint, guestSessionId: string): Promise<CartItem | null> {
+    findByIdAndGuestSessionId(id: number, guestSessionId: string): Promise<CartItem | null> {
         return this.prisma.cartItem.findFirst({
             where: {
                 id,
@@ -23,7 +23,7 @@ export class CartItemRepository {
         });
     }
 
-    findByIdAndUserId(id: bigint, userId: bigint): Promise<CartItem | null> {
+    findByIdAndUserId(id: number, userId: number): Promise<CartItem | null> {
         return this.prisma.cartItem.findFirst({
             where: {
                 id,
@@ -34,13 +34,13 @@ export class CartItemRepository {
         });
     }
 
-    updateQuantityById(id: bigint, quantity: number): Promise<CartItem> {
+    updateQuantityById(id: number, quantity: number): Promise<CartItem> {
         return this.prisma.cartItem.update({
             where: { id },
             data: { quantity },
         });
     }
-    createByCartIdAndBookVariantId(cartId: bigint, bookVariantId: bigint, quantity: number): Promise<CartItem> {
+    createByCartIdAndBookVariantId(cartId: number, bookVariantId: number, quantity: number): Promise<CartItem> {
         return this.prisma.cartItem.create({
             data: {
                 cartId,
@@ -50,7 +50,7 @@ export class CartItemRepository {
         });
     }
 
-    deleteByIdAndGuestSessionId(id: bigint, guestSessionId: string): Promise<number> {
+    deleteByIdAndGuestSessionId(id: number, guestSessionId: string): Promise<number> {
         return this.prisma.cartItem
             .deleteMany({
                 where: {
@@ -63,7 +63,7 @@ export class CartItemRepository {
             .then((result) => result.count);
     }
 
-    deleteByIdAndUserId(id: bigint, userId: bigint): Promise<number> {
+    deleteByIdAndUserId(id: number, userId: number): Promise<number> {
         return this.prisma.cartItem
             .deleteMany({
                 where: {
@@ -77,7 +77,7 @@ export class CartItemRepository {
     }
 
     async getStockByBookVariantId(
-        bookVariantId: bigint
+        bookVariantId: number
     ): Promise<{ available: number } | null> {
         return this.prisma.bookVariant.findUnique({
             where: { id: bookVariantId },

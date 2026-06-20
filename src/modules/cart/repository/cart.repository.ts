@@ -43,7 +43,7 @@ const buildCartWithItemsInclude = (languageId?: number): Prisma.CartInclude => (
 export class CartRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findByUserId(userId: bigint, languageId?: number) {
+    findByUserId(userId: number, languageId?: number) {
         return this.prisma.cart.findFirst({
             where: { userId },
             orderBy: { updatedAt: 'desc' },
@@ -60,7 +60,7 @@ export class CartRepository {
         });
     }
 
-    createCartByUserId(userId: bigint, languageId?: number) {
+    createCartByUserId(userId: number, languageId?: number) {
         return this.prisma.cart.create({
             data: {
                 userId,
@@ -70,7 +70,7 @@ export class CartRepository {
     }
 
 
-    createByUserId(userId: bigint): Promise<Cart> {
+    createByUserId(userId: number): Promise<Cart> {
         return this.prisma.cart.create({
             data: { userId },
         });
@@ -96,7 +96,7 @@ export class CartRepository {
         });
     }
 
-    deleteByUserId(userId: bigint) {
+    deleteByUserId(userId: number) {
         return this.prisma.cart.deleteMany({
             where: { userId },
         });

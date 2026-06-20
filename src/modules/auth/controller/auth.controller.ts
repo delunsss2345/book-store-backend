@@ -82,7 +82,7 @@ export class AuthController {
     @Get('me')
     @ApiBearerAuth('access-token')
     me(@GetUser() user: JwtPayload) {
-        return this.authService.getMe(BigInt(user.sub));
+        return this.authService.getMe(Number(user.sub));
     }
     @Refresh()
     @UseGuards(RefreshGuard)
@@ -126,7 +126,7 @@ export class AuthController {
     @ApiBearerAuth('access-token')
     @ApiOkResponse({ type: ResponseDto<ChangePasswordResponseDto> })
     changePassword(@GetUser() user: JwtPayload, @Body() body: ChangePasswordRequestDto) {
-        return this.authService.changePassword(BigInt(user.sub), body);
+        return this.authService.changePassword(Number(user.sub), body);
     }
 
     @Public()

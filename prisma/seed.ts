@@ -81,7 +81,7 @@ type SeedBook = {
 };
 
 type SeededUser = {
-  id: bigint;
+  id: number;
   email: string;
   firstName: string | null;
   lastName: string | null;
@@ -89,15 +89,15 @@ type SeededUser = {
 };
 
 type SeededBook = {
-  id: bigint;
+  id: number;
   slug: string;
   titleSnapshot: string;
   coverImageUrlSnapshot: string | null;
 };
 
 type SeededVariant = {
-  id: bigint;
-  bookId: bigint;
+  id: number;
+  bookId: number;
   format: BookFormat;
   edition: number | null;
   isbn: string | null;
@@ -108,9 +108,9 @@ type SeededVariant = {
 };
 
 type SeededSnapshot = {
-  id: bigint;
-  bookId: bigint;
-  bookVariantId: bigint;
+  id: number;
+  bookId: number;
+  bookVariantId: number;
   priceSnapshot: number;
   formatSnapshot: BookFormat;
   editionSnapshot: number | null;
@@ -119,9 +119,9 @@ type SeededSnapshot = {
 };
 
 type SeededPurchase = {
-  userId: bigint;
-  bookId: bigint;
-  bookVariantId: bigint;
+  userId: number;
+  bookId: number;
+  bookVariantId: number;
 };
 
 const CURRENCY_CODE_VND = 'VND';
@@ -458,7 +458,7 @@ async function upsertPermissions() {
 
 async function upsertUserWithRoles(
   user: SeedUser,
-  roleIdByCode: Map<RoleCode, bigint>,
+  roleIdByCode: Map<RoleCode, number>,
 ) {
   const hashed = await bcrypt.hash(user.password, 12);
 
@@ -538,8 +538,8 @@ async function upsertLanguages() {
 }
 
 async function upsertRolePermissions(
-  roleIdByCode: Map<RoleCode, bigint>,
-  permissionIdByCode: Map<PermissionCode, bigint>,
+  roleIdByCode: Map<RoleCode, number>,
+  permissionIdByCode: Map<PermissionCode, number>,
 ) {
   const rolePermissionMap: Record<RoleCode, PermissionCode[]> = {
     [RoleCode.ADMIN]: Object.values(PermissionCode),
@@ -879,7 +879,7 @@ async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
     throw new Error('Missing vi/en language seed');
   }
 
-  const categoryIdBySlug = new Map<string, bigint>();
+  const categoryIdBySlug = new Map<string, number>();
 
   for (const category of categories) {
     const parentId = category.parentSlug
@@ -896,7 +896,7 @@ async function upsertCatalogCategories(languageIdByCode: Map<string, number>) {
       },
     });
 
-    let categoryId: bigint;
+    let categoryId: number;
     if (existing) {
       categoryId = existing.categoryId;
       await prisma.category.update({
@@ -1416,7 +1416,7 @@ function buildSeedBooks(categorySlugs: string[]): SeedBook[] {
 
 async function upsertCatalogBooks(
   languageIdByCode: Map<string, number>,
-  categoryIdBySlug: Map<string, bigint>,
+  categoryIdBySlug: Map<string, number>,
 ): Promise<{ books: SeededBook[]; variants: SeededVariant[] }> {
   const viLanguageId = languageIdByCode.get('vi');
   const enLanguageId = languageIdByCode.get('en');
@@ -1436,7 +1436,7 @@ async function upsertCatalogBooks(
       select: { bookId: true },
     });
 
-    let bookId: bigint;
+    let bookId: number;
     if (existingTranslation) {
       bookId = existingTranslation.bookId;
       await prisma.book.update({
@@ -1578,7 +1578,7 @@ async function upsertVariantSnapshots(variants: SeededVariant[]) {
   const snapshots: SeededSnapshot[] = [];
 
   for (const variant of variants) {
-    const keepIds: bigint[] = [];
+    const keepIds: number[] = [];
     const targetPrices = [
       toRoundedVnd(variant.price),
       toRoundedVnd(variant.price * (0.88 + Math.random() * 0.2)),
@@ -1678,7 +1678,7 @@ async function upsertDemoReviews(
   purchases: SeededPurchase[],
 ) {
   if (!books.length || !customers.length) return;
-  const variantIdsByBookId = new Map<string, bigint[]>();
+  const variantIdsByBookId = new Map<string, number[]>();
   const purchasesByBookId = new Map<string, SeededPurchase[]>();
 
   for (const variant of variants) {
@@ -1718,9 +1718,9 @@ async function upsertDemoReviews(
       Math.min(customers.length, reviewCount),
     );
     const data: Array<{
-      userId: bigint;
-      bookId: bigint;
-      bookVariantId: bigint;
+      userId: number;
+      bookId: number;
+      bookVariantId: number;
       rating: number;
       content: string;
       createdAt: Date;

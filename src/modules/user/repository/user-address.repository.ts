@@ -9,7 +9,7 @@ import { UpdateUserAddressRequestDto } from '../dto/request/update-user-address.
 export class UserAddressRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  getUserAddressByUserId(userId: bigint): Promise<UserAddress[]> {
+  getUserAddressByUserId(userId: number): Promise<UserAddress[]> {
     return this.prisma.userAddress.findMany({
       where: {
         userId,
@@ -20,7 +20,7 @@ export class UserAddressRepository {
   }
 
   createUserAddressByUserId(
-    userId: bigint,
+    userId: number,
     body: CreateUserAddressRequestDto,
   ): Promise<UserAddress> {
     return this.prisma.$transaction(async (tx) => {
@@ -55,8 +55,8 @@ export class UserAddressRepository {
   }
 
   async updateUserAddressByIdAndUserId(
-    id: bigint,
-    userId: bigint,
+    id: number,
+    userId: number,
     body: UpdateUserAddressRequestDto,
   ): Promise<UserAddress> {
     const found = await this.prisma.userAddress.findFirst({
@@ -108,7 +108,7 @@ export class UserAddressRepository {
     });
   }
 
-  setDefaultByIdAndUserId(id: bigint, userId: bigint): Promise<UserAddress> {
+  setDefaultByIdAndUserId(id: number, userId: number): Promise<UserAddress> {
     return this.prisma.$transaction(async (tx) => {
       const target = await tx.userAddress.findFirst({
         where: {
@@ -143,9 +143,9 @@ export class UserAddressRepository {
   }
 
   softDeleteByIdAndUserId(
-    id: bigint,
-    userId: bigint,
-  ): Promise<{ success: boolean; deleteId: bigint }> {
+    id: number,
+    userId: number,
+  ): Promise<{ success: boolean; deleteId: number }> {
     return this.prisma.$transaction(async (tx) => {
       const target = await tx.userAddress.findFirst({
         where: {

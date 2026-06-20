@@ -1,5 +1,5 @@
 import { CategoryItemResponseDto } from '../dto/response/category-item.response.dto';
-import { CategoryRepository } from '../category.repository';
+import { CategoryRepository } from '../repository/category.repository';
 
 type CategoryRow = Awaited<
   ReturnType<CategoryRepository['findActiveCategoriesByLanguage']>

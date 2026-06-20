@@ -3,11 +3,11 @@ import {
     ORDER_EMAIL,
     OTP_FORGOT_PASSWORD_TEMPLATE_KEY,
     OTP_REGISTER_TEMPLATE_KEY
-} from '@/modules/email-outbox/email-outbox.repository';
-import { EmailOutboxService } from '@/modules/email-outbox/email-outbox.service';
-import { MailService } from '@/modules/mail/mail.service';
-import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/verification-code.constants';
-import { VerificationCodeService } from '@/modules/verification-code/verification-code.service';
+} from '@/modules/email-outbox/repository/email-outbox.repository';
+import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
+import { MailService } from '@/modules/mail/service/mail.service';
+import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/constants/verification-code.constants';
+import { VerificationCodeService } from '@/modules/verification-code/service/verification-code.service';
 import { EMAIL_TEMPLATE, EMAIL_TEMPLATE_ORDER_SUCCESS, EMAIL_TEMPLATE_RESET_PASSWORD } from '@/template/email.template';
 import { generateLinkWithType } from '@/utils/generateLink.util';
 import { hashToken } from '@/utils/hashToken.util';
@@ -33,7 +33,7 @@ export class EmailProcessor extends WorkerHost {
     ) {
         super();
     }
-    public async process(job: Job<{ outboxId: bigint; verificationCodeId?: bigint }>) {
+    public async process(job: Job<{ outboxId: number; verificationCodeId?: number }>) {
         const { outboxId, verificationCodeId } = job.data;
         const outBox = await this.emailOutbox.findByIdEmailBox((outboxId));
         try {
@@ -55,7 +55,7 @@ export class EmailProcessor extends WorkerHost {
         }
     }
 
-    private async handleVerifyEmail(outBox: EmailOutbox, verificationCodeId: bigint) {
+    private async handleVerifyEmail(outBox: EmailOutbox, verificationCodeId: number) {
         let path = VerifyCodePath.VERIFY_EMAIL;
 
         const token = randomKey();

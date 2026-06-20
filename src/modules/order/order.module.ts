@@ -1,11 +1,12 @@
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { JwtProvider } from '@/config/jwt.config';
+import { AuthModule } from '@/modules/auth/auth.module';
 import { BookSnapShotModule } from '@/modules/book/snapshot/book-snapshot.module';
 import { CartModule } from '@/modules/cart/cart.module';
-import { CatalogModule } from '@/modules/catalog';
+import { CatalogModule } from '@/modules/catalog/catalog.module';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
 import { JobsModule } from '@/modules/jobs/jobs.module';
-import { OrderCleanupJob } from '@/modules/order/order.cleanup.job';
+import { OrderCleanupJob } from '@/modules/order/job/order.cleanup.job';
 import { Module } from '@nestjs/common';
 import { AuthRepository } from '../auth/repository/auth.repository';
 import { GuestSessionModule } from '../guest-session/guest-session.module';
@@ -17,7 +18,16 @@ import { OrderRepository } from './repository/order.repository';
 import { OrderService } from './service/order.service';
 
 @Module({
-    imports: [PaymentModule, JwtProvider, GuestSessionModule, CartModule, CatalogModule, BookSnapShotModule, EmailOutboxModule, JobsModule],
+    imports: [
+        PaymentModule,
+        JwtProvider,
+        AuthModule,
+        GuestSessionModule,
+        CartModule,
+        CatalogModule,
+        BookSnapShotModule,
+        EmailOutboxModule,
+        JobsModule],
     controllers: [OrderController],
     providers: [
         OrderCleanupJob,
@@ -31,4 +41,3 @@ import { OrderService } from './service/order.service';
     exports: [OrderRepository, OrderItemRepository, OrderAddressRepository, OrderService],
 })
 export class OrderModule { }
-

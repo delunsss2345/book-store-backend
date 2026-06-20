@@ -28,12 +28,12 @@ export class PurchaseOrderRepository {
   }
 
   async createPurchaseOrder(
-    createdById: bigint,
+    createdById: number,
     body: CreatePurchaseOrderRequestDto,
     tx?: DbClient,
   ) {
     const db = this.getDb(tx);
-    const supplierId = BigInt(body.supplierId);
+    const supplierId = Number(body.supplierId);
     const supplier = await db.supplier.findUnique({
       where: { id: supplierId },
       select: { id: true },
@@ -111,7 +111,7 @@ export class PurchaseOrderRepository {
 
   updatePurchaseOrderStatus(
     purchaseOrderId: string,
-    approvedById: bigint,
+    approvedById: number,
     status: PurchaseOrderStatus,
     tx?: DbClient,
   ) {
@@ -138,7 +138,7 @@ export class PurchaseOrderRepository {
 
     const db = this.getDb(tx);
     const bookVariantIds = [
-      ...new Set(items.map((item) => BigInt(item.bookVariantId))),
+      ...new Set(items.map((item) => Number(item.bookVariantId))),
     ];
     const existingBookVariants = await db.bookVariant.findMany({
       where: {
@@ -165,7 +165,7 @@ export class PurchaseOrderRepository {
     await db.purchaseOrderItem.createMany({
       data: items.map((item) => ({
         purchaseOrderId,
-        bookVariantId: BigInt(item.bookVariantId),
+        bookVariantId: Number(item.bookVariantId),
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,

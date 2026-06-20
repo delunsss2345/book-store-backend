@@ -1,4 +1,4 @@
-import { GeminiService } from '@/modules/gemini/gemini.service';
+import { GeminiService } from '@/modules/gemini/service/gemini.service';
 import { Module } from '@nestjs/common';
 
 @Module({

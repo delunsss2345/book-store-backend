@@ -1,10 +1,10 @@
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
 import { JwtProvider } from '@/config/jwt.config';
 import { AuthModule } from '@/modules/auth/auth.module';
+import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { BookSnapShotModule } from '@/modules/book/snapshot/book-snapshot.module';
 import { BookVariantModule } from '@/modules/book/variant/bookVariant.module';
 import { CartModule } from '@/modules/cart/cart.module';
-import { CatalogModule } from '@/modules/catalog/catalog.module';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
 import { JobsModule } from '@/modules/jobs/jobs.module';
 import { OrderCleanupJob } from '@/modules/order/job/order.cleanup.job';

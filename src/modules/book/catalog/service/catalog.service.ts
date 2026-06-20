@@ -12,7 +12,7 @@ import {
 import {
   CatalogBookListQueryDto,
   CatalogHomeQueryDto,
-} from '@/modules/catalog/dto/request';
+} from '@/modules/book/catalog/dto/request';
 import {
   CatalogBookCardDto,
   CatalogBookDetailDto,
@@ -21,7 +21,7 @@ import {
   CatalogBookVariantDto,
   CatalogCategoryDto,
   CatalogCategoryTreeDto,
-} from '@/modules/catalog/dto/response';
+} from '@/modules/book/catalog/dto/response';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,

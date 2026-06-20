@@ -1,5 +1,5 @@
+import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { BookSnapShotModule } from '@/modules/book/snapshot/book-snapshot.module';
-import { CatalogModule } from '@/modules/catalog/catalog.module';
 import { OrderModule } from '@/modules/order/order.module';
 import { Module } from '@nestjs/common';
 import { UserEventController } from './controller/user-event.controller';

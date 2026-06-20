@@ -1,10 +1,10 @@
 import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
+import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
 import { CartService } from '@/modules/cart/service/cart.service';
-import { CatalogService } from '@/modules/catalog/service/catalog.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import {

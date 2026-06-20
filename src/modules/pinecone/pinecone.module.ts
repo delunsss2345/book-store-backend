@@ -1,4 +1,4 @@
-import { CatalogModule } from '@/modules/catalog/catalog.module';
+import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { GeminiModule } from '@/modules/gemini/gemini.module';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
 import { Module } from '@nestjs/common';

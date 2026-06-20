@@ -1,6 +1,6 @@
-import { SearchMessage } from '@/common';
 import { AppModule } from '@/app.module';
-import { CatalogService } from '@/modules/catalog/service/catalog.service';
+import { SearchMessage } from '@/common';
+import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GeminiService } from '@/modules/gemini/service/gemini.service';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
@@ -17,7 +17,7 @@ export class SearchService {
     private readonly pineconeService: PineconeService,
     private readonly geminiService: GeminiService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {}
+  ) { }
   // Search sách theo query , topK format maxPrice categoryId
   async searchBooks(query: SearchBooksQueryDto, langId: number): Promise<any> {
     const q = query.q?.trim();

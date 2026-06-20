@@ -1,5 +1,5 @@
 import { CacheProvider } from '@/config/redis.config';
-import { CatalogModule } from '@/modules/catalog/catalog.module';
+import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { GeminiModule } from '@/modules/gemini/gemini.module';
 import { PineconeModule } from '@/modules/pinecone/pinecone.module';
 import { SearchController } from '@/modules/search/controller/search.controller';

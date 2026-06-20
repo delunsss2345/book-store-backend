@@ -1,4 +1,4 @@
-import { CatalogRepository } from '@/modules/catalog/repository/catalog.repository';
+import { CatalogRepository } from '@/modules/book/catalog/repository/catalog.repository';
 import * as crypto from 'crypto';
 
 export const generateContentHash = (data: Awaited<ReturnType<CatalogRepository['findBookVariantById']>>) => {

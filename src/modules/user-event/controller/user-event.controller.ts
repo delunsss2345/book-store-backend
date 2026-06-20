@@ -1,8 +1,8 @@
 import type { JwtPayload } from '@/common';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
-import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
-import { CatalogHomeResponseDto } from '@/modules/catalog/dto/response';
+import { CatalogHomeQueryDto } from '@/modules/book/catalog/dto/request';
+import { CatalogHomeResponseDto } from '@/modules/book/catalog/dto/response';
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { UserEventService } from '../service/user-event.service';

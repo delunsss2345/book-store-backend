@@ -1,5 +1,5 @@
 import { PineconeMessage } from '@/common';
-import { CatalogService } from '@/modules/catalog/service/catalog.service';
+import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GeminiService } from '@/modules/gemini/service/gemini.service';
 import {
   BookVariantEmbeddingSource,

@@ -1,16 +1,16 @@
 import { EventType, scoreEvent } from '@/common/constants/event-type.constant';
-import { BookSnapshotRepository } from '@/modules/book/snapshot/repository/book-snapshot.repository';
-import { CatalogHomeQueryDto } from '@/modules/catalog/dto/request';
+import { CatalogHomeQueryDto } from '@/modules/book/catalog/dto/request';
 import {
     CatalogBookCardDto,
     CatalogRecommendRequestDto
-} from '@/modules/catalog/dto/response';
+} from '@/modules/book/catalog/dto/response';
+import { BookSnapshotRepository } from '@/modules/book/snapshot/repository/book-snapshot.repository';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { Injectable } from '@nestjs/common';
 import { EventType as PrismaEventType } from '@prisma/client';
-import { CatalogRepository } from '../../catalog/repository/catalog.repository';
-import { CatalogService } from '../../catalog/service/catalog.service';
+import { CatalogRepository } from '../../book/catalog/repository/catalog.repository';
+import { CatalogService } from '../../book/catalog/service/catalog.service';
 import { CreateUserEventRequestDto } from '../dto/request/create-user-event.request.dto';
 import { UserEventRepository } from '../repository/user-event.repository';
 type ScoredObj = {

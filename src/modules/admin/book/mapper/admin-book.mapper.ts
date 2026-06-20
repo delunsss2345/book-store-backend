@@ -1,11 +1,11 @@
-import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
-import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import {
   AdminBookItemResponseDto,
   AdminBookSnapshotItemResponseDto,
   AdminBookTranslationResponseDto,
   AdminBookVariantItemResponseDto,
 } from '@/modules/admin/dto/response';
+import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
+import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import { Prisma } from '@prisma/client';
 import { AdminBookRepository } from '../admin-book.repository';
 
@@ -45,12 +45,12 @@ export function toAdminBookItem(row: BookRow): AdminBookItemResponseDto {
     updatedAt: row.updatedAt,
     translation: translation
       ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
+        id: translation.id.toString(),
+        languageId: translation.languageId,
+        title: translation.title,
+        description: translation.description ?? null,
+        slug: translation.slug ?? '',
+      }
       : null,
     variants: row.variants.map((variant) => ({
       id: variant.id.toString(),
@@ -84,12 +84,12 @@ export function toAdminBookListItem(
     updatedAt: row.updatedAt,
     translation: translation
       ? {
-          id: translation.id.toString(),
-          languageId: translation.languageId,
-          title: translation.title,
-          description: translation.description ?? null,
-          slug: translation.slug ?? '',
-        }
+        id: translation.id.toString(),
+        languageId: translation.languageId,
+        title: translation.title,
+        description: translation.description ?? null,
+        slug: translation.slug ?? '',
+      }
       : null,
     variants: row.variants.map((variant) => ({
       id: variant.id.toString(),
@@ -112,13 +112,9 @@ export function toSnapshotItem(
     id: row.id.toString(),
     bookVariantId: row.bookVariantId.toString(),
     bookId: row.bookVariant.bookId.toString(),
-    titleSnapshot: row.titleSnapshot ?? null,
-    coverImageUrlSnapshot: row.coverImageUrlSnapshot ?? null,
-    skuSnapshot: row.skuSnapshot,
     priceSnapshot: toDecimalText(row.priceSnapshot) as string,
     currencyCodeSnapshot: row.currencyCodeSnapshot ?? null,
     formatSnapshot: String(row.formatSnapshot),
-    editionSnapshot: row.editionSnapshot ?? null,
     isbnSnapshot: row.isbnSnapshot ?? null,
     createdAt: row.createdAt,
   };
@@ -138,14 +134,14 @@ export function toBookDetail(book: any): AdminBookDetailResponseDto {
     updatedAt: book.updatedAt,
     translation: Array.isArray(book.translation || book.translations)
       ? (book.translation || book.translations).map(
-          (item: any): AdminBookTranslationResponseDto => ({
-            id: String(item.id),
-            languageId: Number(item.languageId),
-            title: item.title,
-            description: item.description ?? null,
-            slug: item.slug,
-          }),
-        )
+        (item: any): AdminBookTranslationResponseDto => ({
+          id: String(item.id),
+          languageId: Number(item.languageId),
+          title: item.title,
+          description: item.description ?? null,
+          slug: item.slug,
+        }),
+      )
       : [],
     authorName:
       book.authors && book.authors.length > 0
@@ -154,18 +150,18 @@ export function toBookDetail(book: any): AdminBookDetailResponseDto {
     publisherName: book.publisher ? book.publisher?.defaultName : null,
     variants: Array.isArray(book.variants)
       ? book.variants.map(
-          (item: any): AdminBookVariantItemResponseDto => ({
-            id: String(item.id),
-            format: item.format,
-            edition: item.edition ?? null,
-            isbn: item.isbn ?? null,
-            costPrice: String(item.costPrice),
-            price: String(item.price),
-            currencyCode: item.currencyCode ?? null,
-            stock: item.stock ?? null,
-            isActive: Boolean(item.isActive),
-          }),
-        )
+        (item: any): AdminBookVariantItemResponseDto => ({
+          id: String(item.id),
+          format: item.format,
+          edition: item.edition ?? null,
+          isbn: item.isbn ?? null,
+          costPrice: String(item.costPrice),
+          price: String(item.price),
+          currencyCode: item.currencyCode ?? null,
+          stock: item.stock ?? null,
+          isActive: Boolean(item.isActive),
+        }),
+      )
       : [],
   };
 }

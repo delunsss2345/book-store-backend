@@ -405,8 +405,6 @@ export class CatalogService {
       pageCount: book.pageCount ?? null,
       weightGrams: book.weightGrams ?? null,
       publisherName: book.publisher?.defaultName ?? null,
-      ratingAvg: book.ratingAvg,
-      ratingCount: book.ratingCount,
       variants: this.toBookVariants(book),
       categories: this.toBookCategories(book),
       specs: this.toBookSpecs(book),

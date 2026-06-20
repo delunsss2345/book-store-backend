@@ -619,7 +619,6 @@ model BookVariantSnapshot {
   bookVariantId Int  @map("book_variant_id")
   contentHash   String? @unique @map("content_hash") @db.VarChar(255)
 
-  skuSnapshot          String     @map("sku_snapshot") @db.VarChar(50)
   priceSnapshot        Decimal    @map("price_snapshot") @db.Decimal(12, 2)
   currencyCodeSnapshot String?    @map("currency_code_snapshot") @db.VarChar(3)
   formatSnapshot       BookFormat @map("format_snapshot")

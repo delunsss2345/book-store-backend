@@ -28,15 +28,9 @@ export class BookSnapshotRepository {
             create: {
                 bookVariantId: Number(dto.bookVariantId),
                 contentHash,
-                coverImageUrlSnapshot: dto.coverImageUrlSnapshot ?? null,
-                titleSnapshot: dto.titleSnapshot ?? null,
-
-                skuSnapshot: dto.skuSnapshot,
                 priceSnapshot: dto.priceSnapshot, // nếu Prisma Decimal, có thể nhận string
                 currencyCodeSnapshot: dto.currencyCodeSnapshot ?? null,
-
                 formatSnapshot: dto.formatSnapshot,
-                editionSnapshot: dto.editionSnapshot ?? null,
                 isbnSnapshot: dto.isbnSnapshot ?? null,
             },
             update: {
@@ -58,13 +52,9 @@ export class BookSnapshotRepository {
             create: {
                 bookVariantId: Number(dto.bookVariantId),
                 contentHash,
-                coverImageUrlSnapshot: dto.coverImageUrlSnapshot ?? null,
-                titleSnapshot: dto.titleSnapshot ?? null,
-                skuSnapshot: dto.skuSnapshot,
                 priceSnapshot: dto.priceSnapshot,
                 currencyCodeSnapshot: dto.currencyCodeSnapshot ?? null,
                 formatSnapshot: dto.formatSnapshot,
-                editionSnapshot: dto.editionSnapshot ?? null,
                 isbnSnapshot: dto.isbnSnapshot ?? null,
             },
         });

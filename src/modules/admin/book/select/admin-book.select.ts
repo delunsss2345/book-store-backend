@@ -96,13 +96,9 @@ export const adminBookTranslationCreateSelect = {
 export const adminBookSnapshotSelect = {
   id: true,
   bookVariantId: true,
-  titleSnapshot: true,
-  coverImageUrlSnapshot: true,
-  skuSnapshot: true,
   priceSnapshot: true,
   currencyCodeSnapshot: true,
   formatSnapshot: true,
-  editionSnapshot: true,
   isbnSnapshot: true,
   createdAt: true,
   bookVariant: {

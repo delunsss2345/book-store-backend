@@ -173,8 +173,6 @@ export class OrderService {
             contentHash,
             priceSnapshot: unitPrice,
             formatSnapshot: bookVariant.format,
-            skuSnapshot: bookVariant.isbn ?? '',
-            coverImageUrlSnapshot: bookVariant.book.coverImageUrl ?? '',
             currencyCodeSnapshot: bookVariant.currencyCode ?? 'VND',
           },
           tx,

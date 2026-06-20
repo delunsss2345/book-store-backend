@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookFormat } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 
 
 export class CreateBookSnapshotDto {
@@ -25,33 +25,6 @@ export class CreateBookSnapshotDto {
     @MaxLength(255)
     contentHash?: string;
 
-    @ApiPropertyOptional({
-        description: 'URL ảnh bìa snapshot',
-        example: 'https://cdn.example.com/covers/abc.jpg',
-    })
-    @IsOptional()
-    @IsString()
-    coverImageUrlSnapshot?: string;
-
-    @ApiPropertyOptional({
-        description: 'Tiêu đề snapshot',
-        example: 'Clean Code',
-        maxLength: 255,
-    })
-    @IsOptional()
-    @IsString()
-    @MaxLength(255)
-    titleSnapshot?: string;
-
-    @ApiProperty({
-        description: 'SKU snapshot',
-        example: 'SKU-CC-001',
-        maxLength: 50,
-    })
-    @IsNotEmpty()
-    @IsString()
-    @MaxLength(50)
-    skuSnapshot: string;
 
     @ApiProperty({
         description: 'Giá snapshot (Decimal 12,2). Có thể gửi number hoặc string tuỳ bạn validate.',
@@ -80,15 +53,6 @@ export class CreateBookSnapshotDto {
     @IsNotEmpty()
     @IsEnum(BookFormat)
     formatSnapshot: BookFormat;
-
-    @ApiPropertyOptional({
-        description: 'Lần tái bản / edition snapshot',
-        example: 2,
-    })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    editionSnapshot?: number;
 
     @ApiPropertyOptional({
         description: 'ISBN snapshot',

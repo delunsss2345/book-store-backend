@@ -456,7 +456,7 @@ export class CatalogRepository {
 
     // repo
     async findBookDetailById(bookId: number, languageId: number) {
-        const [bookDetail, ratingAgg] = await Promise.all([
+        const [bookDetail,] = await Promise.all([
             this.prisma.book.findFirst({
                 where: { id: bookId, isActive: true, deletedAt: null },
                 select: {
@@ -518,19 +518,12 @@ export class CatalogRepository {
                 },
             }),
 
-            this.prisma.review.aggregate({
-                where: { bookVariant: { bookId, isActive: true } },
-                _avg: { rating: true },
-                _count: { rating: true },
-            }),
         ]);
 
         if (!bookDetail) return null;
 
         return {
             ...bookDetail,
-            ratingAvg: ratingAgg._avg.rating ?? null,
-            ratingCount: ratingAgg._count.rating ?? 0,
         };
     }
 
@@ -607,16 +600,9 @@ export class CatalogRepository {
 
         if (!bookDetail) return null;
 
-        const ratingAgg = await this.prisma.review.aggregate({
-            where: { bookVariant: { bookId: bookDetail.id, isActive: true } },
-            _avg: { rating: true },
-            _count: { rating: true },
-        });
 
         return {
             ...bookDetail,
-            ratingAvg: ratingAgg._avg.rating ?? null,
-            ratingCount: ratingAgg._count.rating ?? 0,
         };
     }
     async findBookAlikeCategory(bookId: number, categoriesIds: number[]) {

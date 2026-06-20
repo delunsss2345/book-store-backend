@@ -287,6 +287,7 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/search/reindex',
       description: 'Reindex search vectors in Pinecone',
     },
+
     {
       code: PermissionCode.AUTHOR_CREATE,
       method: 'POST',
@@ -305,6 +306,7 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/categories',
       description: 'Create category',
     },
+
     {
       code: PermissionCode.SUPPLIER_READ,
       method: 'GET',
@@ -323,6 +325,7 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/suppliers/:supplierId/active',
       description: 'Toggle supplier active status',
     },
+
     {
       code: PermissionCode.ADMIN_CREATE_BOOK,
       method: 'POST',
@@ -347,12 +350,22 @@ async function upsertPermissions() {
       pathPattern: '/api/v1/admin/books/:bookId',
       description: 'Soft delete admin book',
     },
+
+    // Bổ sung permission đang bị thiếu
+    {
+      code: PermissionCode.ADMIN_READ_DETAIL,
+      method: 'GET',
+      pathPattern: '/api/v1/admin/books/:bookId',
+      description: 'Read admin book detail',
+    },
+
     {
       code: PermissionCode.ADMIN_READ,
       method: 'GET',
       pathPattern: '/api/v1/admin/*',
       description: 'Read admin resources',
     },
+
     {
       code: PermissionCode.UPLOAD_MANAGE,
       method: 'POST',
@@ -427,7 +440,6 @@ async function upsertPermissions() {
       description: 'Reset password',
     },
   ];
-
   for (const p of permissions) {
     await prisma.permission.upsert({
       where: { code: p.code },

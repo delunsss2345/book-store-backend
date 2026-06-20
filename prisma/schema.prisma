@@ -1,6 +1,4 @@
-// =============================================================================
-// Prisma schema (single-file). Models are grouped by domain, enums sorted A–Z.
-// =============================================================================
+
 
 generator client {
   provider = "prisma-client-js"
@@ -9,10 +7,6 @@ generator client {
 datasource db {
   provider = "mysql"
 }
-
-// =============================================================================
-// Enums (alphabetical)
-// =============================================================================
 
 enum Badge {
   NEW
@@ -196,7 +190,6 @@ model User {
   orderCreator       Order[]         @relation("OrderCreator")
   orderUpdater       Order[]         @relation("OrderUpdater")
   cart               Cart[]
-  review             Review[]
   order              Order[]
 
   paymentTransaction     PaymentTransaction[]
@@ -522,7 +515,6 @@ model Book {
   specs             BookSpec?
   bookBadge         BookBadge[]
   publisher         Publisher?         @relation(fields: [publisherId], references: [id], onDelete: SetNull)
-  reviews           Review[]
   bookVariantAssets BookVariantAsset[]
 
   @@map("books")
@@ -614,7 +606,6 @@ model BookVariant {
   wishlistItems        WishlistItem[]
   cartItems            CartItem[]
   bookVariantSnapshots BookVariantSnapshot[]
-  reviews              Review[]
   stockImportItem      StockImportItem[]     @relation("BookVariantToStockImportItem")
   purchaseOrderItem    PurchaseOrderItem[]
   supplier             Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
@@ -839,7 +830,7 @@ model PaymentTransaction {
 
 model PaymentIntent {
   id         String         @id @default(cuid())
-  orderId    Int         @map("order_id")
+  orderId    Int            @map("order_id")
   orderCode  String         @map("order_code") @db.VarChar(50)
   content    String?        @unique @map("content") @db.VarChar(100)
   gateway    PaymentGateway
@@ -947,27 +938,8 @@ model PurchaseOrderItem {
 }
 
 // =============================================================================
-// Engagement (reviews, events, audit)
+// Engagement (events, audit)
 // =============================================================================
-
-model Review {
-  id            Int @id @default(autoincrement())
-  userId        Int @map("user_id")
-  bookVariantId Int @map("book_variant_id")
-  bookId        Int @map("book_id")
-
-  rating    Int
-  content   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  bookVariant BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  book        Book        @relation(fields: [bookId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@map("reviews")
-}
 
 model UserEvent {
   id             Int    @id @default(autoincrement())
@@ -1016,7 +988,6 @@ model AuditLog {
 // =============================================================================
 // Integration (email outbox, webhook inbox)
 // =============================================================================
-
 model EmailOutbox {
   id          Int       @id @default(autoincrement())
   toEmail     String       @map("to_email") @db.VarChar(320)

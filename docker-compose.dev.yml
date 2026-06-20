@@ -2,27 +2,42 @@ services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
+    container_name: bookstore-mysql
     env_file:
       - .env
     volumes:
-      - /docker/mysql_data:/var/lib/mysql
+      - ./docker/mysql_data:/var/lib/mysql
     ports:
       - '127.0.0.1:3308:3306'
+    networks:
+      - book-store-network
+
   redis:
-    image: redis:7.2
+    image: redis:8.6.2-alpine
     restart: unless-stopped
+    container_name: bookstore-redis
     env_file:
       - .env
     ports:
       - '127.0.0.1:6379:6379'
     volumes:
-      - /docker/redis_data:/data
-  redis-insight:
-    image: redislabs/redisinsight:2.6.0
-    restart: unless-stopped
+      - ./docker/redis_data:/data
+    networks:
+      - book-store-network
+  redisinsight:
+    image: redislabs/redisinsight:3.4
+    container_name: bookstore-redisinsight
     ports:
-      - '5540:5540'
+      - '8001:8001'
+    depends_on:
+      - redis
+    networks:
+      - book-store-network
 
 volumes:
   mysql_data:
   redis_data:
+
+networks:
+  book-store-network:
+    driver: bridge

@@ -1,4 +1,3 @@
-import { AuthService } from '@/modules/auth/service/auth.service';
 import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,7 +9,6 @@ export class ShopperSessionGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
         private readonly guestSessionService: GuestSessionService,
-        private readonly authService: AuthService,
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -31,6 +29,7 @@ export class ShopperSessionGuard implements CanActivate {
             console.log(error);
             return true;
         } finally {
+            // luôn check và gắn sessionId
             await this.attachGuestSession(request, response);
         }
     }

@@ -143,6 +143,12 @@ enum VerificationType {
   CHANGE_PASSWORD
 }
 
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
 // =============================================================================
 // User & Identity
 // =============================================================================
@@ -286,7 +292,7 @@ model RevokedToken {
 model UserAddress {
   id            Int    @id @default(autoincrement())
   userId        Int    @map("user_id")
-  addressType   String?   @map("address_type") @db.VarChar(50) // mặc định là không có
+  addressType   AddressType  @default(HOME)  @map("address_type") 
   recipientName String    @map("recipient_name") @db.VarChar(200) // mặc định là tên thật, thích thì điền không thôi
   phoneNumber   String    @map("phone_number") @db.VarChar(30) // buộc phải có số
   addressDetail String    @map("address_detail") @db.VarChar(255) // buộc phải có địa chỉ

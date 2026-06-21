@@ -1,7 +1,7 @@
 import { GetLanguageCode } from '@/common/decorators/getLanguageCode.decorator';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
-import { SearchBooksQueryDto } from '@/modules/search/dto/request';
+import { SearchBooksQueryDto, SearchFilterQueryDto } from '@/modules/search/dto/request';
 import { SearchBookItemDto } from '@/modules/search/dto/response';
 import { Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -19,6 +19,16 @@ export class SearchController {
     searchSemantic(@Query() query: SearchBooksQueryDto, @GetLanguageId() langId: number) {
         return this.searchService.searchBooks(query, langId);
     }
+
+    @Public()
+    @Get('filter')
+    searchFilter(
+        @Query() query: SearchFilterQueryDto,
+        @GetLanguageId() langId: number,
+    ) {
+        return this.searchService.filterBook(query, langId);
+    }
+
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')
     @ApiBearerAuth('access-token')

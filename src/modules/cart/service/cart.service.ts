@@ -7,6 +7,7 @@ import {
 } from '@/modules/cart/dto/request';
 import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
 import { CartItemService } from '@/modules/cart/service/cart-item.service';
+import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import {
   ForbiddenException,
   Injectable,
@@ -27,6 +28,7 @@ export class CartService {
     private readonly cartRepository: CartRepository,
     private readonly cartItemService: CartItemService,
     private readonly authService: AuthService,
+    private readonly transactionService: TransactionService,
   ) { }
 
   async getCartUser(userId: number, langId: number) {
@@ -383,7 +385,8 @@ export class CartService {
       }
     }
 
-    await this.mergeCartUser(userCart.id, mergedItems);
+    await this.mergeCartUser(userCart.id, guestSessionId, mergedItems);
+
     this.logger.log(`Merge cart completed: userId=${userId}, guestCartId=${guestCart.id}, userCartId=${userCart.id}, mergeCount=${mergeCount}`);
     return {
       mergeCount,
@@ -391,8 +394,11 @@ export class CartService {
     }
   }
 
-  private async mergeCartUser(cartId: number, items: { bookVariantId: number, quantity: number }[]) {
-    return this.cartRepository.updateCartByUserId(cartId, items);
+  private async mergeCartUser(cartId: number, guestSessionId: string, items: { bookVariantId: number, quantity: number }[]) {
+    await this.transactionService.doInTransaction(async (tx) => {
+      await this.cartRepository.updateCartByUserId(cartId, items, tx);
+      await this.cartRepository.removeCartByGuestSessionIf(guestSessionId, tx);
+    });
   }
 
   // Điều chỉnh giá 

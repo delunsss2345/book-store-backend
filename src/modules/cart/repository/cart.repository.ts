@@ -65,8 +65,9 @@ export class CartRepository {
     updateCartByUserId(
         cartId: number,
         items: { bookVariantId: number; quantity: number }[],
+        tx: PrismaClientTransaction = this.prisma,
     ) {
-        return this.prisma.cart.update({
+        return tx.cart.update({
             where: { id: cartId },
             data: {
                 items: {
@@ -87,6 +88,18 @@ export class CartRepository {
             },
         });
     }
+
+    removeCartByGuestSessionIf(
+        guestSessionId: string | null | undefined,
+        tx: PrismaClientTransaction = this.prisma,
+    ) {
+        if (!guestSessionId) return null;
+
+        return tx.cart.deleteMany({
+            where: { guestSessionId },
+        });
+    }
+
     createCartByGuestSessionId(guestSessionId: string, languageId?: number) {
         return this.prisma.cart.create({
             data: {

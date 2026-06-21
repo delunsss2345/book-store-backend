@@ -26,6 +26,8 @@ export class CatalogBookCardDto {
     @ApiPropertyOptional({ example: 'USD' })
     currencyCode?: string | null;
 
+    @ApiPropertyOptional({ example: 'An in-depth guide to designing data-intensive applications.' })
+    description?: string | null;
     @ApiPropertyOptional({ example: 4.7 })
     ratingAvg?: number | null;
 

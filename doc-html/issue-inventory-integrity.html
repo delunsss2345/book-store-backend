@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend — Issue write-up: inventory integrity
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+  Every code citation in this page was read verbatim from the source on branch `dev`.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issue · Inventory integrity — Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D; --olive-d:#5F6F4A;
+    --red:#B04A3F; --amber:#C98A2B;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--slate); font-family:var(--sans); line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px; margin:0 auto; padding:0 24px}
+  a{color:var(--clay-d)}
+
+  /* breadcrumb */
+  .crumb{font-family:var(--mono); font-size:12px; color:var(--g500); padding:22px 0 0}
+  .crumb a{color:var(--g500); text-decoration:none}
+  .crumb a:hover{color:var(--clay-d)}
+
+  /* masthead */
+  header.head{padding:30px 0 26px; border-bottom:1px solid var(--g200)}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 14px}
+  header.head h1{font-family:var(--serif); font-weight:600; line-height:1.08; font-size:clamp(28px,4.4vw,42px); margin:0 0 18px; letter-spacing:-.01em}
+  .labels{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px}
+  .lab{font-family:var(--mono); font-size:11.5px; padding:5px 11px; border-radius:999px; border:1px solid var(--g300); background:var(--paper); color:var(--g700)}
+  .lab.sev{background:var(--red); color:#fff; border-color:var(--red); font-weight:600}
+  .lab.bug{background:rgba(176,74,63,.10); color:var(--red); border-color:rgba(176,74,63,.4)}
+  .lab.area{background:var(--slate); color:var(--ivory); border-color:var(--slate)}
+  .meta{font-family:var(--mono); font-size:12px; color:var(--g500); display:flex; flex-wrap:wrap; gap:18px}
+  .meta b{color:var(--g700); font-weight:600}
+
+  /* sections */
+  section{padding:34px 0 0}
+  h2{font-family:var(--serif); font-weight:600; font-size:clamp(21px,2.6vw,27px); margin:0 0 6px; letter-spacing:-.01em; scroll-margin-top:18px}
+  h2 .n{font-family:var(--mono); font-size:14px; color:var(--clay); margin-right:10px; font-weight:400}
+  h3{font-family:var(--sans); font-weight:650; font-size:16px; margin:26px 0 8px}
+  p{margin:12px 0; color:var(--g700); font-size:15.5px}
+  .lead{font-size:17px; color:var(--slate)}
+  strong{color:var(--slate)}
+  ul,ol{color:var(--g700); font-size:15.5px; padding-left:22px}
+  li{margin:7px 0}
+
+  /* callout cards */
+  .call{border:1px solid var(--g200); border-left-width:4px; border-radius:12px; background:var(--paper); padding:18px 22px; margin:18px 0}
+  .call.tldr{border-left-color:var(--clay); background:linear-gradient(180deg,#fff,#fdfbf7)}
+  .call.danger{border-left-color:var(--red)}
+  .call.fix{border-left-color:var(--olive)}
+  .call h3{margin-top:0}
+  .call .tag{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--clay-d)}
+
+  /* code */
+  figure.code{margin:16px 0; border-radius:12px; overflow:hidden; border:1px solid #26261f; box-shadow:0 8px 26px rgba(20,20,19,.10)}
+  figure.code figcaption{font-family:var(--mono); font-size:11.5px; color:#cfae9b; background:#1d1d19; padding:8px 14px; display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid #2c2c25}
+  figure.code figcaption .path{color:#e7c3b2}
+  figure.code figcaption .tag{color:#8d8c82}
+  pre{margin:0; background:#141413; color:#e9e6dd; font-family:var(--mono); font-size:12.6px; line-height:1.65; padding:14px 16px; overflow-x:auto}
+  pre .c{color:#7e8a6b}     /* comment / olive */
+  pre .k{color:#e0996f}     /* keyword / clay */
+  pre .s{color:#cdbf9a}     /* string */
+  pre .m{color:#9fb2d6}     /* number/ident accent */
+  pre .del{color:#d98b7f}   /* removed */
+  pre .add{color:#9fc07e}   /* added */
+  pre .hl{color:#fff; background:rgba(217,119,87,.22); display:inline-block; width:100%}
+  code{font-family:var(--mono); font-size:.9em; background:var(--g100); border:1px solid var(--g200); border-radius:5px; padding:1px 6px; color:var(--clay-d)}
+  pre code{background:none; border:0; padding:0; color:inherit; font-size:inherit}
+
+  /* tables */
+  table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; background:var(--paper); border:1px solid var(--g200); border-radius:12px; overflow:hidden}
+  th,td{text-align:left; padding:11px 14px; border-bottom:1px solid var(--g200); vertical-align:top}
+  th{background:var(--g100); font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--g700)}
+  tr:last-child td{border-bottom:none}
+  td code{font-size:.86em}
+  .pill{font-family:var(--mono); font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; white-space:nowrap}
+  .pill.bad{background:rgba(176,74,63,.12); color:var(--red); border:1px solid rgba(176,74,63,.35)}
+  .pill.ok{background:rgba(120,140,93,.16); color:var(--olive-d); border:1px solid rgba(120,140,93,.4)}
+  .pill.warn{background:rgba(201,138,43,.14); color:var(--amber); border:1px solid rgba(201,138,43,.4)}
+  .pill.none{background:var(--g100); color:var(--g500); border:1px solid var(--g300)}
+
+  /* repro steps */
+  ol.steps{counter-reset:s; list-style:none; padding-left:0; margin:14px 0}
+  ol.steps li{counter-increment:s; position:relative; padding:8px 0 8px 42px; border-bottom:1px dashed var(--g200)}
+  ol.steps li:last-child{border-bottom:none}
+  ol.steps li::before{content:counter(s); position:absolute; left:0; top:7px; width:27px; height:27px; border-radius:50%; background:var(--slate); color:var(--ivory); font-family:var(--mono); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center}
+  ol.steps.bad li::before{background:var(--red)}
+
+  /* flow diagram */
+  .flow{display:grid; grid-template-columns:1fr; gap:10px; margin:18px 0}
+  .frow{display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:start; background:var(--paper); border:1px solid var(--g200); border-radius:11px; padding:13px 16px}
+  .frow .when{font-family:var(--mono); font-size:12.5px; color:var(--slate); font-weight:600}
+  .frow .when small{display:block; color:var(--g500); font-weight:400; font-size:11px}
+  .frow .eff{font-family:var(--mono); font-size:12.5px; display:flex; flex-wrap:wrap; gap:8px 16px}
+  .chg{white-space:nowrap}
+  .chg .up{color:var(--olive-d)} .chg .dn{color:var(--red)} .chg .no{color:var(--g500)}
+
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 2px}
+  .toc a{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700); border:1px solid var(--g300); border-radius:999px; padding:5px 12px; background:var(--paper)}
+  .toc a:hover{border-color:var(--clay); color:var(--clay-d)}
+
+  .kbd{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g300); border-bottom-width:2px; border-radius:6px; padding:1px 7px}
+
+  footer{margin:46px 0 64px; padding-top:24px; border-top:1px solid var(--g200); font-family:var(--mono); font-size:12px; color:var(--g500); display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px}
+  @media(max-width:640px){ .frow{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="crumb"><a href="./index.html">← Documentation index</a> &nbsp;·&nbsp; issues / inventory-integrity</div>
+
+  <header class="head">
+    <p class="eyebrow">Issue · Data integrity</p>
+    <h1>Inventory is split across two contradictory definitions — <code style="font-size:.62em">available</code> is never written, and order expiry inflates <code style="font-size:.62em">stock</code></h1>
+    <div class="labels">
+      <span class="lab sev">Severity: Critical</span>
+      <span class="lab bug">bug</span>
+      <span class="lab bug">data-integrity</span>
+      <span class="lab">money-path</span>
+      <span class="lab area">module: cart · order · book/variant</span>
+      <span class="lab area">model: BookVariant</span>
+    </div>
+    <div class="meta">
+      <span>Found via <b>codebase + schema audit</b></span>
+      <span>Branch <b>dev</b></span>
+      <span>Date <b>2026-06-21</b></span>
+      <span>Confidence <b>verified (read on source)</b></span>
+    </div>
+  </header>
+
+  <div class="toc">
+    <a href="#tldr">TL;DR</a>
+    <a href="#two">Two definitions</a>
+    <a href="#evidence">Evidence</a>
+    <a href="#repro">Reproduction</a>
+    <a href="#impact">Impact</a>
+    <a href="#root">Root cause</a>
+    <a href="#fix">Proposed fix</a>
+    <a href="#migration">Migration</a>
+    <a href="#runnerup">Runner-ups</a>
+  </div>
+
+  <!-- TLDR -->
+  <section id="tldr">
+    <div class="call tldr">
+      <span class="tag">TL;DR</span>
+      <p class="lead" style="margin-top:8px">
+        <code>BookVariant</code> carries three inventory fields — <code>stock</code>, <code>reserved</code>, and a
+        materialized <code>available</code> (intended to mean <code>stock − reserved</code>). The <b>cart</b> path gates
+        add-to-cart on the <code>available</code> column; the <b>order</b> path computes <code>stock − reserved</code> inline
+        and ignores the column entirely. <b>No code anywhere writes <code>available</code></b>, so it is frozen at its DB
+        default of <code>0</code>.
+      </p>
+      <p style="margin-bottom:0">
+        Two consequences, both on the money path, both silent:
+        <b>(A)</b> every variant created through the normal admin / stock-import flow is un-addable to any cart — the store
+        looks entirely sold out while inventory is full; and <b>(B)</b> order <em>expiry</em> runs
+        <code>stock += qty</code> for stock that was never debited at reserve time, so <code>stock</code> drifts upward on
+        every abandoned order → eventual oversell.
+      </p>
+    </div>
+  </section>
+
+  <!-- TWO DEFINITIONS -->
+  <section id="two">
+    <h2><span class="n">01</span>Two definitions of "purchasable", never reconciled</h2>
+    <p>
+      There is no single source of truth for "how many units can a customer buy right now." Two subsystems answer the
+      question differently, and a third writer (expiry) mutates a field neither of them expects:
+    </p>
+    <table>
+      <thead><tr><th>Path</th><th>How it decides availability</th><th>Field it trusts</th><th>Reads <code>available</code> column?</th></tr></thead>
+      <tbody>
+        <tr><td><b>Cart</b> — add / increase qty</td><td><code>available &lt; quantity</code> → reject</td><td><code>available</code></td><td><span class="pill bad">yes — and it's always 0</span></td></tr>
+        <tr><td><b>Order</b> — place order</td><td><code>stock − reserved &lt; quantity</code> → reject</td><td><code>stock</code>, <code>reserved</code></td><td><span class="pill warn">no — computes inline</span></td></tr>
+        <tr><td><b>Storefront</b> — catalog card</td><td>shows <code>available</code> to the UI</td><td><code>available</code></td><td><span class="pill bad">yes — surfaces 0/null</span></td></tr>
+      </tbody>
+    </table>
+    <p>
+      Because the <code>available</code> column is never maintained, the cart and storefront permanently disagree with the
+      order path. The column is a <em>materialized view that has no writer.</em>
+    </p>
+  </section>
+
+  <!-- EVIDENCE -->
+  <section id="evidence">
+    <h2><span class="n">02</span>Evidence</h2>
+
+    <h3>The schema declares three fields; <code>available</code> defaults to 0</h3>
+    <figure class="code">
+      <figcaption><span class="path">prisma/schema.prisma:596–601</span><span class="tag">model BookVariant</span></figcaption>
+<pre><span class="c">// only the inventory fields shown</span>
+stock        Int<span class="k">?</span>
+available    Int        <span class="k">@default(0)</span>
+<span class="c">// ...</span>
+reserved     Int<span class="k">?</span>       <span class="k">@default(0)</span></pre>
+    </figure>
+    <p><code>stock</code> and <code>reserved</code> are nullable; <code>available</code> is non-null with default <code>0</code>. That default is the value every row keeps forever (see below).</p>
+
+    <h3>Add-to-cart gates only on <code>available</code></h3>
+    <figure class="code">
+      <figcaption><span class="path">src/modules/cart/service/cart-item.service.ts:27–35</span><span class="tag">CartItemService.createByCartIdAndBookVariantId</span></figcaption>
+<pre>const bookVariant = await this.cartItemRepository.<span class="m">getStockByBookVariantId</span>(bookVariantId);
+<span class="k">if</span> (bookVariant === <span class="k">null</span>) {
+    <span class="k">throw new</span> Error(<span class="s">'Book variant not found'</span>);
+}
+<span class="hl">if (bookVariant.available === null || bookVariant.available &lt; quantity) {</span>
+    <span class="k">throw new</span> Error(<span class="s">'Not enough stock'</span>);
+}
+<span class="k">return</span> this.cartItemRepository.createByCartIdAndBookVariantId(cartId, bookVariantId, quantity);</pre>
+    </figure>
+    <figure class="code">
+      <figcaption><span class="path">src/modules/cart/repository/cart-item.repository.ts:79–86</span><span class="tag">reads ONLY the available column</span></figcaption>
+<pre>async <span class="m">getStockByBookVariantId</span>(
+    bookVariantId: number
+): Promise&lt;{ available: number } | null&gt; {
+    <span class="k">return</span> this.prisma.bookVariant.findUnique({
+        where: { id: bookVariantId },
+        select: { <span class="hl">available: true</span> },
+    });
+}</pre>
+    </figure>
+    <p>The quantity-increase path applies the same clamp — <code>Math.max(0, stock?.available ?? 0)</code> at <code>src/modules/cart/service/cart.service.ts:358</code> — so it, too, collapses to <code>0</code>.</p>
+
+    <h3>Nothing ever writes <code>available</code></h3>
+    <p>A whole-tree search for the identifier across <code>src/</code> returns reads only — selects, a DTO field, and the divergent order formula. There is <b>not a single assignment</b>:</p>
+    <figure class="code">
+      <figcaption><span class="path">$ rg -n "available" src/</span><span class="tag">every hit is a read</span></figcaption>
+<pre>book/catalog/service/catalog.service.ts:439:    available: v.available ?? null      <span class="c">// → storefront card (read)</span>
+book/catalog/repository/catalog.repository.ts:515:  available: true                     <span class="c">// select (read)</span>
+book/catalog/repository/catalog.repository.ts:595:  available: true                     <span class="c">// select (read)</span>
+book/catalog/dto/response/catalog-book-card.dto.ts:114: available?: number | null         <span class="c">// dto field</span>
+cart/service/cart.service.ts:358:        stock?.available ?? 0               <span class="c">// clamp (read)</span>
+order/service/order.service.ts:138:      variant.stock! - variant.reserved!   <span class="c">// computes its OWN "available"</span>
+cart/service/cart-item.service.ts:31:    bookVariant.available &lt; quantity     <span class="c">// gate (read)</span>
+cart/repository/cart-item.repository.ts:84:   select: { available: true }         <span class="c">// select (read)</span>
+<span class="add">  → 0 writes. The column is left at DEFAULT 0 for the row's entire life.</span></pre>
+    </figure>
+    <p>The inventory-mutating repository confirms it: stock import updates <code>stock</code>/<code>costPrice</code>/<code>price</code> and never touches <code>available</code> (<code>src/modules/book/variant/repository/bookVariant.repository.ts:21–41</code>), and the seed leaves the assignment commented out (<code>prisma/seed.ts:1165</code>, <code>:1178</code>).</p>
+
+    <h3>The order path computes a different number and reserves by bumping <code>reserved</code> only</h3>
+    <figure class="code">
+      <figcaption><span class="path">src/modules/order/service/order.service.ts:135–152</span><span class="tag">OrderService — placement check</span></figcaption>
+<pre>bookVariants.forEach((v) => {
+  const variantCardItem = mapBookVariant.get(v.id.toString());
+  const variant = variantMap.get(v.id.toString());
+  <span class="hl">const available = variant ? variant.stock! - variant.reserved! : 0;</span>   <span class="c">// NOT the column</span>
+
+  if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
+
+  <span class="hl">if (!v.stock || available &lt; (variantCardItem?.quantity ?? 0)) {</span>          <span class="c">// 0 and null conflated</span>
+    Logger.error(`Book variant ${v.id} out of stock...`);
+    throw new ForbiddenException(OrderMessage.BOOK_OUT_OF_STOCK("Sản phẩm vừa hết hàng"));
+  }
+});
+<span class="c">// ...later, per item:</span>
+await this.bookVariantService.<span class="m">updateReservedById</span>(bookVariant.id, item.quantity, tx);   <span class="c">// line 192</span></pre>
+    </figure>
+    <figure class="code">
+      <figcaption><span class="path">src/modules/book/variant/repository/bookVariant.repository.ts:43–48</span><span class="tag">reserve = reserved += qty (only)</span></figcaption>
+<pre>updateReservedById(id: number, quantity: number, tx: PrismaClientTransaction) {
+  <span class="k">return</span> tx.bookVariant.update({
+    where: { id },
+    data: { <span class="hl">reserved: { increment: quantity }</span> },   <span class="c">// stock and available untouched</span>
+  });
+}</pre>
+    </figure>
+
+    <h3>Success debits <code>stock</code>; expiry <em>credits</em> <code>stock</code> that was never debited</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+      <figure class="code" style="margin:6px 0">
+        <figcaption><span class="path">order.repository.ts:223–229</span><span class="tag">updateOrderDone — paid</span></figcaption>
+<pre>data: {
+  <span class="del">stock: { decrement: value }</span>,
+  reserved: { decrement: value }
+}</pre>
+      </figure>
+      <figure class="code" style="margin:6px 0">
+        <figcaption><span class="path">order.repository.ts:193–203</span><span class="tag">clearOrder — expired</span></figcaption>
+<pre>data: {
+  <span class="add">stock: { increment: value }</span>,   <span class="c">// ← bug</span>
+  reserved: { decrement: value }
+}</pre>
+      </figure>
+    </div>
+
+    <h3>Net effect of every transition (as written today)</h3>
+    <div class="flow">
+      <div class="frow"><div class="when">Reserve<small>place order · order.service.ts:192</small></div><div class="eff"><span class="chg"><span class="no">stock —</span></span><span class="chg"><span class="up">reserved +qty</span></span><span class="chg"><span class="no">available — (never)</span></span></div></div>
+      <div class="frow"><div class="when">Success<small>paid · updateOrderDone</small></div><div class="eff"><span class="chg"><span class="dn">stock −qty</span></span><span class="chg"><span class="dn">reserved −qty</span></span><span class="chg"><span class="no">available —</span></span></div></div>
+      <div class="frow" style="border-color:rgba(176,74,63,.45)"><div class="when">Expiry<small>unpaid · clearOrder</small></div><div class="eff"><span class="chg"><span class="up">stock +qty</span> ⚠</span><span class="chg"><span class="dn">reserved −qty</span></span><span class="chg"><span class="no">available —</span></span></div></div>
+      <div class="frow"><div class="when">Stock import<small>bookVariant.repository.ts:21</small></div><div class="eff"><span class="chg"><span class="up">stock =new</span></span><span class="chg"><span class="no">reserved —</span></span><span class="chg"><span class="no">available — (never)</span></span></div></div>
+    </div>
+    <p>
+      The intended model is clearly <code>available = stock − reserved</code> (the order path even names the local variable
+      <code>available</code>). On reserve, <code>stock</code> is deliberately <em>not</em> debited — units only leave at
+      fulfillment. So expiry must return the hold (<code>reserved −qty</code>) and <b>leave <code>stock</code> alone</b>.
+      Instead it adds <code>qty</code> back to <code>stock</code>, inventing units.
+    </p>
+  </section>
+
+  <!-- REPRODUCTION -->
+  <section id="repro">
+    <h2><span class="n">03</span>Reproduction</h2>
+
+    <h3>Failure A — the purchase funnel is dead on arrival</h3>
+    <p>Setup: admin (or stock-import) creates variant <code>#42</code> with <code>stock = 100</code>. Nothing sets <code>available</code>, so it stays <code>0</code>; <code>reserved = 0</code>.</p>
+    <ol class="steps bad">
+      <li>Customer opens the product and clicks <span class="kbd">Add to cart</span>, quantity 1.</li>
+      <li><code>cart-item.service.ts:31</code> evaluates <code>available (0) &lt; 1</code> → throws <code>Error("Not enough stock")</code>.</li>
+      <li>The variant — with 100 real units — <b>cannot be added to any cart by anyone, ever.</b> The whole catalog appears sold out. The same clamp blocks quantity increases.</li>
+    </ol>
+
+    <h3>Failure B — stock inflation → oversell</h3>
+    <p>Setup: a cart does exist (legacy row, or a seed that set <code>available</code>). Variant <code>#42</code>: <code>stock = 5</code>, <code>reserved = 0</code>.</p>
+    <ol class="steps bad">
+      <li>Customer places an order for 5 → reserve runs: <code>reserved = 5</code>, <code>stock = 5</code> (order check <code>stock − reserved = 0</code>… passes at the boundary for qty ≤ 5).</li>
+      <li>Customer never pays; the cleanup job expires the order.</li>
+      <li><code>clearOrder</code> runs: <code>stock = 5 + 5 = 10</code>, <code>reserved = 0</code>.</li>
+      <li>Inventory now claims <b>10 units</b> for a variant that physically has 5. Repeat across abandoned orders and <code>stock</code> drifts upward without bound.</li>
+    </ol>
+    <p>Cart abandonment is typically 60–80%, so Failure B accrues on the majority of orders that reach reservation.</p>
+  </section>
+
+  <!-- IMPACT -->
+  <section id="impact">
+    <h2><span class="n">04</span>Impact at scale</h2>
+    <table>
+      <thead><tr><th>Dimension</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><b>Revenue</b></td><td>Failure A is a <b>complete checkout outage</b> for any variant created through the normal flow — 0 add-to-cart conversions, surfaced only as a generic per-request <code>Error("Not enough stock")</code> that no monitor flags as a config fault.</td></tr>
+        <tr><td><b>Inventory accuracy</b></td><td>Failure B corrupts the stock ledger proportionally to abandonment volume. Once <code>stock</code> overstates reality, paid orders are accepted that cannot be fulfilled.</td></tr>
+        <tr><td><b>Downstream</b></td><td>Oversell → cancellations, refunds, chargebacks, support load; <code>cost_price</code>-derived inventory valuation drifts, polluting any reporting built on it.</td></tr>
+        <tr><td><b>Observability</b></td><td>Both failures are <b>silent</b> — no exception distinguishes "misconfigured inventory" from "genuinely out of stock."</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ROOT CAUSE -->
+  <section id="root">
+    <h2><span class="n">05</span>Root cause</h2>
+    <div class="call danger">
+      <p style="margin-top:0">There are <b>two independent, never-reconciled definitions</b> of purchasable quantity:</p>
+      <ul>
+        <li>a materialized <code>available</code> column (intended <code>stock − reserved</code>), trusted by <b>cart</b> + <b>storefront</b>; and</li>
+        <li>an on-the-fly <code>stock − reserved</code> computed by <b>order</b>.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        No writer maintains the column, so the two permanently disagree. Compounding it, the reserve step mutates only
+        <code>reserved</code>, while the <b>expiry path mutates <code>stock</code></b> — a field that the reserve step
+        never changed — so the restock arithmetic is internally inconsistent with the "hold = stock→reserved" model the
+        rest of the system assumes.
+      </p>
+    </div>
+  </section>
+
+  <!-- FIX -->
+  <section id="fix">
+    <h2><span class="n">06</span>Proposed fix</h2>
+    <p>Pick <b>one</b> inventory model and make every path obey it. Recommended: keep <code>available</code> as the single source of truth for purchasability and maintain it transactionally next to <code>reserved</code>.</p>
+
+    <h3>1 · Schema — make the invariant enforceable</h3>
+    <figure class="code">
+      <figcaption><span class="path">prisma/schema.prisma — model BookVariant</span><span class="tag">diff</span></figcaption>
+<pre><span class="del">- stock     Int?</span>
+<span class="add">+ stock     Int  @default(0)</span>
+<span class="del">- reserved  Int? @default(0)</span>
+<span class="add">+ reserved  Int  @default(0)</span>
+  available Int  @default(0)
+<span class="c">// + DB CHECK (MySQL 8.0.16+): available &gt;= 0 AND reserved &gt;= 0 AND stock &gt;= 0</span></pre>
+    </figure>
+    <p>Non-null <code>stock</code>/<code>reserved</code> removes the <code>stock!</code>/<code>reserved!</code> non-null assertions and the <code>!v.stock</code> bug that conflates <code>0</code> with <code>null</code>.</p>
+
+    <h3>2 · Maintain <code>available</code> atomically on every transition (inside the existing tx)</h3>
+    <table>
+      <thead><tr><th>Transition</th><th>stock</th><th>reserved</th><th>available</th></tr></thead>
+      <tbody>
+        <tr><td>Reserve (place order)</td><td><span class="pill none">—</span></td><td><span class="pill ok">+qty</span></td><td><span class="pill bad">−qty</span> <em>(was: —)</em></td></tr>
+        <tr><td>Success (paid)</td><td><span class="pill bad">−qty</span></td><td><span class="pill bad">−qty</span></td><td><span class="pill none">—</span></td></tr>
+        <tr><td>Expiry (unpaid)</td><td><span class="pill none">— <em>(was: +qty)</em></span></td><td><span class="pill bad">−qty</span></td><td><span class="pill ok">+qty</span></td></tr>
+        <tr><td>Stock import</td><td><span class="pill ok">+qty</span></td><td><span class="pill none">—</span></td><td><span class="pill ok">+qty</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>3 · Make reserve a guarded, atomic write (also fixes the latent oversell race)</h3>
+    <p>The current check-then-increment at <code>order.service.ts:138</code>/<code>:192</code> is a read-modify-write across two statements — a TOCTOU window under concurrency. Collapse it into one conditional update:</p>
+    <figure class="code">
+      <figcaption><span class="path">book/variant/repository/bookVariant.repository.ts — replace updateReservedById</span><span class="tag">atomic reserve</span></figcaption>
+<pre>const res = await tx.bookVariant.<span class="m">updateMany</span>({
+  where: { id, <span class="hl">available: { gte: qty }</span> },
+  data:  { reserved: { increment: qty }, available: { decrement: qty } },
+});
+<span class="k">if</span> (res.count === 0) <span class="k">throw new</span> ForbiddenException(OrderMessage.BOOK_OUT_OF_STOCK(...));</pre>
+    </figure>
+    <p>This removes the race without needing <code>SELECT … FOR UPDATE</code>, because the <code>available &gt;= qty</code> predicate and the decrement are evaluated atomically by the database.</p>
+
+    <h3>4 · Unify the readers</h3>
+    <p>Delete the divergent <code>stock − reserved</code> computation in <code>order.service.ts</code> and have the order check read the same <code>available</code> column the cart does. One number, one place.</p>
+
+    <div class="call fix">
+      <span class="tag">Trade-off</span>
+      <p style="margin-bottom:0">
+        Maintaining a materialized <code>available</code> means one more field to keep in sync on every transition
+        (more places to get wrong), versus <em>dropping</em> <code>available</code> and computing <code>stock − reserved</code>
+        everywhere (one fewer column, simpler invariant — but every read site changes and you lose an indexable
+        "in-stock" flag). Since the cart and storefront already depend on the column, maintaining it is the smaller,
+        lower-risk change. Either way the non-negotiable is <b>one model, enforced in one place.</b>
+      </p>
+    </div>
+  </section>
+
+  <!-- MIGRATION -->
+  <section id="migration">
+    <h2><span class="n">07</span>Migration plan</h2>
+    <ol>
+      <li><b>Normalize existing nulls</b> before adding <code>NOT NULL</code>/<code>CHECK</code>: set <code>stock</code>/<code>reserved</code> nulls to <code>0</code>, and clamp any already-negative values produced by the current buggy expiry path.</li>
+      <li><b>Backfill the column</b> in the same release as the code change:
+        <figure class="code" style="margin:10px 0 4px">
+          <figcaption><span class="path">backfill</span><span class="tag">run once, writes briefly quiesced</span></figcaption>
+<pre>UPDATE book_variants
+SET available = GREATEST(COALESCE(stock,0) - COALESCE(reserved,0), 0);</pre>
+        </figure>
+      </li>
+      <li>Without the backfill, every existing row stays at <code>available = 0</code> and <b>Failure A persists after deploy</b>.</li>
+      <li>Ship backfill + maintenance logic together (ideally with writes quiesced) to avoid a window where in-flight reserves race the backfill.</li>
+    </ol>
+  </section>
+
+  <!-- RUNNERUP -->
+  <section id="runnerup">
+    <h2><span class="n">08</span>Related findings (lower priority, verified)</h2>
+    <table>
+      <thead><tr><th>Finding</th><th>Where</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b><code>!v.stock</code> conflates <code>0</code> and <code>null</code></b>; <code>variant.stock! - variant.reserved!</code> computes garbage when either is null.</td>
+          <td><code>order.service.ts:138,142</code> + nullable cols <code>schema.prisma:596</code></td>
+          <td><span class="pill warn">High</span></td>
+        </tr>
+        <tr>
+          <td><b>Webhook re-processing window</b>: idempotency keys on <code>status === DONE</code>, but failure/mismatch branches set <code>FAILED</code> and the inbox is upserted back to <code>PENDING</code> on retry — a re-sent <code>FAILED</code> event re-enters processing and writes another <code>PaymentTransaction</code>.</td>
+          <td><code>hooks.service.ts:222,328–340</code>; <code>hooks.repository.ts:45–50</code></td>
+          <td><span class="pill warn">Medium-High</span></td>
+        </tr>
+        <tr>
+          <td><b><code>PaymentTransaction.paymentUrl</code> is <code>VarChar(100)</code></b> — harmless today only because no code writes a URL there; truncates silently the moment a gateway redirect URL (VNPAY/Stripe) is stored. Widen to <code>VarChar(512)</code>/<code>Text</code> now as cheap insurance.</td>
+          <td><code>schema.prisma:810</code></td>
+          <td><span class="pill none">Low now / High later</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <span>Bookstore Backend · issue write-up · every citation read on branch <b>dev</b></span>
+    <span><a href="./index.html">← index</a> · <a href="./module-grouping-analysis.html">module map →</a></span>
+  </footer>
+
+</div>
+</body>
+</html>

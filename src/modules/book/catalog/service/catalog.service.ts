@@ -509,6 +509,7 @@ export class CatalogService {
       badges: (book.bookBadge ?? []).map((badge) => badge.code),
       bookVariantId: cheapestVariant?.id,
       price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
+      description: t?.description ?? null,
       currencyCode: cheapestVariant?.currencyCode ?? null,
       format: cheapestVariant?.format ?? null,
       isOutOfStock: !cheapestVariant || (cheapestVariant.stock ?? 0) <= 0,

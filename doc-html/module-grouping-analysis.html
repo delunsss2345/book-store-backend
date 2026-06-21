@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend — Module Grouping Analysis
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+  Module imports verified verbatim from source on branch `dev`.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module Grouping Analysis — Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D; --olive-d:#5F6F4A;
+    --red:#B04A3F; --amber:#C98A2B; --blue:#4A6FA5;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+    /* group accent colors */
+    --g-catalog:#788C5D;   /* olive */
+    --g-ai:#4A6FA5;         /* blue */
+    --g-shop:#D97757;       /* clay */
+    --g-iam:#141413;        /* slate */
+    --g-supply:#C98A2B;     /* amber */
+    --g-msg:#B85C3E;        /* clay-d */
+    --g-infra:#87867F;      /* gray */
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--slate); font-family:var(--sans); line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px; margin:0 auto; padding:0 24px}
+  a{color:var(--clay-d); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono); font-size:.88em; background:var(--g100); padding:1px 5px; border-radius:4px}
+
+  /* ---- Breadcrumb ---- */
+  .crumb{font-family:var(--mono); font-size:12px; color:var(--g500); padding:22px 0 0}
+  .crumb a{color:var(--g500)}
+  .crumb span{color:var(--g300); margin:0 6px}
+
+  /* ---- Masthead ---- */
+  header.masthead{padding:40px 0 44px; border-bottom:1px solid var(--g200)}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--clay-d); margin:0 0 14px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.08; font-size:clamp(32px,4.5vw,52px); margin:0 0 18px; letter-spacing:-.01em}
+  .lede{font-size:clamp(15px,1.5vw,17px); color:var(--g700); margin:0 0 20px; max-width:72ch}
+  .meta-row{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{font-family:var(--mono); font-size:11.5px; padding:5px 11px; border:1px solid var(--g300); border-radius:999px; background:var(--paper); color:var(--g700)}
+  .chip.k{background:var(--slate); color:var(--ivory); border-color:var(--slate)}
+  .chip.warn{background:var(--red); color:#fff; border-color:var(--red)}
+
+  /* ---- Summary strip ---- */
+  .summary-strip{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1px; background:var(--g200); border:1px solid var(--g200); border-radius:14px; overflow:hidden; margin:32px 0}
+  .ss-cell{background:var(--paper); padding:18px 20px}
+  .ss-cell .n{font-family:var(--serif); font-size:28px; font-weight:600; line-height:1; margin-bottom:4px}
+  .ss-cell .l{font-family:var(--mono); font-size:11px; color:var(--g500); text-transform:uppercase; letter-spacing:.08em}
+
+  /* ---- Section header ---- */
+  .sec-intro{padding:44px 0 6px}
+  .sec-intro .k{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--clay-d)}
+  .sec-intro h2{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.8vw,30px); margin:6px 0 6px; letter-spacing:-.01em}
+  .sec-intro p{color:var(--g500); font-size:14.5px; margin:0 0 24px; max-width:72ch}
+
+  /* ---- Group cards ---- */
+  .group-card{background:var(--paper); border:1px solid var(--g200); border-radius:16px; overflow:hidden; margin-bottom:24px}
+  .group-header{display:flex; align-items:center; gap:14px; padding:20px 24px 18px; border-bottom:1px solid var(--g100)}
+  .group-dot{width:12px; height:12px; border-radius:50%; flex-shrink:0}
+  .group-name{font-family:var(--serif); font-size:20px; font-weight:600; flex:1}
+  .group-count{font-family:var(--mono); font-size:11px; color:var(--g500); background:var(--g100); padding:3px 9px; border-radius:999px}
+  .group-desc{font-size:14px; color:var(--g700); padding:14px 24px 0; max-width:80ch}
+  .module-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:12px; padding:16px 24px 20px}
+
+  /* ---- Module pill/card ---- */
+  .mod{border:1px solid var(--g200); border-radius:10px; padding:12px 14px; background:var(--ivory)}
+  .mod.warn{border-color:#F0C4BB; background:#FDF5F4}
+  .mod-name{font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:4px}
+  .mod-name .path{color:var(--g500); font-weight:400}
+  .mod-desc{font-size:12.5px; color:var(--g700); margin-bottom:6px; line-height:1.45}
+  .mod-imports{display:flex; flex-wrap:wrap; gap:4px; margin-top:5px}
+  .imp{font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:5px; background:var(--g100); color:var(--g700)}
+  .imp.cross{background:#EDF0F8; color:var(--blue)}
+  .imp.warn{background:#F9EBE9; color:var(--red)}
+  .imp.self{background:#EDF3E7; color:var(--olive-d)}
+  .mod-badge{display:inline-block; font-family:var(--mono); font-size:10px; padding:1px 6px; border-radius:4px; margin-top:4px}
+  .badge-global{background:#141413; color:#E9E6DD}
+  .badge-warn{background:var(--red); color:#fff}
+  .badge-good{background:var(--olive); color:#fff}
+
+  /* ---- Smell section ---- */
+  .smell-list{display:flex; flex-direction:column; gap:12px; margin-bottom:32px}
+  .smell{display:flex; gap:16px; padding:16px 18px; background:var(--paper); border:1px solid var(--g200); border-radius:12px; align-items:flex-start}
+  .smell.critical{border-left:3px solid var(--red)}
+  .smell.warning{border-left:3px solid var(--amber)}
+  .smell-icon{font-size:18px; flex-shrink:0; margin-top:1px}
+  .smell-body{}
+  .smell-title{font-weight:600; font-size:14px; margin-bottom:3px}
+  .smell-detail{font-size:13.5px; color:var(--g700); line-height:1.5}
+  .smell-file{font-family:var(--mono); font-size:12px; color:var(--clay-d); margin-top:6px}
+
+  /* ---- Dependency map table ---- */
+  .dep-table{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:8px}
+  .dep-table th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500); font-weight:400; text-align:left; padding:8px 12px; border-bottom:2px solid var(--g200)}
+  .dep-table td{padding:9px 12px; border-bottom:1px solid var(--g100); vertical-align:top}
+  .dep-table tr:last-child td{border-bottom:none}
+  .dep-table .module-cell{font-family:var(--mono); font-size:12px; color:var(--slate); font-weight:600; white-space:nowrap}
+  .dep-table .group-badge{display:inline-block; font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:4px; color:#fff; margin-right:4px; white-space:nowrap}
+  .dep-tags{display:flex; flex-wrap:wrap; gap:4px}
+  .dep-tag{font-family:var(--mono); font-size:10.5px; padding:2px 7px; border-radius:5px; background:var(--g100); color:var(--g700)}
+  .dep-tag.ext{background:#EDF0F8; color:var(--blue)}
+
+  footer{margin-top:48px; padding:32px 0 56px; border-top:1px solid var(--g200); display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; align-items:center}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:17px}
+  footer .mono{font-family:var(--mono); font-size:11.5px; color:var(--g500)}
+
+  @media(max-width:640px){.module-grid{grid-template-columns:1fr} .summary-strip{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="crumb"><a href="./index.html">Documentation</a><span>›</span>Module Grouping Analysis</p>
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <p class="eyebrow">Architecture · Module Analysis</p>
+    <h1>Module Grouping Analysis</h1>
+    <p class="lede">
+      38 NestJS modules across <code>src/modules/</code> classified into 7 domain groups
+      based on their imports, responsibilities, and coupling — with architecture smells highlighted.
+    </p>
+    <div class="meta-row">
+      <span class="chip k">38 modules</span>
+      <span class="chip k">7 domain groups</span>
+      <span class="chip">Branch: dev</span>
+      <span class="chip warn">3 architecture smells</span>
+    </div>
+  </header>
+
+  <!-- Summary strip -->
+  <div class="summary-strip">
+    <div class="ss-cell"><div class="n" style="color:var(--g-catalog)">9</div><div class="l">Book Catalog</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-ai)">3</div><div class="l">AI &amp; Discovery</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-shop)">6</div><div class="l">Shopping &amp; Orders</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-iam)">8</div><div class="l">Identity &amp; Access</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-supply)">4</div><div class="l">Supply Chain</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-msg)">3</div><div class="l">Messaging</div></div>
+    <div class="ss-cell"><div class="n" style="color:var(--g-infra)">5</div><div class="l">Infrastructure</div></div>
+  </div>
+
+  <!-- ============ GROUP 1 — BOOK CATALOG ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 1</span>
+    <h2>Book Catalog</h2>
+    <p>Everything that defines a bookable product — entity, editions, assets, metadata. Sub-modules under <code>book/</code> follow a clean barrel pattern (<code>book/variant/index.ts</code>) and are consumed by most other domains.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-catalog)"></div>
+      <span class="group-name">Book Catalog</span>
+      <span class="group-count">9 modules</span>
+    </div>
+    <p class="group-desc">Core product domain. The <code>book/</code> directory is split into 5 focused sub-modules. <code>author</code>, <code>category</code>, <code>publisher</code>, and <code>language</code> are clean standalone modules that support book metadata.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name"><span class="path">book/</span>catalog</div>
+        <div class="mod-desc">Book listing, search filters, catalog feed. Redis-cached queries. Consumed by nearly every other group.</div>
+        <div class="mod-imports">
+          <span class="imp self">CacheProvider</span>
+        </div>
+        <span class="mod-badge badge-good">Most imported</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name"><span class="path">book/</span>variant</div>
+        <div class="mod-desc">Book editions — format, price, stock. Exposes a clean barrel via <code>index.ts</code>. No external module imports.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+        <span class="mod-badge badge-good">Clean barrel</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name"><span class="path">book/</span>snapshot</div>
+        <div class="mod-desc">Point-in-time variant snapshots taken at order creation. Consumed by <code>order</code> and <code>user-event</code> to preserve historical pricing.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name"><span class="path">book/</span>author</div>
+        <div class="mod-desc">Many-to-many join between <code>Book</code> and <code>Author</code>. Exposed only via <code>author</code> module — no direct external imports.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod warn">
+        <div class="mod-name"><span class="path">book/</span>asset</div>
+        <div class="mod-desc">Book cover images stored on Cloudflare R2. Injects <code>R2ServiceService</code> directly rather than importing <code>R2ServiceModule</code>.</div>
+        <div class="mod-imports">
+          <span class="imp warn">R2ServiceService (direct)</span>
+        </div>
+        <span class="mod-badge badge-warn">Coupling smell</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">author</div>
+        <div class="mod-desc">Author entity CRUD. Imports <code>BookAuthorModule</code> to manage book associations via the join module.</div>
+        <div class="mod-imports">
+          <span class="imp self">book/author</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">category</div>
+        <div class="mod-desc">Book category tree — CRUD with mapper and select helpers. No external module imports.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">publisher</div>
+        <div class="mod-desc">Publisher entity — standalone CRUD. Consumed only by <code>admin</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">language</div>
+        <div class="mod-desc">Book language reference data. Redis-cached. Consumed by <code>admin</code> for multilingual book management.</div>
+        <div class="mod-imports">
+          <span class="imp self">CacheProvider</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 2 — AI & DISCOVERY ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 2</span>
+    <h2>AI &amp; Discovery</h2>
+    <p>Semantic search and AI recommendation stack. Three tightly coupled modules: <code>gemini</code> generates embeddings, <code>pinecone</code> stores/queries vectors, <code>search</code> orchestrates the full pipeline on top of the catalog.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-ai)"></div>
+      <span class="group-name">AI &amp; Discovery</span>
+      <span class="group-count">3 modules</span>
+    </div>
+    <p class="group-desc">All three modules form a chain: <code>gemini → pinecone → search</code>. <code>search</code> also imports <code>catalog</code> directly for hybrid lexical+vector queries.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">gemini</div>
+        <div class="mod-desc">Google Gemini API client wrapper. Generates text embeddings for semantic search. Standalone leaf — no NestJS module imports.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">pinecone</div>
+        <div class="mod-desc">Pinecone vector DB client. Upserts and queries embedding vectors. Depends on <code>gemini</code> for embedding generation and <code>catalog</code> for book data during indexing.</div>
+        <div class="mod-imports">
+          <span class="imp self">gemini</span>
+          <span class="imp cross">book/catalog</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">search</div>
+        <div class="mod-desc">Orchestrates semantic search: user query → Gemini embed → Pinecone ANN → catalog hydration. Redis-cached results.</div>
+        <div class="mod-imports">
+          <span class="imp cross">book/catalog</span>
+          <span class="imp self">pinecone</span>
+          <span class="imp self">gemini</span>
+          <span class="imp self">CacheProvider</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 3 — SHOPPING & ORDERS ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 3</span>
+    <h2>Shopping &amp; Orders</h2>
+    <p>Customer-facing transaction flow. <code>cart</code> and <code>wishlist</code> are parallel: both share a guest-session gate. <code>order</code> orchestrates the full checkout by consuming almost every other group — it is the highest-fan-in module in the codebase.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-shop)"></div>
+      <span class="group-name">Shopping &amp; Orders</span>
+      <span class="group-count">6 modules</span>
+    </div>
+    <p class="group-desc"><code>hooks</code> is the Sepay payment webhook handler — it sits at the end of the checkout pipeline and reaches back into both <code>payment</code> and <code>order</code>. <code>user-event</code> tracks behavioral signals for AI recommendations.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">cart</div>
+        <div class="mod-desc">Shopping cart — cart and cart-item. Supports both authenticated and guest sessions. Exposes cart/item services to <code>order</code>.</div>
+        <div class="mod-imports">
+          <span class="imp cross">auth</span>
+          <span class="imp cross">guest-session</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">wishlist</div>
+        <div class="mod-desc">Wishlist — same structure as <code>cart</code>. Supports both authenticated and guest sessions via identical import pattern.</div>
+        <div class="mod-imports">
+          <span class="imp cross">auth</span>
+          <span class="imp cross">guest-session</span>
+        </div>
+      </div>
+
+      <div class="mod warn">
+        <div class="mod-name">order</div>
+        <div class="mod-desc">Full checkout — order, order-item, order-address, cleanup job. Highest fan-in: imports 11 modules. Declares <code>AuthRepository</code> as a provider directly — bypassing <code>AuthModule</code>'s encapsulation boundary.</div>
+        <div class="mod-imports">
+          <span class="imp self">payment · cart · email-outbox · jobs · user</span>
+          <span class="imp cross">auth · guest-session</span>
+          <span class="imp cross">book/catalog · book/snapshot · book/variant</span>
+          <span class="imp warn">AuthRepository (direct)</span>
+        </div>
+        <span class="mod-badge badge-warn">Auth boundary violation</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">payment</div>
+        <div class="mod-desc">Sepay payment intent and payment record. Standalone — no module imports. Consumed by <code>order</code> and <code>hooks</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">hooks</div>
+        <div class="mod-desc">Sepay payment webhook handler. Receives Sepay callbacks, confirms payment status, and triggers order state transitions. Redis idempotency cache.</div>
+        <div class="mod-imports">
+          <span class="imp self">payment</span>
+          <span class="imp self">order</span>
+          <span class="imp self">CacheProvider</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">user-event</div>
+        <div class="mod-desc">Tracks user behavioral signals (views, purchases) for the AI recommendation engine. Consumes <code>order</code> and book data to record post-purchase events.</div>
+        <div class="mod-imports">
+          <span class="imp self">order</span>
+          <span class="imp cross">book/catalog · book/snapshot</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 4 — IDENTITY & ACCESS ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 4</span>
+    <h2>Identity &amp; Access</h2>
+    <p>Full auth surface — JWT sessions, RBAC, guest sessions, device tracking, OTP verification, and brute-force protection. <code>auth</code> is the group hub: it orchestrates all sub-concerns at login/register time.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-iam)"></div>
+      <span class="group-name">Identity &amp; Access</span>
+      <span class="group-count">8 modules</span>
+    </div>
+    <p class="group-desc">Most modules here are intentionally standalone — they are the leaves that <code>auth</code> composes. The separation is good: <code>guest-session</code> is independently consumable without pulling in the full <code>auth</code> module.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">auth</div>
+        <div class="mod-desc">JWT access/refresh token issuance, session management, token revocation, and registration flow. Hub of this group.</div>
+        <div class="mod-imports">
+          <span class="imp self">user · role · login-attempt · user-device · guest-session · verification-code · jobs · email-outbox</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">user</div>
+        <div class="mod-desc">User profile, address, and user-role assignments. Standalone — no module imports. Foundation for auth, admin, and supplier.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+        <span class="mod-badge badge-good">Foundation module</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">role</div>
+        <div class="mod-desc">Role and role-permission CRUD. Redis-cached permission lookups for the global authorization guard.</div>
+        <div class="mod-imports">
+          <span class="imp self">CacheProvider</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">permission</div>
+        <div class="mod-desc">Permission registry — standalone CRUD. Consumed only by <code>role</code> (implicitly) and <code>admin</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">guest-session</div>
+        <div class="mod-desc">Anonymous session management with cleanup job. Widely consumed — by <code>cart</code>, <code>wishlist</code>, <code>order</code>, and <code>auth</code> (for guest-to-user cart merge).</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+        <span class="mod-badge badge-good">Widely reused</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">login-attempt</div>
+        <div class="mod-desc">Tracks failed login attempts for brute-force protection. Standalone leaf — consumed only by <code>auth</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">user-device</div>
+        <div class="mod-desc">Tracks user devices (push tokens, last-seen). Consumed by <code>auth</code> at login to register the device.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">verification-code</div>
+        <div class="mod-desc">OTP generation and verification for email confirmation and password reset. Writes via the transactional outbox.</div>
+        <div class="mod-imports">
+          <span class="imp self">email-outbox</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 5 — SUPPLY CHAIN ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 5</span>
+    <h2>Supply Chain &amp; Admin</h2>
+    <p>B2B inventory operations. <code>purchase-order → stock-import</code> is the inbound goods flow. <code>supplier</code> manages vendor profiles. <code>admin</code> is the god-module that owns the admin panel — it inlines services from all other groups rather than delegating.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-supply)"></div>
+      <span class="group-name">Supply Chain &amp; Admin</span>
+      <span class="group-count">4 modules</span>
+    </div>
+    <p class="group-desc">The biggest architectural smell in this group is <code>admin.module.ts</code> — 8 controllers, 10 providers, and 11 exports, all inlining logic that belongs inside the domain modules it borrows from.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">stock-import</div>
+        <div class="mod-desc">Inbound stock import records and line items. Standalone — the leaf of the supply chain. Consumed by <code>purchase-order</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">purchase-order</div>
+        <div class="mod-desc">B2B purchase orders from supplier. Links to stock-import for goods receipt and to book variants for SKU-level receiving.</div>
+        <div class="mod-imports">
+          <span class="imp self">stock-import</span>
+          <span class="imp cross">book/variant</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">supplier</div>
+        <div class="mod-desc">Supplier (vendor) profiles with role-based access control. A supplier can log in as a user with a supplier role.</div>
+        <div class="mod-imports">
+          <span class="imp cross">role</span>
+          <span class="imp cross">user</span>
+          <span class="imp self">CacheProvider</span>
+        </div>
+      </div>
+
+      <div class="mod warn">
+        <div class="mod-name">admin</div>
+        <div class="mod-desc">Admin panel controller aggregator. 8 controllers. Inlines <code>AdminBookService</code>, <code>AdminOrderService</code>, <code>AdminUserService</code>, <code>AdminCategoryService</code>, and <code>AdminBookVariantsService</code> — all duplicating logic owned by their domain modules.</div>
+        <div class="mod-imports">
+          <span class="imp self">language · audit-log · publisher · author · supplier</span>
+          <span class="imp warn">Inlines book / order / user / category services</span>
+        </div>
+        <span class="mod-badge badge-warn">God-module</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 6 — MESSAGING ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 6</span>
+    <h2>Messaging</h2>
+    <p>Transactional email pipeline built on the outbox pattern with BullMQ workers. <code>email-outbox</code> is the persistence layer; <code>mail</code> is the SMTP sender; <code>jobs</code> orchestrates the queue between them.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-msg)"></div>
+      <span class="group-name">Messaging</span>
+      <span class="group-count">3 modules</span>
+    </div>
+    <p class="group-desc">The pattern is correct: domain modules write to <code>email-outbox</code> (persist then fire), <code>jobs</code> picks up via BullMQ, and <code>mail</code> delivers. No domain module imports <code>mail</code> directly — isolation is maintained.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">email-outbox</div>
+        <div class="mod-desc">Transactional outbox — stores email payloads in DB before async delivery. Consumed broadly: <code>auth</code>, <code>order</code>, <code>verification-code</code>.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+        <span class="mod-badge badge-good">Outbox pattern</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">mail</div>
+        <div class="mod-desc">Nodemailer SMTP adapter. Standalone leaf — only consumed by <code>jobs</code>. Domain modules never import <code>mail</code> directly.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">jobs</div>
+        <div class="mod-desc">BullMQ email queue — producers, processors, and Redis plumbing. Bridges <code>email-outbox</code> → <code>mail</code>. Also handles verification code delivery.</div>
+        <div class="mod-imports">
+          <span class="imp self">email-outbox · mail · verification-code</span>
+          <span class="imp self">RedisProvider · EmailQueueProvider</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ GROUP 7 — INFRASTRUCTURE ============ -->
+  <div class="sec-intro">
+    <span class="k">Group 7</span>
+    <h2>Infrastructure</h2>
+    <p>Cross-cutting concerns with no business logic. <code>transaction</code> is <code>@Global</code> — the only module that skips the explicit import graph. <code>uploads</code> and <code>book/asset</code> share the same coupling smell against <code>r2-service</code>.</p>
+  </div>
+
+  <div class="group-card">
+    <div class="group-header">
+      <div class="group-dot" style="background:var(--g-infra)"></div>
+      <span class="group-name">Infrastructure</span>
+      <span class="group-count">5 modules</span>
+    </div>
+    <p class="group-desc">These modules are never feature-complete on their own — they are tools consumed by domain modules. Only <code>transaction</code> bypasses the import graph via <code>@Global()</code>.</p>
+    <div class="module-grid">
+
+      <div class="mod">
+        <div class="mod-name">transaction</div>
+        <div class="mod-desc"><code>@Global()</code> module — <code>TransactionService</code> provides <code>prisma.$transaction</code> wrappers available app-wide without explicit import.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+        <span class="mod-badge badge-global">@Global</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">r2-service</div>
+        <div class="mod-desc">Cloudflare R2 object storage client. Exposes <code>R2ServiceController</code> for direct uploads and <code>R2ServiceService</code> for internal use.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod warn">
+        <div class="mod-name">uploads</div>
+        <div class="mod-desc">General-purpose file upload handler. Injects <code>R2ServiceService</code> directly into providers instead of importing <code>R2ServiceModule</code> — same coupling smell as <code>book/asset</code>.</div>
+        <div class="mod-imports">
+          <span class="imp warn">R2ServiceService (direct)</span>
+        </div>
+        <span class="mod-badge badge-warn">Coupling smell</span>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">health</div>
+        <div class="mod-desc">Single health-check endpoint (<code>/health</code>). Standalone leaf — no imports, no providers beyond its controller.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+      <div class="mod">
+        <div class="mod-name">audit-log</div>
+        <div class="mod-desc">Append-only audit trail. Standalone — consumed only by <code>admin</code> to log admin actions.</div>
+        <div class="mod-imports">
+          <span class="imp self">—</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ ARCHITECTURE SMELLS ============ -->
+  <div class="sec-intro">
+    <span class="k">Issues</span>
+    <h2>Architecture smells</h2>
+    <p>Three verified issues found by tracing imports verbatim from source. Ranked by severity.</p>
+  </div>
+
+  <div class="smell-list">
+
+    <div class="smell critical">
+      <div class="smell-icon">🔴</div>
+      <div class="smell-body">
+        <div class="smell-title">order leaks into auth internals</div>
+        <div class="smell-detail">
+          <code>OrderModule</code> imports <code>AuthModule</code> at line 28, which correctly exposes <code>AuthService</code>.
+          But it also declares <code>AuthRepository</code> directly in its own <code>providers</code> array at line 48 —
+          bypassing <code>AuthModule</code>'s encapsulation boundary and duplicating a provider that should be private to the auth domain.
+          If <code>AuthRepository</code> ever changes its constructor signature, <code>OrderModule</code> silently breaks.
+        </div>
+        <div class="smell-file">order/order.module.ts · line 12 (import) · line 48 (provider)</div>
+      </div>
+    </div>
+
+    <div class="smell critical">
+      <div class="smell-icon">🔴</div>
+      <div class="smell-body">
+        <div class="smell-title">admin is a god-module</div>
+        <div class="smell-detail">
+          <code>AdminModule</code> registers 8 controllers, 10 providers, and 11 exports in a single module.
+          It inlines <code>AdminBookService</code>, <code>AdminOrderService</code>, <code>AdminUserService</code>,
+          <code>AdminCategoryService</code>, and <code>AdminBookVariantsService</code> — all of which re-implement
+          data-access logic already owned by their respective domain modules (<code>book/catalog</code>, <code>order</code>,
+          <code>user</code>, <code>category</code>). Any bug fix in the domain model must be applied in two places.
+        </div>
+        <div class="smell-file">admin/admin.module.ts · lines 36–45 (controllers) · lines 48–57 (providers)</div>
+      </div>
+    </div>
+
+    <div class="smell warning">
+      <div class="smell-icon">🟡</div>
+      <div class="smell-body">
+        <div class="smell-title">R2ServiceService injected directly in two modules</div>
+        <div class="smell-detail">
+          Both <code>UploadsModule</code> and <code>BookAssetModule</code> inject <code>R2ServiceService</code>
+          directly into their <code>providers</code> array instead of importing <code>R2ServiceModule</code>.
+          This bypasses the DI module boundary: if <code>R2ServiceService</code> gains a required constructor
+          dependency, both callers break silently at runtime. The fix is to import <code>R2ServiceModule</code>
+          and let NestJS resolve the dependency through the module graph.
+        </div>
+        <div class="smell-file">uploads/uploads.module.ts · providers[1] · book/asset/book-asset.module.ts · providers[2]</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ CROSS-GROUP DEPENDENCY TABLE ============ -->
+  <div class="sec-intro">
+    <span class="k">Reference</span>
+    <h2>Cross-group import summary</h2>
+    <p>Modules that import from a different domain group — the edges that create coupling between groups.</p>
+  </div>
+
+  <div style="overflow-x:auto; background:var(--paper); border:1px solid var(--g200); border-radius:14px; margin-bottom:32px">
+    <table class="dep-table">
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Group</th>
+          <th>Cross-group imports</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="module-cell">order</td>
+          <td><span class="dep-tag" style="background:#FEF0E7; color:#B85C3E">Shopping</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">auth · guest-session (IAM)</span>
+            <span class="dep-tag ext">book/catalog · snapshot · variant (Catalog)</span>
+            <span class="dep-tag ext">payment (Shopping)</span>
+            <span class="dep-tag ext">email-outbox · jobs (Messaging)</span>
+            <span class="dep-tag ext">user (IAM)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">auth</td>
+          <td><span class="dep-tag" style="background:#F0F0F0; color:#141413">IAM</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">email-outbox · jobs (Messaging)</span>
+            <span class="dep-tag">All leaf IAM modules</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">admin</td>
+          <td><span class="dep-tag" style="background:#FEF9E8; color:#B07A1A">Supply</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">language · author · publisher (Catalog)</span>
+            <span class="dep-tag ext">audit-log (Infra)</span>
+            <span class="dep-tag ext">supplier (Supply)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">search</td>
+          <td><span class="dep-tag" style="background:#EDF0F8; color:var(--blue)">AI</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">book/catalog (Catalog)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">pinecone</td>
+          <td><span class="dep-tag" style="background:#EDF0F8; color:var(--blue)">AI</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">book/catalog (Catalog)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">hooks</td>
+          <td><span class="dep-tag" style="background:#FEF0E7; color:#B85C3E">Shopping</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag">payment · order (Shopping)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">user-event</td>
+          <td><span class="dep-tag" style="background:#FEF0E7; color:#B85C3E">Shopping</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">book/catalog · snapshot (Catalog)</span>
+            <span class="dep-tag">order (Shopping)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">purchase-order</td>
+          <td><span class="dep-tag" style="background:#FEF9E8; color:#B07A1A">Supply</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">book/variant (Catalog)</span>
+          </div></td>
+        </tr>
+        <tr>
+          <td class="module-cell">supplier</td>
+          <td><span class="dep-tag" style="background:#FEF9E8; color:#B07A1A">Supply</span></td>
+          <td><div class="dep-tags">
+            <span class="dep-tag ext">role · user (IAM)</span>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    <span class="acc">Bookstore Backend — module grouping analysis</span>
+    <span class="mono">38 modules · 7 groups · branch dev · 2026-06-21</span>
+  </footer>
+
+</div>
+</body>
+</html>

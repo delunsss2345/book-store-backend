@@ -1,7 +1,7 @@
 import { UserAddressMessage } from '@/common';
 import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, UserAddress } from '@prisma/client';
+import { AddressType, Prisma, UserAddress } from '@prisma/client';
 import { CreateUserAddressRequestDto } from '../dto/request/create-user-address.request.dto';
 import { UpdateUserAddressRequestDto } from '../dto/request/update-user-address.request.dto';
 
@@ -43,7 +43,7 @@ export class UserAddressRepository {
       };
 
       if (body.addressType !== undefined) {
-        data.addressType = body.addressType;
+        data.addressType = body.addressType as AddressType;
       }
 
       if (body.recipientName !== undefined) {
@@ -75,7 +75,7 @@ export class UserAddressRepository {
     const data: Prisma.UserAddressUncheckedUpdateInput = {};
 
     if (body.addressType !== undefined) {
-      data.addressType = body.addressType;
+      data.addressType = body.addressType as AddressType;
     }
 
     if (body.recipientName !== undefined) {

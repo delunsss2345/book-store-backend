@@ -3,7 +3,7 @@ import { SearchMessage } from '@/common';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GeminiService } from '@/modules/gemini/service/gemini.service';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
-import { SearchBooksQueryDto, SearchFilterQueryDto } from '@/modules/search/dto/request';
+import { SearchBooksQueryDto } from '@/modules/search/dto/request';
 import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
 import { validateISBN } from '@/utils/parseIsbn.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -74,12 +74,6 @@ export class SearchService {
 
   async reindexBooks() {
     return this.pineconeService.fullReindexBooks();
-  }
-
-  filterBook(query: SearchFilterQueryDto, langId: number) {
-    const categories = query?.categories;
-
-    return [];
   }
 
   async searchISBN(isbn: string, langId: number, langCode: string) {

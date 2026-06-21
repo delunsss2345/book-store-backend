@@ -25,9 +25,8 @@ export class SearchController {
     searchFilter(
         @Query() query: SearchFilterQueryDto,
         @GetLanguageId() langId: number,
-    ) {
-        return this.searchService.filterBook(query, langId);
-    }
+        @GetLanguageCode() langCode: string,
+    ) { }
 
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')

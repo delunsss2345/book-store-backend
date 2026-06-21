@@ -19,9 +19,6 @@ type ScoredObj = {
     createdAt: Date;
     score: number;
 };
-type VariantBookRow = Awaited<
-    ReturnType<CatalogRepository['findBooksVariantByIds']>
->[number];
 
 const VARIANT_EVENT_TYPES: EventType[] = [
     EventType.VIEW_BOOK,
@@ -301,13 +298,13 @@ export class UserEventService {
 
     private pickRecommendCards(
         variantIds: number[],
-        variants: VariantBookRow[],
+        variants: CatalogBookCardDto[],
         limit: number,
     ): CatalogBookCardDto[] {
         const cardMap = new Map<string, CatalogBookCardDto>(
             variants.map((variant) => [
-                variant.id.toString(),
-                this.toVariantBookCard(variant),
+                variant.bookVariantId?.toString() ?? '',
+                variant,
             ] as const),
         );
 
@@ -315,28 +312,6 @@ export class UserEventService {
             .map((id) => cardMap.get(id.toString()))
             .filter((x): x is CatalogBookCardDto => x != undefined)
             .slice(0, Math.max(1, limit));
-    }
-
-    private toVariantBookCard(variant: VariantBookRow): CatalogBookCardDto {
-        const book = variant.book;
-        const t = book.translations[0];
-        const price = Number.isFinite(Number(variant.price))
-            ? Number(variant.price).toFixed(2)
-            : null;
-
-        return {
-            id: book.id.toString(),
-            title: t?.title ?? `Book ${book.id.toString()}`,
-            slug: t?.slug ?? null,
-            coverImageUrl: book.coverImageUrl ?? null,
-            minPrice: price,
-            maxPrice: price,
-            currencyCode: variant.currencyCode ?? null,
-            ratingAvg: null,
-            ratingCount: 0,
-            soldCount: 0,
-            createdAt: book.createdAt,
-        };
     }
 
     private upsertScore(

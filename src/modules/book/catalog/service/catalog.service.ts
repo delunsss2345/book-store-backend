@@ -17,9 +17,6 @@ import {
   CatalogBookCardDto,
   CatalogBookDetailDto,
   CatalogBookListResponseDto,
-  CatalogBookSpecDto,
-  CatalogBookVariantDto,
-  CatalogCategoryDto,
   CatalogCategoryTreeDto,
 } from '@/modules/book/catalog/dto/response';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -29,28 +26,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Badge } from '@prisma/client';
 import type { Cache } from 'cache-manager';
+import {
+  buildCatalogCategoryTree,
+  toCatalogBookCard,
+  toCatalogBookDetail,
+  toCatalogListBookCard,
+} from '../mapper/catalog.mapper';
 import { CatalogRepository } from '../repository/catalog.repository';
-
-type CategoryRow = Awaited<
-  ReturnType<CatalogRepository['findActiveCategoriesByLanguage']>
->[number];
-type BookDetailByIdRow = NonNullable<
-  Awaited<ReturnType<CatalogRepository['findBookDetailById']>>
->;
-
-
-type BookListRow = Awaited<
-  ReturnType<CatalogRepository['findBooksForList']>
->[number];
 
 @Injectable()
 export class CatalogService {
   constructor(
     private readonly repo: CatalogRepository,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) { }
+  ) {}
 
   // Lấy giớ hạn không lấy phân trang
   async getCatalogHome(
@@ -67,12 +57,10 @@ export class CatalogService {
       ]);
 
       const newestIds = newestRows.map((r) => r.id);
-      const bestSellerIdsVariant = saleTopLimit.map((r) =>
-        Number(r.bookVariantId),
-      );
+      const bestSellerBookIds = saleTopLimit.map((r) => Number(r.bookId));
 
       const allUniqueIds = this.uniqueBigIntIds([
-        ...bestSellerIdsVariant,
+        ...bestSellerBookIds,
         ...newestIds,
       ]);
 
@@ -89,7 +77,7 @@ export class CatalogService {
 
     return this.withCache(cacheKey, CATEGORY_CACHE_TTL, async () => {
       const rows = await this.repo.findActiveCategoriesByLanguage(langId);
-      return this.buildCategoryTree(rows);
+      return buildCatalogCategoryTree(rows);
     });
   }
 
@@ -126,7 +114,7 @@ export class CatalogService {
     return new Map<string, CatalogBookCardDto>(
       books.map((book): [string, CatalogBookCardDto] => [
         book.id.toString(),
-        this.toBookCard(book),
+        toCatalogBookCard(book),
       ]),
     );
   }
@@ -142,55 +130,10 @@ export class CatalogService {
     );
     return new Map<string, CatalogBookCardDto>(
       variants.map((variant): [string, CatalogBookCardDto] => [
-        variant.id.toString(),
-        this.toVariantBookCard(variant),
+        variant.bookVariantId!.toString(),
+        variant,
       ]),
     );
-  }
-
-  private buildCategoryTree(rows: CategoryRow[]): CatalogCategoryTreeDto[] {
-    const nodes = new Map<string, CatalogCategoryTreeDto>();
-
-    for (const row of rows) {
-      const translation = row.categoryTranslation?.[0];
-      if (!translation?.name) continue;
-
-      const id = row.id.toString();
-      nodes.set(id, {
-        id,
-        parentId: row.parentId ? row.parentId.toString() : null,
-        name: translation.name,
-        slug: translation.slug ?? null,
-        sortOrder: row.sortOrder ?? 0,
-        children: [],
-      });
-    }
-
-    const roots: CatalogCategoryTreeDto[] = [];
-    for (const node of nodes.values()) {
-      if (!node.parentId) {
-        roots.push(node);
-        continue;
-      }
-
-      const parent = nodes.get(node.parentId);
-      if (!parent) continue;
-      parent.children.push(node);
-    }
-
-    this.sortCategoryTree(roots);
-    return roots;
-  }
-
-  private sortCategoryTree(nodes: CatalogCategoryTreeDto[]): void {
-    nodes.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-      return a.id.localeCompare(b.id);
-    });
-
-    for (const node of nodes) {
-      this.sortCategoryTree(node.children);
-    }
   }
 
   async listBooks(
@@ -225,7 +168,7 @@ export class CatalogService {
           ]);
 
           const items: CatalogBookCardDto[] = rows.map((book) =>
-            this.toListBookCard(book),
+            toCatalogListBookCard(book),
           );
 
           return buildPaginatedResult(items, total, page, limit);
@@ -240,7 +183,7 @@ export class CatalogService {
       ]);
 
       const items: CatalogBookCardDto[] = rows.map((book) =>
-        this.toListBookCard(book),
+        toCatalogListBookCard(book),
       );
 
       return buildPaginatedResult(items, total, page, limit);
@@ -259,26 +202,9 @@ export class CatalogService {
       this.repo.findBooksByIds(ids, langId, page, limit),
     ]);
 
-    const items: CatalogBookCardDto[] = rows.map((book) => {
-      const translation = book.translations[0];
-      const cheapestVariant = book.variants[0];
-      const stock = cheapestVariant?.stock ?? 0;
-
-      return {
-        id: book.id.toString(),
-        title: translation?.title ?? `Book ${book.id.toString()}`,
-        slug: translation?.slug ?? null,
-        coverImageUrl: book.coverImageUrl ?? null,
-        price: cheapestVariant
-          ? Number(cheapestVariant.price).toFixed(2)
-          : null,
-        currencyCode: cheapestVariant?.currencyCode ?? null,
-        isOutOfStock: !cheapestVariant || stock <= 0,
-        createdAt: book.createdAt,
-        bookVariantId: cheapestVariant?.id,
-        categories: this.toListBookCategories(book.categories ?? []),
-      };
-    });
+    const items: CatalogBookCardDto[] = rows.map((book) =>
+      toCatalogListBookCard(book),
+    );
 
     return buildPaginatedResult(items, total, page, limit);
   }
@@ -292,7 +218,7 @@ export class CatalogService {
     return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
       const book = await this.repo.findBookDetailById(bookId, langId);
       if (!book) throw new NotFoundException(CatalogMessage.BOOK_NOT_FOUND);
-      return this.toBookDetail(book);
+      return toCatalogBookDetail(book);
     });
   }
 
@@ -329,7 +255,7 @@ export class CatalogService {
       const recommendIds = top.map((item) => item.id);
       const recommendMap = await this.buildCardMap(recommendIds, langId);
       const recommend = this.pickCards(recommendIds, recommendMap);
-      return this.toBookDetail(book, normalizedSlug, recommend);
+      return toCatalogBookDetail(book, normalizedSlug, recommend);
     });
   }
 
@@ -348,123 +274,6 @@ export class CatalogService {
     const union = new Set([...setA, ...setB]);
 
     return intersection.size / union.size;
-  }
-
-  private toListBookCategories(
-    bookCategories: BookListRow['categories'],
-  ): CatalogCategoryDto[] {
-    return (bookCategories ?? []).map((x) => {
-      const category = x.category;
-      const translation = category.categoryTranslation?.[0];
-
-      return {
-        id: category.id.toString(),
-        parentId: category.parentId ? category.parentId.toString() : null,
-        sortOrder: category.sortOrder ?? 0,
-        name: translation?.name ?? `Category ${category.id.toString()}`,
-        slug: translation?.slug ?? null,
-      };
-    });
-  }
-
-  private toListBookCard(book: BookListRow): CatalogBookCardDto {
-    const translation = book.translations[0];
-    const cheapestVariant = book.variants[0];
-    const stock = cheapestVariant?.stock ?? 0;
-
-    return {
-      id: book.id.toString(),
-      title: translation?.title ?? `Book ${book.id.toString()}`,
-      slug: translation?.slug ?? null,
-      coverImageUrl: book.coverImageUrl ?? null,
-      price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
-      currencyCode: cheapestVariant?.currencyCode ?? null,
-      isOutOfStock: !cheapestVariant || stock <= 0,
-      createdAt: book.createdAt,
-      bookVariantId: cheapestVariant?.id,
-      format: cheapestVariant?.format ?? null,
-      categories: this.toListBookCategories(book.categories ?? []),
-      badges: (book.bookBadge ?? []).map((badge) => badge.code),
-    };
-  }
-
-  private toBookDetail(
-    book: BookDetailByIdRow,
-    slugFallback?: string,
-    recommend?: CatalogBookCardDto[],
-  ): CatalogBookDetailDto {
-    const t = book.translations[0];
-
-    return {
-      id: book.id.toString(),
-      title: t?.title ?? `Book ${book.id.toString()}`,
-      slug: t?.slug ?? slugFallback ?? null,
-      description: t?.description ?? null,
-      coverImageUrl: book.coverImageUrl ?? null,
-      publicationYear: book.publicationYear ?? null,
-      pageCount: book.pageCount ?? null,
-      weightGrams: book.weightGrams ?? null,
-      publisherName: book.publisher?.defaultName ?? null,
-      variants: this.toBookVariants(book),
-      categories: this.toBookCategories(book),
-      specs: this.toBookSpecs(book),
-      badges: this.toBookBadges(book),
-      createdAt: book.createdAt,
-      recommend: recommend ?? [],
-    };
-  }
-
-  private toBookCategories(book: BookDetailByIdRow): CatalogCategoryDto[] {
-    return (book.categories ?? []).map((x) => {
-      const c = x.category;
-      const ct = c.categoryTranslation?.[0];
-      return {
-        id: c.id.toString(),
-        parentId: c.parentId ? c.parentId.toString() : null,
-        sortOrder: c.sortOrder ?? null,
-        name: ct?.name ?? null,
-        slug: ct?.slug ?? null,
-      };
-    });
-  }
-
-  private toBookVariants(book: BookDetailByIdRow): CatalogBookVariantDto[] {
-    return (book.variants ?? []).map((v) => ({
-      id: v.id.toString(),
-      format: v.format,
-      edition: v.edition ?? null,
-      isbn: v.isbn ?? null,
-      price: v.price?.toString?.() ?? String(v.price),
-      currencyCode: v.currencyCode ?? null,
-      available: v.available ?? null,
-    }));
-  }
-
-  private toBookSpecs(book: BookDetailByIdRow): CatalogBookSpecDto {
-    const specs = book.specs;
-    if (!specs) {
-      return {};
-    }
-
-    return {
-      widthCm: this.toNullableString(specs.widthCm),
-      heightCm: this.toNullableString(specs.heightCm),
-      thicknessCm: this.toNullableString(specs.thicknessCm),
-      packaging: specs.packaging ?? null,
-    };
-  }
-
-  private toBookBadges(book: BookDetailByIdRow): Badge[] {
-    return (book.bookBadge ?? []).map((badge) => badge.code);
-  }
-
-  private toNullableString(
-    value: { toString: () => string } | null | undefined,
-  ): string | null {
-    if (!value) {
-      return null;
-    }
-    return value.toString();
   }
 
   private async withCache<T>(
@@ -487,65 +296,6 @@ export class CatalogService {
     return ids
       .map((id) => map.get(id.toString()))
       .filter((x) => x != undefined && x != null);
-  }
-
-  private toBookCard(
-    book: Awaited<ReturnType<CatalogRepository['findBooksByIds']>>[number],
-    soldCount?: number,
-    ratingAvg?: number,
-    ratingCount?: number,
-  ): CatalogBookCardDto {
-    const t = book.translations[0];
-    const cheapestVariant = book.variants[0];
-    return {
-      id: book.id.toString(),
-      title: t?.title ?? `Book ${book.id.toString()}`,
-      slug: t?.slug ?? null,
-      coverImageUrl: book.coverImageUrl,
-      ratingAvg: ratingAvg ?? null,
-      ratingCount: ratingCount ?? 0,
-      soldCount: soldCount ?? 0,
-      createdAt: book.createdAt,
-      badges: (book.bookBadge ?? []).map((badge) => badge.code),
-      bookVariantId: cheapestVariant?.id,
-      price: cheapestVariant ? Number(cheapestVariant.price).toFixed(2) : null,
-      description: t?.description ?? null,
-      currencyCode: cheapestVariant?.currencyCode ?? null,
-      format: cheapestVariant?.format ?? null,
-      isOutOfStock: !cheapestVariant || (cheapestVariant.stock ?? 0) <= 0,
-    };
-  }
-
-  private toVariantBookCard(
-    variant: Awaited<
-      ReturnType<CatalogRepository['findBooksVariantByIds']>
-    >[number],
-    soldCount?: number,
-    ratingAvg?: number,
-    ratingCount?: number,
-  ): CatalogBookCardDto {
-    const book = variant.book;
-    const t = book.translations[0];
-    const price = Number.isFinite(Number(variant.price))
-      ? Number(variant.price).toFixed(2)
-      : null;
-
-    return {
-      id: book.id.toString(),
-      title: t?.title ?? `Book ${book.id.toString()}`,
-      slug: t?.slug ?? null,
-      coverImageUrl: book.coverImageUrl,
-      price: price,
-      currencyCode: variant.currencyCode ?? null,
-      ratingAvg: ratingAvg ?? null,
-      ratingCount: ratingCount ?? 0,
-      soldCount: soldCount ?? 0,
-      createdAt: book.createdAt,
-      badges: (book.bookBadge ?? []).map((badge) => badge.code),
-      bookVariantId: variant.id,
-      format: variant.format,
-      isOutOfStock: (variant.stock ?? 0) <= 0,
-    };
   }
 
   // Build unique mục đính trùng lọc trùng id tối ưu query nhanh

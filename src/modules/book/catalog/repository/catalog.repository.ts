@@ -1,4 +1,5 @@
 import { PrismaService } from '@/database';
+import { CatalogBookCardDto } from '@/modules/book/catalog/dto/response';
 import { Injectable } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 
@@ -274,12 +275,16 @@ export class CatalogRepository {
         });
     }
 
-    findBooksVariantByIds(bookVariantId: number[], languageId: number, take: number = 20) {
+    async findBooksVariantByIds(
+        bookVariantId: number[],
+        languageId: number,
+        take: number = 20,
+    ): Promise<CatalogBookCardDto[]> {
         if (!bookVariantId.length) {
             return Promise.resolve([]);
         }
 
-        return this.prisma.bookVariant.findMany({
+        const variants = await this.prisma.bookVariant.findMany({
             where: {
                 id: { in: bookVariantId },
                 isActive: true,
@@ -342,6 +347,31 @@ export class CatalogRepository {
                 stock: true,
             },
             take
+        });
+
+        return variants.map((variant) => {
+            const book = variant.book;
+            const translation = book.translations[0];
+            const price = Number.isFinite(Number(variant.price))
+                ? Number(variant.price).toFixed(2)
+                : null;
+
+            return {
+                id: book.id.toString(),
+                title: translation?.title ?? `Book ${book.id.toString()}`,
+                slug: translation?.slug ?? null,
+                coverImageUrl: book.coverImageUrl,
+                price,
+                currencyCode: variant.currencyCode ?? null,
+                ratingAvg: null,
+                ratingCount: 0,
+                soldCount: 0,
+                createdAt: book.createdAt,
+                badges: (book.bookBadge ?? []).map((badge) => badge.code),
+                bookVariantId: variant.id,
+                format: variant.format,
+                isOutOfStock: (variant.stock ?? 0) <= 0,
+            };
         });
     }
 

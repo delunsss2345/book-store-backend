@@ -678,7 +678,7 @@ model CartItem {
   // Relations
   cart    Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
   variant BookVariant @relation(fields: [bookVariantId], references: [id], onDelete: Cascade)
-
+  
   @@unique([cartId, bookVariantId])
   @@map("cart_items")
 }

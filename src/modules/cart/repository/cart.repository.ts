@@ -51,6 +51,42 @@ export class CartRepository {
         });
     }
 
+    updateGuestCart(guestCartId: number, userId: number) {
+        return this.prisma.cart.update({
+            where: {
+                id: guestCartId
+            },
+            data: {
+                userId
+            }
+        })
+    }
+
+    updateCartByUserId(
+        cartId: number,
+        items: { bookVariantId: number; quantity: number }[],
+    ) {
+        return this.prisma.cart.update({
+            where: { id: cartId },
+            data: {
+                items: {
+                    upsert: items.map((item) => ({
+                        where: {
+                            cartId_bookVariantId: {
+                                cartId,
+                                bookVariantId: item.bookVariantId,
+                            },
+                        },
+                        update: { quantity: item.quantity },
+                        create: {
+                            bookVariantId: item.bookVariantId,
+                            quantity: item.quantity,
+                        },
+                    })),
+                },
+            },
+        });
+    }
     createCartByGuestSessionId(guestSessionId: string, languageId?: number) {
         return this.prisma.cart.create({
             data: {
@@ -86,6 +122,58 @@ export class CartRepository {
         return this.prisma.cart.findFirst({
             where: { guestSessionId },
             include: buildCartWithItemsInclude(languageId),
+            orderBy: { updatedAt: 'desc' },
+        });
+    }
+
+
+    findCartByGuestSessionId(guestSessionId: string, tx: PrismaClientTransaction = this.prisma) {
+        return tx.cart.findFirst({
+            where: { guestSessionId },
+            include: {
+                items: {
+                    select: {
+                        id: true,
+                        bookVariantId: true,
+                        quantity: true,
+                        addedAt: true,
+                        variant: {
+                            select: {
+                                id: true,
+                                price: true,
+                                format: true,
+                                currencyCode: true,
+                            }
+                        },
+                    },
+                },
+            },
+            orderBy: { updatedAt: 'desc' },
+        });
+    }
+
+
+    findCartByUserId(userId: number, tx: PrismaClientTransaction = this.prisma) {
+        return tx.cart.findFirst({
+            where: { userId },
+            include: {
+                items: {
+                    select: {
+                        id: true,
+                        bookVariantId: true,
+                        quantity: true,
+                        addedAt: true,
+                        variant: {
+                            select: {
+                                id: true,
+                                price: true,
+                                format: true,
+                                currencyCode: true,
+                            }
+                        },
+                    },
+                },
+            },
             orderBy: { updatedAt: 'desc' },
         });
     }

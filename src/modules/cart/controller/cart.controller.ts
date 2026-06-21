@@ -1,4 +1,5 @@
 import type { JwtPayload } from '@/common';
+import { GetGuestSessionId } from '@/common/decorators/getGuestSessionId.decorator';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -7,6 +8,7 @@ import {
     AddCartItemRequestDto,
     UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
+import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
 import {
     Body,
     Controller,
@@ -18,6 +20,7 @@ import {
     Req,
     UseGuards,
 } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CartService } from '../service/cart.service';
 
@@ -88,22 +91,31 @@ export class CartController {
 
     @Delete()
     clearCart(
-        @Req() req: Request,
         @GetUser() user: JwtPayload | null,
+        @GetGuestSessionId() guestSessionId: string | null
     ) {
-        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-
+        if (!guestSessionId && !user) {
+            throw new Error('Guest session or user is required to clear cart');
+        }
         return this.cartService.clearCart(guestSessionId, user);
     }
 
-    // @Post('merge')
-    // mergeCart(
-    //     @Req() req: Request,
-    //     @GetUser() user: JwtPayload | null,
-    //     @Body() body: unknown,
-    // ) {
-    //     const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-
-    //     return this.cartService.mergeCart(guestSessionId, user);
-    // }
+    @Post('merge')
+    @ApiOkResponse({ type: MergeCartResponseDto })
+    mergeCart(
+        @GetUser() user: JwtPayload | null,
+        @GetGuestSessionId() guestSessionId: string | null
+    ) {
+        const userId = Number(user?.sub);
+        if (!userId) {
+            throw new Error('User is required to merge cart')
+        }
+        if (!user) {
+            throw new Error('User is required to merge cart');
+        }
+        if (!guestSessionId) {
+            throw new Error('Guest session is required to merge cart');
+        }
+        return this.cartService.mergeCart(guestSessionId, userId);
+    }
 }

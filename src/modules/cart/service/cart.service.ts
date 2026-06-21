@@ -10,8 +10,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
-  NotFoundException,
-  NotImplementedException,
+  NotFoundException
 } from '@nestjs/common';
 import { CartRepository } from '../repository/cart.repository';
 
@@ -325,10 +324,57 @@ export class CartService {
 
     throw new ForbiddenException();
   }
-  mergeCart(guestSessionId: string, user: JwtPayload) {
-    throw new NotImplementedException(
-      CartMessage.CART_MERGE_IS_NOT_IMPLEMENTED_YET,
-    );
+  async mergeCart(guestSessionId: string, userId: number) {
+    const [guestCart, userCart] = await Promise.all([
+      this.cartRepository.findCartByGuestSessionId(guestSessionId),
+      this.cartRepository.findCartByUserId(userId),
+    ]);
+
+    if (!guestCart) {
+      return { mergeCart: true };
+    }
+
+    if (!userCart) {
+      await this.cartRepository.updateGuestCart(guestCart.id, userId);
+      return {
+        mergeCart: true
+      }
+    }
+
+    const userCartMap = new Map<number, number>();
+    if (userCart) {
+      for (const item of userCart.items) {
+        userCartMap.set(item.bookVariantId, item.quantity);
+      }
+    }
+
+    const mergedItems: {
+      bookVariantId: number,
+      quantity: number
+    }[] = [];
+    for (const guestItem of guestCart.items) {
+      const exitItem = userCartMap.get(guestItem.bookVariantId) || 0;
+      if (exitItem) {
+        mergedItems.push({
+          bookVariantId: guestItem.bookVariantId,
+          quantity: exitItem + guestItem.quantity
+        })
+      } else {
+        mergedItems.push({
+          bookVariantId: guestItem.bookVariantId,
+          quantity: exitItem + guestItem.quantity
+        })
+      }
+    }
+
+    await this.mergeCartUser(userCart.id, mergedItems);
+    return {
+      mergeCart: true
+    }
+  }
+
+  private async mergeCartUser(cartId: number, items: { bookVariantId: number, quantity: number }[]) {
+    return this.cartRepository.updateCartByUserId(cartId, items);
   }
 
   // Điều chỉnh giá 

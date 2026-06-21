@@ -16,14 +16,14 @@ import {
   VerifyEmailRequestDto,
 } from '@/modules/auth/dto/request';
 import { AuthRepository } from '@/modules/auth/repository/auth.repository';
+import { LoginAttemptService } from '@/modules/auth/service/login-attempt.service';
+import { RevokedTokenService } from '@/modules/auth/service/revoked-token.service';
+import { UserDeviceService } from '@/modules/auth/service/user-device.service';
+import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
-import { LoginAttemptService } from '@/modules/login-attempt/service/login-attempt.service';
-import { RevokedTokenService } from '@/modules/auth/service/revoked-token.service';
 import { RoleService } from '@/modules/role/service/role.service';
-import { UserDeviceService } from '@/modules/user-device/service/user-device.service';
-import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { UserRoleService } from '@/modules/user/service/user-role.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/constants/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/service/verification-code.service';

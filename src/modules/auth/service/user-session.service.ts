@@ -13,6 +13,7 @@ export class UserSessionService {
 
     async createSession(params: {
         userId: number;
+        ip: string | null;
         refreshToken: string;
         userAgent?: string;
         deviceId?: number | null;
@@ -24,6 +25,7 @@ export class UserSessionService {
         return this.userSessionRepository.createUserSession({
             userId: params.userId,
             deviceId: params.deviceId ?? undefined,
+            ip: params?.ip ?? undefined,
             refreshTokenHash,
             userAgent: params.userAgent,
             expiresAt,

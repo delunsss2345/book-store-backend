@@ -119,6 +119,7 @@ export class AuthService {
       }),
       this.userSessionService.createSession({
         userId: user.id,
+        ip,
         refreshToken: signature.refreshToken,
         userAgent,
       }),
@@ -300,6 +301,7 @@ export class AuthService {
       }),
       this.userSessionService.createSession({
         userId: safeUser.id,
+        ip,
         refreshToken: signature.refreshToken,
         userAgent,
         deviceId: device.id,

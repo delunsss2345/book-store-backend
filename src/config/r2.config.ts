@@ -1,8 +1,3 @@
-import KeyvRedis, { Keyv } from '@keyv/redis';
-import { BullModule } from '@nestjs/bullmq';
-import { CacheModule } from '@nestjs/cache-manager';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { CacheableMemory } from 'cacheable';
 import { IsNotEmpty, IsString, validateSync } from 'class-validator';
 
 export class R2Configuration {

@@ -260,6 +260,7 @@ model UserSession {
   id               String        @id @default(uuid()) @db.Char(36)
   userId           Int        @map("user_id")
   deviceId         Int?       @map("device_id")
+  ip               String?    @db.VarChar(64)
   status           SessionStatus @default(ACTIVE)
   refreshTokenHash String        @unique @map("refresh_token_hash") @db.VarChar(255)
   userAgent        String?       @map("user_agent") @db.VarChar(150)
@@ -537,7 +538,7 @@ model BookTranslation {
   // Relations
   book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   language Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-
+  @@fulltext([title, description], map: "idx_book_translation_fulltext")
   @@unique([bookId, languageId])
   @@index([languageId, slug])
   @@map("book_translations")

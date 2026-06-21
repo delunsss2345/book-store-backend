@@ -61,7 +61,7 @@ export class AuthService {
     private readonly userRoleService: UserRoleService,
     private readonly roleService: RoleService,
     private readonly guestSessionService: GuestSessionService,
-  ) {}
+  ) { }
 
   getMe(id: number) {
     return this.authRepository.findUserById(id);
@@ -223,7 +223,7 @@ export class AuthService {
       countRecentOtp >= RESEND_MAX_ATTEMPTS_PER_DAY &&
       latestRecentOtp &&
       latestRecentOtp.createdAt.getTime() + RESEND_BLOCK_WINDOW_IN_MS >
-        Date.now()
+      Date.now()
     ) {
       // Chặn resend-email
       throw new HttpException(

@@ -157,7 +157,6 @@ export class WishlistService {
         languageId,
       );
     }
-
-    throw new ForbiddenException();
+    return null
   }
 }

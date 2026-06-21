@@ -17,11 +17,9 @@ import {
     Param,
     Patch,
     Post,
-    Req,
     UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
-import type { Request } from 'express';
 import { CartService } from '../service/cart.service';
 
 @Public()
@@ -32,17 +30,16 @@ export class CartController {
 
     @Get()
     getCart(
-        @Req() req: Request,
+        @GetGuestSessionId() guestSessionId: string | null,
         @GetLanguageId() langId: number,
         @GetUser() user: JwtPayload | null,
     ) {
-        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-        if (guestSessionId) {
-            return this.cartService.getCartGuest(guestSessionId, langId);
-        }
-
         if (user) {
             return this.cartService.getCartUser(Number(user.sub), langId);
+        }
+
+        if (guestSessionId) {
+            return this.cartService.getCartGuest(guestSessionId, langId);
         }
 
         throw new Error('Guest session or user is required');
@@ -50,23 +47,20 @@ export class CartController {
 
     @Post('items')
     addCartItem(
-        @Req() req: Request,
+        @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
         @Body() body: AddCartItemRequestDto,
     ) {
-        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
-
         return this.cartService.addCartItem(guestSessionId, user, body);
     }
 
     @Patch('items/:itemKey/delta')
     updateCartItemDelta(
-        @Req() req: Request,
+        @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
         @Param('itemKey') itemKey: string,
         @Body() body: UpdateCartItemDeltaRequestDto,
     ) {
-        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
         const parsedItemId = Number(itemKey);
 
         return this.cartService.updateCartItemDelta(
@@ -79,11 +73,10 @@ export class CartController {
 
     @Delete('items/:itemKey')
     removeCartItem(
-        @Req() req: Request,
+        @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
         @Param('itemKey') itemKey: string,
     ) {
-        const guestSessionId = (req['guestSessionId'] as string | undefined) ?? null;
         const parsedItemId = Number(itemKey);
 
         return this.cartService.removeCartItem(parsedItemId, guestSessionId, user);
@@ -105,7 +98,7 @@ export class CartController {
     mergeCart(
         @GetUser() user: JwtPayload | null,
         @GetGuestSessionId() guestSessionId: string | null
-    ) {
+    ): Promise<MergeCartResponseDto> {
         const userId = Number(user?.sub);
         if (!userId) {
             throw new Error('User is required to merge cart')

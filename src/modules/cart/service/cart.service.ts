@@ -5,6 +5,7 @@ import {
   AddCartItemRequestDto,
   UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
+import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
 import { CartItemService } from '@/modules/cart/service/cart-item.service';
 import {
   ForbiddenException,
@@ -20,6 +21,8 @@ type CartRequestUser = {
 
 @Injectable()
 export class CartService {
+  private readonly logger = new Logger(CartService.name);
+
   constructor(
     private readonly cartRepository: CartRepository,
     private readonly cartItemService: CartItemService,
@@ -64,6 +67,57 @@ export class CartService {
   ) {
     const bookVariantId = Number(body.bookVariantId);
     const quantity = body.quantity ?? 1;
+    console.log(user);
+    if (user) {
+      const userId = Number(user.sub);
+      Logger.log(`userId : ${userId}`);
+      const foundUser = await this.authService.findUserById(userId);
+
+      if (!foundUser) {
+        throw new ForbiddenException();
+      }
+
+      let cart = await this.cartRepository.findByUserId(foundUser.id);
+      if (!cart) {
+        cart = await this.cartRepository.createCartByUserId(foundUser.id);
+      }
+
+      const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(
+        cart.id,
+        bookVariantId,
+      );
+
+      if (existedItem) {
+        const adjustedQuantity = await this.resolveAdjustedQuantity(undefined, userId, existedItem.id, bookVariantId, existedItem.quantity, quantity);
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          existedItem.id,
+          adjustedQuantity,
+        );
+
+
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
+
+      const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
+        cart.id,
+        bookVariantId,
+        quantity,
+      );
+
+      return {
+        cartItem: {
+          itemKey: createdItem.id.toString(),
+          bookVariantId: Number(createdItem.bookVariantId),
+          quantity: createdItem.quantity,
+        },
+      };
+    }
     if (guestSessionId) {
       let guestCart = await this.cartRepository.findByGuestSessionId(guestSessionId);
 
@@ -112,55 +166,7 @@ export class CartService {
       };
     }
 
-    if (user) {
-      const userId = Number(user.sub);
-      const foundUser = await this.authService.findUserById(userId);
 
-      if (!foundUser) {
-        throw new ForbiddenException();
-      }
-
-      let cart = await this.cartRepository.findByUserId(foundUser.id);
-      if (!cart) {
-        cart = await this.cartRepository.createCartByUserId(foundUser.id);
-      }
-
-      const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(
-        cart.id,
-        bookVariantId,
-      );
-
-      if (existedItem) {
-        const adjustedQuantity = await this.resolveAdjustedQuantity(undefined, userId, existedItem.id, bookVariantId, existedItem.quantity, quantity);
-        const updatedItem = await this.cartItemService.updateQuantityById(
-          existedItem.id,
-          adjustedQuantity,
-        );
-
-
-        return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
-        };
-      }
-
-      const createdItem = await this.cartItemService.createByCartIdAndBookVariantId(
-        cart.id,
-        bookVariantId,
-        quantity,
-      );
-
-      return {
-        cartItem: {
-          itemKey: createdItem.id.toString(),
-          bookVariantId: Number(createdItem.bookVariantId),
-          quantity: createdItem.quantity,
-        },
-      };
-    }
 
     throw new ForbiddenException('Guest session or user is required');
   }
@@ -171,48 +177,6 @@ export class CartService {
     itemId: number,
     body: UpdateCartItemDeltaRequestDto,
   ) {
-    if (guestSessionId) {
-      const item = await this.cartItemService.findByIdAndGuestSessionId(
-        itemId,
-        guestSessionId,
-      );
-
-      if (!item) {
-        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
-      }
-
-      const quantity = await this.resolveAdjustedQuantity(
-        guestSessionId,
-        undefined,
-        item.id,
-        item.bookVariantId,
-        item.quantity,
-        body.quantity,
-      );
-      if (!quantity) {
-        return {
-          cartItem: {
-            itemKey: item.id.toString(),
-            bookVariantId: Number(item.bookVariantId),
-            quantity,
-            remove: true
-          },
-        }
-      } else {
-        const updatedItem = await this.cartItemService.updateQuantityById(
-          item.id,
-          quantity,
-        );
-        return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
-        };
-      }
-    }
-
     if (user) {
       const userId = Number(user.sub);
       const foundUser = await this.authService.findUserById(userId);
@@ -262,6 +226,48 @@ export class CartService {
       }
     }
 
+    if (guestSessionId) {
+      const item = await this.cartItemService.findByIdAndGuestSessionId(
+        itemId,
+        guestSessionId,
+      );
+
+      if (!item) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      const quantity = await this.resolveAdjustedQuantity(
+        guestSessionId,
+        undefined,
+        item.id,
+        item.bookVariantId,
+        item.quantity,
+        body.quantity,
+      );
+      if (!quantity) {
+        return {
+          cartItem: {
+            itemKey: item.id.toString(),
+            bookVariantId: Number(item.bookVariantId),
+            quantity,
+            remove: true
+          },
+        }
+      } else {
+        const updatedItem = await this.cartItemService.updateQuantityById(
+          item.id,
+          quantity,
+        );
+        return {
+          cartItem: {
+            itemKey: updatedItem.id.toString(),
+            bookVariantId: Number(updatedItem.bookVariantId),
+            quantity: updatedItem.quantity,
+          },
+        };
+      }
+    }
+
     throw new ForbiddenException('Guest session or user is required');
   }
 
@@ -270,18 +276,6 @@ export class CartService {
     guestSessionId?: string | null,
     user?: JwtPayload | null,
   ) {
-    if (guestSessionId) {
-      const deleted = await this.cartItemService.deleteByIdAndGuestSessionId(
-        itemId,
-        guestSessionId,
-      );
-
-      if (!deleted) {
-        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
-      }
-
-      return { success: true };
-    }
     if (user) {
       const foundUser = await this.authService.findUserById(Number(user.sub));
       if (!foundUser) {
@@ -300,6 +294,19 @@ export class CartService {
       return { success: true };
     }
 
+    if (guestSessionId) {
+      const deleted = await this.cartItemService.deleteByIdAndGuestSessionId(
+        itemId,
+        guestSessionId,
+      );
+
+      if (!deleted) {
+        throw new NotFoundException(CartMessage.CART_ITEM_NOT_FOUND);
+      }
+
+      return { success: true };
+    }
+
     throw new ForbiddenException("Vui lòng thử lại sau");
   }
 
@@ -307,11 +314,6 @@ export class CartService {
     guestSessionId?: string | null,
     user?: JwtPayload | null,
   ) {
-    if (guestSessionId) {
-      await this.cartRepository.deleteByGuestSessionId(guestSessionId);
-      return { success: true };
-    }
-
     if (user?.sub) {
       const foundUser = await this.authService.findUserById(Number(user.sub));
       if (!foundUser) {
@@ -322,22 +324,35 @@ export class CartService {
       return { success: true };
     }
 
+    if (guestSessionId) {
+      await this.cartRepository.deleteByGuestSessionId(guestSessionId);
+      return { success: true };
+    }
+
     throw new ForbiddenException();
   }
-  async mergeCart(guestSessionId: string, userId: number) {
+  async mergeCart(guestSessionId: string, userId: number): Promise<MergeCartResponseDto> {
+    this.logger.log(`Merging cart: userId=${userId}, guestSessionId=${guestSessionId}`);
+
     const [guestCart, userCart] = await Promise.all([
       this.cartRepository.findCartByGuestSessionId(guestSessionId),
       this.cartRepository.findCartByUserId(userId),
     ]);
 
     if (!guestCart) {
-      return { mergeCart: true };
+      this.logger.log(`Merge cart skipped: guest cart not found, userId=${userId}, guestSessionId=${guestSessionId}`);
+      return {
+        mergeCart: true,
+        mergeCount: 0,
+      };
     }
 
     if (!userCart) {
       await this.cartRepository.updateGuestCart(guestCart.id, userId);
+      this.logger.log(`Merge cart completed by assigning guest cart: userId=${userId}, guestCartId=${guestCart.id}, mergeCount=${guestCart.items.length}`);
       return {
-        mergeCart: true
+        mergeCart: true,
+        mergeCount: guestCart.items.length,
       }
     }
 
@@ -347,7 +362,7 @@ export class CartService {
         userCartMap.set(item.bookVariantId, item.quantity);
       }
     }
-
+    let mergeCount = 0;
     const mergedItems: {
       bookVariantId: number,
       quantity: number
@@ -364,11 +379,14 @@ export class CartService {
           bookVariantId: guestItem.bookVariantId,
           quantity: exitItem + guestItem.quantity
         })
+        mergeCount++
       }
     }
 
     await this.mergeCartUser(userCart.id, mergedItems);
+    this.logger.log(`Merge cart completed: userId=${userId}, guestCartId=${guestCart.id}, userCartId=${userCart.id}, mergeCount=${mergeCount}`);
     return {
+      mergeCount,
       mergeCart: true
     }
   }

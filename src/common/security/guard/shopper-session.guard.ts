@@ -25,40 +25,19 @@ export class ShopperSessionGuard implements CanActivate {
 
         try {
             const payload = await this.jwtService.verifyAsync<{ sub?: string }>(token);
-            const userId = this.parseUserId(payload?.sub);
-            if (!userId) {
-                await this.attachGuestSession(request, response);
-                return true;
-            }
-
-            const user = await this.authService.findUserById(userId);
-
-            if (!user) {
-                await this.attachGuestSession(request, response);
-                return true;
-            }
-
-            request['user'] = user
+            request['user'] = payload
             return true;
-        } catch {
+        } catch (error) {
+            console.log(error);
+            return true;
+        } finally {
             await this.attachGuestSession(request, response);
-            return true;
         }
     }
 
     private extractTokenFromHeader(request: Request): string | undefined {
         const [type, token] = request.headers.authorization?.split(' ') ?? [];
         return type === 'Bearer' ? token : undefined;
-    }
-
-    private parseUserId(value: string | undefined): number | null {
-        if (!value) return null;
-
-        try {
-            return Number(value);
-        } catch {
-            return null;
-        }
     }
 
     private resolveIp(request: Request): string | null {

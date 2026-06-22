@@ -71,7 +71,7 @@ export class UserRoleRepository {
 
     findRolesByUserId(userId: number) {
         return this.prisma.userRole.findMany({
-            where: { userId, deletedAt: null },
+            where: { userId: Number(userId), deletedAt: null },
             select: {
                 role: { select: userRoleRoleSelect },
             },

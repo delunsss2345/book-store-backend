@@ -12,7 +12,6 @@ import {
   ChangePasswordRequestDto,
   ForgotPasswordRequestDto,
   LoginRequestDto,
-  LogoutRequestDto,
   RegisterRequestDto,
   ResendVerifyEmailRequestDto,
   ResetPasswordRequestDto,
@@ -33,6 +32,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Ip,
@@ -45,7 +45,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOkResponse } from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
 import type { CookieOptions, Request, Response } from 'express';
 import { v4 } from 'uuid';
@@ -56,7 +56,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
   @Public()
   @Post('register')
   @ApiOkResponse({ type: ResponseDto<RegisterResponseDto> })
@@ -116,6 +116,7 @@ export class AuthController {
   @Refresh()
   @UseGuards(RefreshGuard)
   @Post('refresh-token')
+  @ApiHeader({ name: 'x-refresh-token', required: true })
   refreshToken(
     @RefreshSession() session: UserSession,
     @UserAgent() userAgent: string,
@@ -126,11 +127,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('logout')
   @ApiBearerAuth('access-token')
+  @ApiHeader({ name: 'x-refresh-token', required: true })
   logout(
     @GetAccessToken() accessToken: string,
-    @Body() body: LogoutRequestDto,
+    @Headers('x-refresh-token') refreshToken: string,
   ) {
-    return this.authService.logout({ accessToken, ...body });
+    return this.authService.logout({ accessToken, refreshToken });
   }
 
   @Public()

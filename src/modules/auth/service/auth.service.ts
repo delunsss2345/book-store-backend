@@ -337,8 +337,11 @@ export class AuthService {
     return { user, ...signature };
   }
 
-  async logout(body: { refreshToken: string; accessToken: string }) {
+  async logout(body: { refreshToken?: string; accessToken?: string }) {
     const { refreshToken, accessToken } = body;
+    if (!refreshToken || !accessToken) {
+      throw new UnauthorizedException();
+    }
 
     let payload: { exp?: number } | null = null;
     try {

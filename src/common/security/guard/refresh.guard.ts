@@ -28,11 +28,12 @@ export class RefreshGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest<Request>();
 
-        const refreshToken = this.extractRefreshTokenFromBody(request);
+        const refreshToken = this.extractRefreshTokenFromHeader(request);
         if (!refreshToken) throw new UnauthorizedException();
 
         const refreshTokenHash = hashToken(refreshToken);
         const session = await this.userSessionService.findByRefreshTokenHash(refreshTokenHash);
+
         if (!session) throw new UnauthorizedException();
         if (session.status !== SessionStatus.ACTIVE || session.revokedAt) {
             throw new UnauthorizedException();
@@ -48,9 +49,13 @@ export class RefreshGuard implements CanActivate {
         return true;
     }
 
-    private extractRefreshTokenFromBody(request: Request): string | undefined {
-        const body = request.body as { refreshToken?: string };
-        return body?.refreshToken;
+    private extractRefreshTokenFromHeader(request: Request): string | undefined {
+        const refreshToken = request.headers['x-refresh-token'];
+        if (Array.isArray(refreshToken)) {
+            return refreshToken[0]?.trim() || undefined;
+        }
+
+        return refreshToken?.trim() || undefined;
     }
 
 }

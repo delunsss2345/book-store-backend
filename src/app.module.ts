@@ -30,6 +30,7 @@ import { HooksModule } from './modules/hooks/hooks.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './modules/mail/mail.module';
 import { OrderModule } from './modules/order/order.module';
+import { PermissionModule } from './modules/permission/permission.module';
 import { R2ServiceModule } from './modules/r2-service/r2-service.module';
 import { RoleModule } from './modules/role/role.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
@@ -51,6 +52,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     VerificationCodeModule,
     MailModule,
     JobsModule,
+    PermissionModule,
     RoleModule,
     AuditLogModule,
     AdminModule,

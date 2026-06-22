@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePermissionRequestDto, UpdatePermissionRequestDto } from '../permission/dto/request';
+import { CreatePermissionRequestDto, UpdatePermissionRequestDto } from '../dto/request';
 import { PermissionRepository } from '../repository/permission.repository';
 
 @Injectable()

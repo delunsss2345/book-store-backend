@@ -8,7 +8,6 @@ export class RoleController {
   constructor(private readonly roleService: RoleService) { }
 
   @Get()
-  @Public()
   getAll() {
     return this.roleService.findAllRole();
   }

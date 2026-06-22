@@ -2,8 +2,9 @@ import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
+import { CreatePermissionRequestDto } from '@/modules/role/dto/request/create-permission.request.dto';
+import { UpdatePermissionRequestDto } from '@/modules/role/dto/request/update-permission.request.dto';
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { CreatePermissionRequestDto, UpdatePermissionRequestDto } from '../dto/request';
 import { PermissionService } from '../service/permission.service';
 
 @Controller('permission')

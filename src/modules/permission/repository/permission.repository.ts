@@ -1,4 +1,5 @@
-import { PrismaService } from '@/database';
+import { PrismaClientTransaction, PrismaService } from '@/database';
+import { CreatePermissionScanDto } from '@/modules/permission/dto/request';
 import { Injectable } from '@nestjs/common';
 import { HTTPMethod, Prisma } from '@prisma/client';
 
@@ -35,9 +36,9 @@ export class PermissionRepository {
             where: {
                 code: {
                     startsWith: name,
-                }
-            }
-        })
+                },
+            },
+        });
     }
 
     createPermission(params: CreatePermissionParams, actorUserId: number) {
@@ -63,7 +64,11 @@ export class PermissionRepository {
         return this.prisma.permission.create({ data });
     }
 
-    updatePermission(id: number, params: UpdatePermissionParams, actorUserId: number) {
+    updatePermission(
+        id: number,
+        params: UpdatePermissionParams,
+        actorUserId: number,
+    ) {
         const data: Prisma.PermissionUncheckedUpdateInput = {
             updatedById: actorUserId,
         };
@@ -101,6 +106,25 @@ export class PermissionRepository {
                 isActive: false,
                 deletedAt: new Date(),
                 updatedById: actorUserId,
+            },
+        });
+    }
+
+    upsert(key: CreatePermissionScanDto, tx: PrismaClientTransaction = this.prisma) {
+        return tx.permission.upsert({
+            where: {
+                method_pathPattern: {
+                    method: key.methodName as HTTPMethod,
+                    pathPattern: key.pathMetadata,
+                },
+            },
+            create: {
+                code: key.namePermission,
+                method: key.methodName as HTTPMethod,
+                pathPattern: key.pathMetadata,
+            },
+            update: {
+                code: key.namePermission,
             },
         });
     }

@@ -36,6 +36,7 @@ import { RoleModule } from './modules/role/role.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
+import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     ScheduleModule.forRoot(),
     RateLimitProvider,
     VerificationCodeModule,
+    PermissionScanModule,
     MailModule,
     JobsModule,
     PermissionModule,

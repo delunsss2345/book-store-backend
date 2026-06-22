@@ -1,6 +1,6 @@
 import { PineconeMessage } from '@/common';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
-import { GeminiService } from '@/modules/gemini/service/gemini.service';
+import { GroqService } from '@/modules/groq/service/groq.service';
 import {
   BookVariantEmbeddingSource,
   buildBookVariantEmbeddingText,
@@ -51,7 +51,7 @@ export class PineconeService {
   private readonly index: Index<BookVariantPineconeMetadata>;
 
   constructor(
-    private readonly geminiService: GeminiService,
+    private readonly groqService: GroqService,
     private readonly catalogService: CatalogService,
   ) {
     const apiKey = process.env.PINECONE_API_KEY;
@@ -73,10 +73,10 @@ export class PineconeService {
       throw new BadRequestException(PineconeMessage.QUERY_REQUIRED);
     }
 
-    const vector = await this.geminiService.embedText(query); // tính rac vector
+    const vector = await this.groqService.embedText(query); // tính vector
     if (!vector?.length) {
       throw new InternalServerErrorException(
-        PineconeMessage.GEMINI_EMBEDDING_RETURNED_EMPTY_VECTOR,
+        PineconeMessage.GROQ_EMBEDDING_RETURNED_EMPTY_VECTOR,
       );
     }
 
@@ -131,7 +131,7 @@ export class PineconeService {
         );
 
         // số text theo số chunk cắt
-        const embeddings = await this.geminiService.getEmbedding(texts); // trả 1 mảng
+        const embeddings = await this.groqService.getEmbedding(texts); // trả 1 mảng
         const records: PineconeRecord<BookVariantPineconeMetadata>[] = [];
 
         // Xử lí trước 1 phần theo chunk tránh crash

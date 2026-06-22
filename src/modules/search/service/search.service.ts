@@ -1,7 +1,6 @@
-import { AppModule } from '@/app.module';
 import { SearchMessage } from '@/common';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
-import { GeminiService } from '@/modules/gemini/service/gemini.service';
+import { GroqService } from '@/modules/groq/service/groq.service';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
 import { SearchBooksQueryDto } from '@/modules/search/dto/request';
 import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
@@ -15,7 +14,7 @@ export class SearchService {
   constructor(
     private readonly catalogService: CatalogService,
     private readonly pineconeService: PineconeService,
-    private readonly geminiService: GeminiService,
+    private readonly groqService: GroqService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) { }
   // Search sách theo query , topK format maxPrice categoryId
@@ -85,11 +84,32 @@ export class SearchService {
     const key = `isbn:${isbn}:langId:${langId}`;
     const cached = await this.cache.get<QuickBookFillResponseDto>(key);
     if (cached) return cached;
-    const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${AppModule.CONFIGURATION.GOOGLE_CONFIG.GOOGLE_API_KEY_BOOK}`,
+    const googleBooksKey = process.env.GOOGLE_API_KEY_BOOK;
+    const apiKeyQuery = googleBooksKey ? `&key=${googleBooksKey}` : '';
+    const googleBook = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${apiKeyQuery}`,
     );
-    const json = await response.json();
-    const book = await this.geminiService.generateBookData(json, langCode);
+
+    const googleBookJson = await googleBook.json();
+    const title = googleBookJson.items?.[0]?.volumeInfo?.title;
+    const author = googleBookJson.items?.[0]?.volumeInfo?.authors?.[0];
+
+    const q = encodeURIComponent([title, author].filter(Boolean).join(" "));
+
+    const res = await fetch(
+      `https://openlibrary.org/search.json?q=${q}&fields=key,title,author_name,editions&limit=5`,
+      { headers: { "User-Agent": "BookStore/1.0 (huyp7922@gmail.com)" } },
+    );
+
+    if (!res.ok) throw new Error(`OpenLibrary error: ${res.status}`);
+    const data = await res.json();
+
+    const works = data.docs ?? [];      // search.json trả về trong "docs"
+    works.forEach(w => {
+      console.log(w.editions);
+    })
+    console.log(googleBookJson);
+    const book = await this.groqService.generateBookData(googleBookJson, langCode);
     await this.cache.set(key, book);
     return book;
   }

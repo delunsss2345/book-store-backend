@@ -24,6 +24,7 @@ export enum PermissionCode {
   SUPPLIER_READ = 'supplier:read',
   SUPPLIER_CREATE = 'supplier:create',
   SUPPLIER_UPDATE = 'supplier:update',
+  ADMIN_GET_PERMISSION = 'admin:get-permission',
   ADMIN_CREATE_BOOK = 'admin:create-book',
   ADMIN_UPDATE_BOOK = 'admin:update-book',
   ADMIN_DELETE_BOOK = 'admin:delete-book',

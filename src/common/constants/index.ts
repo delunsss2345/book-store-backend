@@ -7,7 +7,7 @@ export * from './catalog-message.constant';
 export * from './category-message.constant';
 export * from './enum-message.constant';
 export * from './enum.constant';
-export * from './gemini-message.constant';
+export * from './groq-message.constant';
 export * from './hooks-message.constant';
 export * from './http-message.constant';
 export * from './language-message.constant';

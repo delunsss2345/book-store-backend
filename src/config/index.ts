@@ -1,6 +1,6 @@
 import { AppConfiguration } from '@/config/app.config';
 import { BaseConfiguration } from '@/config/base.config';
-import { GoogleConfiguration } from '@/config/google.config';
+import { GroqConfiguration } from '@/config/groq.config';
 import { JwtConfiguration } from '@/config/jwt.config';
 import { NodemailerConfiguration } from '@/config/nodemailer.config';
 import { PaymentConfiguration } from '@/config/payment.config';
@@ -37,8 +37,8 @@ class Configuration extends BaseConfiguration {
   R2_CONFIG = new R2Configuration();
 
   @ValidateNested()
-  @Type(() => GoogleConfiguration)
-  GOOGLE_CONFIG = new GoogleConfiguration();
+  @Type(() => GroqConfiguration)
+  GROQ_CONFIG = new GroqConfiguration();
 
   @ValidateNested()
   @Type(() => PaymentConfiguration)

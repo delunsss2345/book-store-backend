@@ -4,128 +4,111 @@ import { Injectable } from '@nestjs/common';
 import { HTTPMethod, Prisma } from '@prisma/client';
 
 export type CreatePermissionParams = {
-    code: string;
-    description?: string;
-    method: HTTPMethod;
-    pathPattern: string;
-    isActive?: boolean;
+  code: string;
+  description?: string;
+  method: HTTPMethod;
+  pathPattern: string;
+  isActive?: boolean;
 };
 
 export type UpdatePermissionParams = {
-    code?: string;
-    description?: string;
-    method?: HTTPMethod;
-    pathPattern?: string;
-    isActive?: boolean;
+  description?: string;
 };
 
 @Injectable()
 export class PermissionRepository {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-    findAllPermissions() {
-        return this.prisma.permission.findMany({
-            orderBy: {
-                id: 'desc',
-            },
-        });
+  findAllPermissions() {
+    return this.prisma.permission.findMany({
+      orderBy: {
+        id: 'desc',
+      },
+    });
+  }
+
+  findPermissionByName(name: string) {
+    return this.prisma.permission.findMany({
+      where: {
+        code: {
+          startsWith: name,
+        },
+      },
+    });
+  }
+
+  createPermission(params: CreatePermissionParams, actorUserId: number) {
+    const data: Prisma.PermissionUncheckedCreateInput = {
+      code: params.code,
+      method: params.method,
+      pathPattern: params.pathPattern,
+      createdById: actorUserId,
+    };
+
+    if (params.code !== undefined) {
+      data.code = params.code;
     }
 
-    findPermissionByName(name: string) {
-        return this.prisma.permission.findMany({
-            where: {
-                code: {
-                    startsWith: name,
-                },
-            },
-        });
+    if (params.description !== undefined) {
+      data.description = params.description;
     }
 
-    createPermission(params: CreatePermissionParams, actorUserId: number) {
-        const data: Prisma.PermissionUncheckedCreateInput = {
-            code: params.code,
-            method: params.method,
-            pathPattern: params.pathPattern,
-            createdById: actorUserId,
-        };
-
-        if (params.code !== undefined) {
-            data.code = params.code;
-        }
-
-        if (params.description !== undefined) {
-            data.description = params.description;
-        }
-
-        if (params.isActive !== undefined) {
-            data.isActive = params.isActive;
-        }
-
-        return this.prisma.permission.create({ data });
+    if (params.isActive !== undefined) {
+      data.isActive = params.isActive;
     }
 
-    updatePermission(
-        id: number,
-        params: UpdatePermissionParams,
-        actorUserId: number,
-    ) {
-        const data: Prisma.PermissionUncheckedUpdateInput = {
-            updatedById: actorUserId,
-        };
+    return this.prisma.permission.create({ data });
+  }
 
-        if (params.code !== undefined) {
-            data.code = params.code;
-        }
+  updatePermission(
+    id: number,
+    params: UpdatePermissionParams,
+    actorUserId: number,
+  ) {
+    const data: Prisma.PermissionUncheckedUpdateInput = {
+      updatedById: actorUserId,
+    };
 
-        if (params.description !== undefined) {
-            data.description = params.description;
-        }
-
-        if (params.method !== undefined) {
-            data.method = params.method;
-        }
-
-        if (params.pathPattern !== undefined) {
-            data.pathPattern = params.pathPattern;
-        }
-
-        if (params.isActive !== undefined) {
-            data.isActive = params.isActive;
-        }
-
-        return this.prisma.permission.update({
-            where: { id },
-            data,
-        });
+    if (params.description !== undefined) {
+      data.description = params.description;
     }
 
-    softDeletePermission(id: number, actorUserId: number) {
-        return this.prisma.permission.update({
-            where: { id },
-            data: {
-                isActive: false,
-                deletedAt: new Date(),
-                updatedById: actorUserId,
-            },
-        });
-    }
+    return this.prisma.permission.update({
+      where: { id },
+      data,
+    });
+  }
 
-    upsert(key: CreatePermissionScanDto, tx: PrismaClientTransaction = this.prisma) {
-        return tx.permission.upsert({
-            where: {
-                method_pathPattern: {
-                    method: key.methodName as HTTPMethod,
-                    pathPattern: key.pathMetadata,
-                },
-            },
-            create: {
-                code: key.namePermission,
-                method: key.methodName as HTTPMethod,
-                pathPattern: key.pathMetadata,
-            },
-            update: {
-                code: key.namePermission,
-            },
-        });
-    }
+  softDeletePermission(id: number, actorUserId: number) {
+    return this.prisma.permission.update({
+      where: { id },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+        updatedById: actorUserId,
+      },
+    });
+  }
+
+  upsert(
+    key: CreatePermissionScanDto,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    return tx.permission.upsert({
+      where: {
+        method_pathPattern: {
+          method: key.methodName as HTTPMethod,
+          pathPattern: key.pathMetadata,
+        },
+      },
+      create: {
+        code: key.namePermission,
+        method: key.methodName as HTTPMethod,
+        pathPattern: key.pathMetadata,
+      },
+      update: {
+        code: key.namePermission,
+      },
+    });
+  }
 }

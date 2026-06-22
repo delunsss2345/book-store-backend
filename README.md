@@ -20,22 +20,26 @@
 Đây không phải một CRUD store. Sáu hệ thống dưới đây là phần có chiều sâu thật sự:
 
 ### 1. Recommendation Engine xác định (không dùng LLM runtime)
+
 Bộ gợi ý **deterministic, giải thích được** — rẻ, nhanh, testable, ổn định:
+
 - **Weighted event scoring + time decay:** mỗi hành vi quy về điểm ý định = `EVENT_WEIGHT × timeDecay(daysAgo)`. Mua thật (`PAYMENT_SUCCESS`) nặng gấp 12× một lượt xem; tín hiệu âm (`REMOVE_FROM_CART`, `PAYMENT_FAILED`) trừ điểm.
 - **Pipeline 3 luồng:** variant events + order events → mở rộng ứng viên bằng **đồ thị mua-kèm** (co-purchase graph) từ `order_items` → hợp nhất + boost theo số lượng → `getTopKMap(20)`.
 - **Sách liên quan** bằng **Jaccard Index (Intersection over Union)** trên tập category.
 
 > `src/modules/user-event` · `src/modules/catalog` · `src/common/constants/event-type.constant.ts`
 
-### 2. Semantic Search — Gemini Embeddings + Pinecone
-- Query ngôn ngữ tự nhiên → **vector 768 chiều** (Gemini `gemini-embedding-001`) → đối sánh độ tương đồng trong Pinecone.
+### 2. Semantic Search — Groq Embeddings + Pinecone
+
+- Query ngôn ngữ tự nhiên → **vector embedding** (Groq `nomic-embed-text-v1_5`) → đối sánh độ tương đồng trong Pinecone.
 - **Batch reindex** (200 record/lần) chống rate-limit; bỏ qua record lỗi thay vì fail cả lô.
 - **Bảo toàn thứ hạng vector** khi hydrate chi tiết từ DB, cache kết quả trong Redis.
-- Gemini còn được dùng để **làm giàu dữ liệu sách** (từ Google Books) và **sinh nháp review** — luôn ép `responseJsonSchema` để đầu ra JSON đúng cấu trúc.
+- Groq còn được dùng để **làm giàu dữ liệu sách** (từ Google Books) bằng structured JSON output.
 
-> `src/modules/pinecone` · `src/modules/gemini` · `src/modules/search` · `src/modules/review-ai`
+> `src/modules/pinecone` · `src/modules/groq` · `src/modules/search`
 
 ### 3. Authentication nhiều lớp
+
 - **JWT access (ngắn hạn) + refresh token opaque** lưu hash.
 - **Token revocation:** `AuthGuard` verify chữ ký rồi tra blacklist → logout có hiệu lực tức thì dù token chưa hết hạn.
 - **Device fingerprinting** + quản lý session theo thiết bị.
@@ -45,6 +49,7 @@ Bộ gợi ý **deterministic, giải thích được** — rẻ, nhanh, testabl
 > `src/modules/auth` · `revoked-token` · `user-session` · `user-device` · `login-attempt`
 
 ### 4. RBAC có cache
+
 - Phân quyền ở tầng guard qua decorator `@RequirePermissions(...)`.
 - Quyền được cache theo role trong Redis (`role_per:{id}:perms`, TTL 1h), nạp song song → không round-trip DB mỗi request.
 - Mô hình chuẩn hoá: `User → UserRole → Role → RolePermission → Permission` với composite unique key.
@@ -52,6 +57,7 @@ Bộ gợi ý **deterministic, giải thích được** — rẻ, nhanh, testabl
 > `src/common/security/guard/permission.guard.ts` · `src/modules/{permission,role,role-permission,user-role}`
 
 ### 5. Payment & Outbox Pattern
+
 - **Webhook Sepay idempotent:** lưu `webhook_inbox` với composite unique `(gateway, providerEventId)` bằng `upsert` → bắn lại nhiều lần cũng chỉ xử lý một lần.
 - Cập nhật order + payment trong **một transaction** (nguyên tử).
 - **Outbox pattern** cho email: ghi `email_outbox` (PENDING) → BullMQ với `jobId` idempotent + **exponential backoff** (3 lần, 3s→9s→27s).
@@ -59,6 +65,7 @@ Bộ gợi ý **deterministic, giải thích được** — rẻ, nhanh, testabl
 > `src/modules/hooks` · `src/modules/payment` · `src/modules/jobs` · `src/modules/email-outbox`
 
 ### 6. Toàn vẹn dữ liệu (Data Integrity)
+
 - **Snapshot pattern:** `OrderItem` trỏ tới `BookVariantSnapshot` (giá/SKU đông cứng) → đổi giá sau này không làm sai đơn cũ.
 - **Audit log** lưu JSON `before`/`after` + actor + IP.
 - **onDelete matrix** có chủ đích (`Cascade`/`Restrict`/`SetNull`/`NoAction`), tài liệu hoá tại [`docs/schema-ondelete-matrix.md`](./docs/schema-ondelete-matrix.md).
@@ -74,7 +81,7 @@ src/
 ├── database/          # Prisma service, selects, error mapping
 └── modules/           # 50+ feature modules
     ├── auth, user-session, user-device, login-attempt, revoked-token, verification-code
-    ├── catalog, user-event, search, pinecone, gemini, review-ai     # discovery & AI
+    ├── catalog, user-event, search, pinecone, groq                  # discovery & AI
     ├── cart, order, payment, hooks, payment-intent                  # commerce & payment
     ├── permission, role, role-permission, user-role                 # RBAC
     ├── jobs, mail, email-outbox                                     # async / queue
@@ -89,29 +96,30 @@ src/
 
 ## 🛠️ Tech Stack
 
-| Lớp | Công nghệ |
-|-----|-----------|
-| Framework | NestJS 11 (Express) |
-| ORM / DB | Prisma 7 · MariaDB / MySQL 8.4 |
-| Cache / Queue | Redis · BullMQ · `@nestjs/cache-manager` |
-| AI / Search | Google Gemini · Pinecone (vector DB) |
-| Auth | JWT (`@nestjs/jwt`) · bcrypt |
-| Storage | Cloudflare R2 (S3-compatible) · Sharp |
-| Realtime | Socket.IO (`@nestjs/websockets`) |
-| Mail | Nodemailer (qua outbox + queue) |
-| Payment | Sepay (QR webhook) |
-| Docs | Swagger (`@nestjs/swagger`) |
-| Infra | Docker · Nginx · AWS EC2 · Terraform · GitHub Actions |
+| Lớp           | Công nghệ                                             |
+| ------------- | ----------------------------------------------------- |
+| Framework     | NestJS 11 (Express)                                   |
+| ORM / DB      | Prisma 7 · MariaDB / MySQL 8.4                        |
+| Cache / Queue | Redis · BullMQ · `@nestjs/cache-manager`              |
+| AI / Search   | Groq · Pinecone (vector DB)                           |
+| Auth          | JWT (`@nestjs/jwt`) · bcrypt                          |
+| Storage       | Cloudflare R2 (S3-compatible) · Sharp                 |
+| Realtime      | Socket.IO (`@nestjs/websockets`)                      |
+| Mail          | Nodemailer (qua outbox + queue)                       |
+| Payment       | Sepay (QR webhook)                                    |
+| Docs          | Swagger (`@nestjs/swagger`)                           |
+| Infra         | Docker · Nginx · AWS EC2 · Terraform · GitHub Actions |
 
 ---
 
 ## 🚀 Bắt đầu
 
 ### Yêu cầu
+
 - Node.js ≥ 20 (khuyến nghị 24.x)
 - Docker & Docker Compose
 - Redis (cache + queue)
-- Tài khoản Gemini API & Pinecone (cho AI search)
+- Tài khoản Groq API & Pinecone (cho AI search)
 
 ### Cài đặt
 
@@ -149,16 +157,16 @@ API mặc định chạy tại `http://localhost:3301` (theo `PORT`). Swagger do
 
 ## 🔑 Biến môi trường chính
 
-| Nhóm | Biến |
-|------|------|
-| Database | `DATABASE_URL`, `MYSQL_*` |
-| Auth | `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `ACCESS_TOKEN_TIME`, `REFRESH_TOKEN_TIME`, `OTP_TIME` |
-| Redis | `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD` |
-| AI / Search | `GEMINI_API_KEY`, `GEMINI_MODEL`, `PINECONE_API_KEY`, `PINECONE_INDEX`, `GOOGLE_API_KEY_BOOK` |
-| Mail | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASS` |
-| Payment (Sepay) | `MERCHANT_ID`, `MERCHANT_SECRET_KEY`, `BANK_ID`, `ACCOUNT_NO`, `TEMPLATE_OR` |
-| Storage (R2) | `CDN_URL`, `FOLDER_PRODUCT`, các khoá R2 |
-| Rate limit | `RATE_LIMIT_LIMIT`, `RATE_LIMIT_TTL` |
+| Nhóm            | Biến                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Database        | `DATABASE_URL`, `MYSQL_*`                                                                                         |
+| Auth            | `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, `ACCESS_TOKEN_TIME`, `REFRESH_TOKEN_TIME`, `OTP_TIME`              |
+| Redis           | `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`                                                    |
+| AI / Search     | `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_EMBEDDING_MODEL`, `PINECONE_API_KEY`, `PINECONE_INDEX`, `GOOGLE_API_KEY_BOOK` |
+| Mail            | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASS`                                                 |
+| Payment (Sepay) | `MERCHANT_ID`, `MERCHANT_SECRET_KEY`, `BANK_ID`, `ACCOUNT_NO`, `TEMPLATE_OR`                                      |
+| Storage (R2)    | `CDN_URL`, `FOLDER_PRODUCT`, các khoá R2                                                                          |
+| Rate limit      | `RATE_LIMIT_LIMIT`, `RATE_LIMIT_TTL`                                                                              |
 
 ---
 

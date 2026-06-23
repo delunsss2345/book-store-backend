@@ -22,11 +22,12 @@ export class SearchController {
 
     @Public()
     @Get('filter')
-    searchFilter(
+    async searchFilter(
         @Query() query: SearchFilterQueryDto,
         @GetLanguageId() langId: number,
-        @GetLanguageCode() langCode: string,
-    ) { }
+    ) {
+        // const result = await this.searchService.filterBooks(query, langId);
+    }
 
     // admin tạo mới dữ liệu vector của sách 
     @Post('reindex')

@@ -2,7 +2,7 @@ import { SearchMessage } from '@/common';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GroqService } from '@/modules/groq/service/groq.service';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
-import { SearchBooksQueryDto } from '@/modules/search/dto/request';
+import { SearchBooksQueryDto, SearchFilterQueryDto } from '@/modules/search/dto/request';
 import { QuickBookFillResponseDto } from '@/modules/search/dto/response/search-isbn.dto';
 import { validateISBN } from '@/utils/parseIsbn.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -47,7 +47,7 @@ export class SearchService {
     const orderedBookIds = orderedBookIdStrings.map((id) => Number(id));
 
     const rankByBookId = new Map(
-      orderedBookIdStrings.map((id, index) => [id, index]),
+      orderedBookIds.map((id, index) => [id, index]),
     );
 
     const cartBooks = await this.catalogService.queryListBook(
@@ -112,5 +112,9 @@ export class SearchService {
     const book = await this.groqService.generateBookData(googleBookJson, langCode);
     await this.cache.set(key, book);
     return book;
+  }
+
+  async filterBooks(query: SearchFilterQueryDto, langId: number) {
+      
   }
 }

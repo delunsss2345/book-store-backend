@@ -17,8 +17,8 @@ export class CatalogBookSpecDto {
 }
 
 export class CatalogBookDetailDto {
-    @ApiProperty({ example: '1' })
-    id: string;
+    @ApiProperty({ example: 1 })
+    id: number;
 
     @ApiProperty({ example: 'Designing Data-Intensive Applications' })
     title: string;
@@ -43,12 +43,6 @@ export class CatalogBookDetailDto {
 
     @ApiPropertyOptional({ example: 'O\'Reilly' })
     publisherName?: string | null;
-
-    @ApiPropertyOptional({ example: 4.7 })
-    ratingAvg?: number | null;
-
-    @ApiPropertyOptional({ example: 120 })
-    ratingCount?: number;
 
     @ApiPropertyOptional({ example: 530 })
     soldCount?: number;

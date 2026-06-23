@@ -2,8 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Badge } from '@prisma/client';
 
 export class CatalogBookCardDto {
-    @ApiProperty({ example: '1' })
-    id: string;
+    @ApiProperty({ example: 1 })
+    id: number;
 
     @ApiProperty({ example: 'Designing Data-Intensive Applications' })
     title: string;
@@ -28,12 +28,6 @@ export class CatalogBookCardDto {
 
     @ApiPropertyOptional({ example: 'An in-depth guide to designing data-intensive applications.' })
     description?: string | null;
-    @ApiPropertyOptional({ example: 4.7 })
-    ratingAvg?: number | null;
-
-    @ApiPropertyOptional({ example: 120 })
-    ratingCount?: number;
-
     @ApiPropertyOptional({ example: 530 })
     soldCount?: number;
 
@@ -57,11 +51,11 @@ export class CatalogBookCardDto {
 }
 
 export class CatalogCategoryDto {
-    @ApiProperty({ example: '1' })
-    id: string;
+    @ApiProperty({ example: 1 })
+    id: number;
 
     @ApiPropertyOptional({ example: null })
-    parentId?: string | null;
+    parentId?: number | null;
 
     @ApiProperty({ example: 'Backend' })
     name: string;
@@ -74,11 +68,11 @@ export class CatalogCategoryDto {
 }
 
 export class CatalogCategoryTreeDto {
-    @ApiProperty({ example: '1' })
-    id: string;
+    @ApiProperty({ example: 1 })
+    id: number;
 
     @ApiPropertyOptional({ example: null })
-    parentId?: string | null;
+    parentId?: number | null;
 
     @ApiProperty({ example: 'Programming' })
     name: string;
@@ -95,7 +89,7 @@ export class CatalogCategoryTreeDto {
 
 export class CatalogBookVariantDto {
     @ApiProperty({ example: '10' })
-    id: string;
+    id: number;
 
     @ApiProperty({ example: 'PAPERBACK' })
     format: string;

@@ -31,16 +31,15 @@ type BookCardSource = BookListRow | BookCardRow;
 export function buildCatalogCategoryTree(
   rows: CategoryRow[],
 ): CatalogCategoryTreeDto[] {
-  const nodes = new Map<string, CatalogCategoryTreeDto>();
+  const nodes = new Map<number, CatalogCategoryTreeDto>();
 
   for (const row of rows) {
-    const translation = row.categoryTranslation?.[0];
+    const [translation] = row.categoryTranslation;
     if (!translation?.name) continue;
 
-    const id = row.id.toString();
-    nodes.set(id, {
-      id,
-      parentId: row.parentId ? row.parentId.toString() : null,
+    nodes.set(row.id, {
+      id: row.id,
+      parentId: row.parentId ?? null,
       name: translation.name,
       slug: translation.slug ?? null,
       sortOrder: row.sortOrder ?? 0,
@@ -67,13 +66,13 @@ export function buildCatalogCategoryTree(
 export function toCatalogListBookCard(
   book: BookCardSource,
 ): CatalogBookCardDto {
-  const translation = book.translations[0];
+  const [translation] = book.translations;
   const cheapestVariant = book.variants[0];
   const stock = cheapestVariant?.stock ?? 0;
 
   return {
-    id: book.id.toString(),
-    title: translation?.title ?? `Book ${book.id.toString()}`,
+    id: book.id,
+    title: translation?.title ?? `Book ${book.id}`,
     slug: translation?.slug ?? null,
     coverImageUrl: book.coverImageUrl ?? null,
     price: toFixedPrice(cheapestVariant?.price),
@@ -92,11 +91,11 @@ export function toCatalogBookDetail(
   slugFallback?: string,
   recommend?: CatalogBookCardDto[],
 ): CatalogBookDetailDto {
-  const translation = book.translations[0];
+  const [translation] = book.translations;
 
   return {
-    id: book.id.toString(),
-    title: translation?.title ?? `Book ${book.id.toString()}`,
+    id: book.id,
+    title: translation?.title ?? `Book ${book.id}`,
     slug: translation?.slug ?? slugFallback ?? null,
     description: translation?.description ?? null,
     coverImageUrl: book.coverImageUrl ?? null,
@@ -116,26 +115,22 @@ export function toCatalogBookDetail(
 export function toCatalogBookCard(
   book: BookCardRow,
   soldCount?: number,
-  ratingAvg?: number,
-  ratingCount?: number,
 ): CatalogBookCardDto {
-  const translation = book.translations[0];
+  const [translation] = book.translations;
   const cheapestVariant = book.variants[0];
 
   return {
-    id: book.id.toString(),
-    title: translation?.title ?? `Book ${book.id.toString()}`,
+    id: book.id,
+    title: translation?.title ?? `Book ${book.id}`,
     slug: translation?.slug ?? null,
     coverImageUrl: book.coverImageUrl,
-    ratingAvg: ratingAvg ?? null,
-    ratingCount: ratingCount ?? 0,
     soldCount: soldCount ?? 0,
     createdAt: book.createdAt,
     badges: (book.bookBadge ?? []).map((badge) => badge.code),
     bookVariantId: cheapestVariant?.id,
     price: toFixedPrice(cheapestVariant?.price),
     description: translation?.description ?? null,
-    currencyCode: cheapestVariant?.currencyCode ?? null,
+    currencyCode: cheapestVariant?.currencyCode ?? 'VND',
     format: cheapestVariant?.format ?? null,
     isOutOfStock: !cheapestVariant || (cheapestVariant.stock ?? 0) <= 0,
   };
@@ -146,13 +141,13 @@ function toCatalogBookCategories(
 ): CatalogCategoryDto[] {
   return bookCategories.map((x) => {
     const category = x.category;
-    const translation = category.categoryTranslation?.[0];
+    const [translation] = category.categoryTranslation;
 
     return {
-      id: category.id.toString(),
-      parentId: category.parentId ? category.parentId.toString() : null,
+      id: category.id,
+      parentId: category.parentId ? category.parentId : null,
       sortOrder: category.sortOrder ?? 0,
-      name: translation?.name ?? `Category ${category.id.toString()}`,
+      name: translation?.name ?? `Category ${category.id}`,
       slug: translation?.slug ?? null,
     };
   });
@@ -162,7 +157,7 @@ function toCatalogBookVariants(
   book: BookDetailByIdRow,
 ): CatalogBookVariantDto[] {
   return (book.variants ?? []).map((variant) => ({
-    id: variant.id.toString(),
+    id: variant.id,
     format: variant.format,
     edition: variant.edition ?? null,
     isbn: variant.isbn ?? null,
@@ -193,7 +188,7 @@ function toCatalogBookBadges(book: BookDetailByIdRow): Badge[] {
 function sortCategoryTree(nodes: CatalogCategoryTreeDto[]): void {
   nodes.sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-    return a.id.localeCompare(b.id);
+    return a.id - b.id;
   });
 
   for (const node of nodes) {

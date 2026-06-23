@@ -53,7 +53,6 @@ export class CatalogRepository {
                         name: true,
                         slug: true,
                     },
-                    take: 1,
                 },
             },
         });
@@ -142,7 +141,6 @@ export class CatalogRepository {
                                 title: true,
                                 slug: true,
                             },
-                            take: 1,
                         },
                     },
                 },
@@ -170,7 +168,6 @@ export class CatalogRepository {
                             select: {
                                 slug: true,
                             },
-                            take: 1,
                         },
                     },
                 },
@@ -234,7 +231,6 @@ export class CatalogRepository {
                         slug: true,
                         description: true,
                     },
-                    take: 1,
                 },
                 categories: {
                     select: {
@@ -249,7 +245,6 @@ export class CatalogRepository {
                                         name: true,
                                         slug: true,
                                     },
-                                    take: 1,
                                 },
                             },
                         },
@@ -310,7 +305,6 @@ export class CatalogRepository {
                                 slug: true,
                                 description: true,
                             },
-                            take: 1,
                         },
                         bookBadge: {
                             select: {
@@ -330,7 +324,6 @@ export class CatalogRepository {
                                                 name: true,
                                                 slug: true,
                                             },
-                                            take: 1,
                                         },
                                     },
                                 },
@@ -351,20 +344,18 @@ export class CatalogRepository {
 
         return variants.map((variant) => {
             const book = variant.book;
-            const translation = book.translations[0];
+            const [translation] = book.translations;
             const price = Number.isFinite(Number(variant.price))
                 ? Number(variant.price).toFixed(2)
                 : null;
 
             return {
-                id: book.id.toString(),
-                title: translation?.title ?? `Book ${book.id.toString()}`,
+                id: book.id,
+                title: translation?.title ?? `Book ${book.id}`,
                 slug: translation?.slug ?? null,
                 coverImageUrl: book.coverImageUrl,
                 price,
                 currencyCode: variant.currencyCode ?? null,
-                ratingAvg: null,
-                ratingCount: 0,
                 soldCount: 0,
                 createdAt: book.createdAt,
                 badges: (book.bookBadge ?? []).map((badge) => badge.code),
@@ -514,7 +505,6 @@ export class CatalogRepository {
                     translations: {
                         where: { languageId },
                         select: { title: true, slug: true, description: true },
-                        take: 1,
                     },
                     categories: {
                         select: {
@@ -526,7 +516,6 @@ export class CatalogRepository {
                                     categoryTranslation: {
                                         where: { languageId },
                                         select: { name: true, slug: true },
-                                        take: 1,
                                     },
                                 },
                             },
@@ -594,7 +583,6 @@ export class CatalogRepository {
                 translations: {
                     where: { languageId, slug },
                     select: { title: true, slug: true, description: true },
-                    take: 1,
                 },
                 categories: {
                     select: {
@@ -606,7 +594,6 @@ export class CatalogRepository {
                                 categoryTranslation: {
                                     where: { languageId },
                                     select: { name: true, slug: true },
-                                    take: 1,
                                 },
                             },
                         },
@@ -649,42 +636,15 @@ export class CatalogRepository {
             },
             select: {
                 id: true,
-                coverImageUrl: true,
-                translations: {
-                    select: {
-                        title: true,
-                        slug: true,
-                    },
-                    take: 1
-                },
                 categories: {
                     select: {
                         category: {
                             select: {
                                 id: true,
-                                parentId: true,
-                                sortOrder: true,
-                                categoryTranslation: {
-                                    select: { name: true, slug: true },
-                                    take: 1,
-                                },
                             },
                         },
                     },
                 },
-                variants: {
-                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
-                    select: {
-                        id: true,
-                        format: true,
-                        edition: true,
-                        isbn: true,
-                        price: true,
-                        currencyCode: true,
-                        stock: true,
-                    },
-                    take: 1
-                }
             }
         })
     }
@@ -747,7 +707,6 @@ export class CatalogRepository {
                         title: true,
                         slug: true,
                     },
-                    take: 1,
                 },
                 bookBadge: {
                     select: {
@@ -767,7 +726,6 @@ export class CatalogRepository {
                                         name: true,
                                         slug: true,
                                     },
-                                    take: 1,
                                 },
                             },
                         },

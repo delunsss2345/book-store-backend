@@ -1,6 +1,7 @@
 import { WishlistMessage } from '@/common';
 import { AuthService } from '@/modules/auth/service/auth.service';
 import { AddWishItemRequestDto } from '@/modules/wishlist/dto/request';
+import { WishlistItemMapper } from '@/modules/wishlist/mapper';
 import { WishlistItemService } from '@/modules/wishlist/service/wishlist-item.service';
 import {
   ForbiddenException,
@@ -53,10 +54,7 @@ export class WishlistService {
     if (existed) {
       return {
         created: false,
-        wishItem: {
-          itemKey: existed.id.toString(),
-          bookVariantId: Number(existed.bookVariantId),
-        },
+        wishItem: WishlistItemMapper.toDto(existed),
       };
     }
 
@@ -67,10 +65,7 @@ export class WishlistService {
       );
     return {
       created: true,
-      wishItem: {
-        itemKey: createdItem.id.toString(),
-        bookVariantId: Number(createdItem.bookVariantId),
-      },
+      wishItem: WishlistItemMapper.toDto(createdItem),
     };
   }
 

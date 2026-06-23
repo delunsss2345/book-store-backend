@@ -10,6 +10,7 @@ import { AuthorBookItemResponseDto } from '../dto/response/author-book-item.resp
 import { AuthorBookListResponseDto } from '../dto/response/author-book-list.response.dto';
 import { AuthorItemResponseDto } from '../dto/response/author-item.response.dto';
 import { AuthorListResponseDto } from '../dto/response/author-list.response.dto';
+import { AuthorMapper } from '../mapper';
 
 @Injectable()
 export class AuthorService {
@@ -22,10 +23,7 @@ export class AuthorService {
     body: CreateAuthorRequestDto,
   ): Promise<AuthorItemResponseDto> {
     const created = await this.authorRepository.createAuthor(body.defaultName);
-    return {
-      id: created.id.toString(),
-      name: created.defaultName,
-    };
+    return AuthorMapper.toItem(created);
   }
 
   async createAuthorMany(
@@ -48,10 +46,7 @@ export class AuthorService {
       normalizedNames.map((name) => this.authorRepository.createAuthor(name)),
     );
 
-    return createdAuthors.map((author) => ({
-      id: author.id.toString(),
-      name: author.defaultName,
-    }));
+    return createdAuthors.map((author) => AuthorMapper.toItem(author));
   }
 
   async getAuthors(
@@ -66,10 +61,9 @@ export class AuthorService {
       this.authorRepository.findAuthors(langId, page, limit),
     ]);
 
-    const items: AuthorItemResponseDto[] = rows.map((row) => ({
-      id: row.id.toString(),
-      name: row.defaultName,
-    }));
+    const items: AuthorItemResponseDto[] = rows.map((row) =>
+      AuthorMapper.toItem(row),
+    );
 
     return buildPaginatedResult(items, total, page, limit);
   }
@@ -92,20 +86,9 @@ export class AuthorService {
       this.bookAuthorService.findBooksByAuthor(authorId, langId, page, limit),
     ]);
 
-    const items: AuthorBookItemResponseDto[] = rows.map((row) => {
-      const book = row.book;
-      const translation = book.translations[0];
-      const cheapest = book.variants[0];
-
-      return {
-        bookId: book.id.toString(),
-        title: translation?.title ?? `Book ${book.id.toString()}`,
-        slug: translation?.slug ?? null,
-        minPrice: cheapest ? Number(cheapest.price).toFixed(2) : null,
-        coverImageUrl: book.coverImageUrl ?? null,
-        isPrimary: row.isPrimary,
-      };
-    });
+    const items: AuthorBookItemResponseDto[] = rows.map((row) =>
+      AuthorMapper.toBookItem(row),
+    );
 
     return buildPaginatedResult(items, total, page, limit);
   }

@@ -6,6 +6,7 @@ import {
   UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
 import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
+import { CartItemMapper } from '@/modules/cart/mapper';
 import { CartItemService } from '@/modules/cart/service/cart-item.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import {
@@ -98,11 +99,7 @@ export class CartService {
 
 
         return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
+          cartItem: CartItemMapper.toDto(updatedItem),
         };
       }
 
@@ -113,11 +110,7 @@ export class CartService {
       );
 
       return {
-        cartItem: {
-          itemKey: createdItem.id.toString(),
-          bookVariantId: Number(createdItem.bookVariantId),
-          quantity: createdItem.quantity,
-        },
+        cartItem: CartItemMapper.toDto(createdItem),
       };
     }
     if (guestSessionId) {
@@ -145,11 +138,7 @@ export class CartService {
         );
 
         return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
+          cartItem: CartItemMapper.toDto(updatedItem),
         };
       }
 
@@ -160,11 +149,7 @@ export class CartService {
       );
 
       return {
-        cartItem: {
-          itemKey: createdItem.id.toString(),
-          bookVariantId: Number(createdItem.bookVariantId),
-          quantity: createdItem.quantity,
-        },
+        cartItem: CartItemMapper.toDto(createdItem),
       };
     }
 
@@ -206,12 +191,7 @@ export class CartService {
       );
       if (!quantity) {
         return {
-          cartItem: {
-            itemKey: item.id.toString(),
-            bookVariantId: Number(item.bookVariantId),
-            quantity,
-            remove: true
-          },
+          cartItem: { ...CartItemMapper.toDto(item), quantity, remove: true },
         }
       } else {
         const updatedItem = await this.cartItemService.updateQuantityById(
@@ -219,11 +199,7 @@ export class CartService {
           quantity,
         );
         return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
+          cartItem: CartItemMapper.toDto(updatedItem),
         };
       }
     }
@@ -248,12 +224,7 @@ export class CartService {
       );
       if (!quantity) {
         return {
-          cartItem: {
-            itemKey: item.id.toString(),
-            bookVariantId: Number(item.bookVariantId),
-            quantity,
-            remove: true
-          },
+          cartItem: { ...CartItemMapper.toDto(item), quantity, remove: true },
         }
       } else {
         const updatedItem = await this.cartItemService.updateQuantityById(
@@ -261,11 +232,7 @@ export class CartService {
           quantity,
         );
         return {
-          cartItem: {
-            itemKey: updatedItem.id.toString(),
-            bookVariantId: Number(updatedItem.bookVariantId),
-            quantity: updatedItem.quantity,
-          },
+          cartItem: CartItemMapper.toDto(updatedItem),
         };
       }
     }

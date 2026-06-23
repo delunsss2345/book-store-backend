@@ -8,6 +8,7 @@ import { PublisherBookItemResponseDto } from '../dto/response/publisher-book-ite
 import { PublisherBookListResponseDto } from '../dto/response/publisher-book-list.response.dto';
 import { PublisherItemResponseDto } from '../dto/response/publisher-item.response.dto';
 import { PublisherListResponseDto } from '../dto/response/publisher-list.response.dto';
+import { PublisherMapper } from '../mapper';
 import { PublisherRepository } from '../repository/publisher.repository';
 
 @Injectable()
@@ -20,10 +21,7 @@ export class PublisherService {
     const created = await this.publisherRepository.createPublisher(
       body.defaultName,
     );
-    return {
-      id: created.id.toString(),
-      name: created.defaultName,
-    };
+    return PublisherMapper.toItem(created);
   }
 
   async getPublishers(
@@ -37,10 +35,9 @@ export class PublisherService {
       this.publisherRepository.findPublishers(page, limit),
     ]);
 
-    const items: PublisherItemResponseDto[] = rows.map((row) => ({
-      id: row.id.toString(),
-      name: row.defaultName,
-    }));
+    const items: PublisherItemResponseDto[] = rows.map((row) =>
+      PublisherMapper.toItem(row),
+    );
 
     return buildPaginatedResult(items, total, page, limit);
   }
@@ -68,18 +65,9 @@ export class PublisherService {
       ),
     ]);
 
-    const items: PublisherBookItemResponseDto[] = rows.map((book) => {
-      const t = book.translations[0];
-      const cheapest = book.variants[0];
-
-      return {
-        bookId: book.id.toString(),
-        title: t?.title ?? `Book ${book.id.toString()}`,
-        slug: t?.slug ?? null,
-        minPrice: cheapest ? Number(cheapest.price).toFixed(2) : null,
-        coverImageUrl: book.coverImageUrl ?? null,
-      };
-    });
+    const items: PublisherBookItemResponseDto[] = rows.map((book) =>
+      PublisherMapper.toBookItem(book),
+    );
 
     return buildPaginatedResult(items, total, page, limit);
   }

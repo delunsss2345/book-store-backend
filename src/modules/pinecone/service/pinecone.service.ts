@@ -1,10 +1,7 @@
 import { PineconeMessage } from '@/common';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GroqService } from '@/modules/groq/service/groq.service';
-import {
-  BookVariantEmbeddingSource,
-  buildBookVariantEmbeddingText,
-} from '@/utils/generateVector.util';
+import { buildBookVariantEmbeddingText } from '@/utils/generateVector.util';
 import {
   BadRequestException,
   Injectable,
@@ -12,20 +9,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Index, Pinecone, PineconeRecord } from '@pinecone-database/pinecone';
+import { BookVariantPineconeMetadata, PineconeMapper } from '../mapper';
+
+// Re-export để giữ nguyên public API cũ của module pinecone.
+export type { BookVariantPineconeMetadata };
 
 const BOOKS_NAMESPACE = 'book-store';
 const DEFAULT_BATCH_SIZE = 200;
-
-export type BookVariantPineconeMetadata = {
-  bookId: string;
-  variantId: string;
-  price: number;
-  categoryIds: string[];
-  langHints: string[];
-  title: string;
-  currencyCode?: string;
-  type: 'book';
-};
 
 export type QueryBookVariantsParams = {
   query: string;
@@ -40,10 +30,6 @@ export type QueryBookVariantResult = {
   score: number;
   metadata?: BookVariantPineconeMetadata;
 };
-
-type SearchIndexVariantRow = Awaited<
-  ReturnType<CatalogService['findActiveBookFirstVariant']>
->[number];
 
 @Injectable()
 export class PineconeService {
@@ -127,7 +113,7 @@ export class PineconeService {
         const chunk = rows.slice(i, i + safeBatchSize);
 
         const texts = chunk.map((row) =>
-          buildBookVariantEmbeddingText(this.toEmbeddingSource(row)),
+          buildBookVariantEmbeddingText(PineconeMapper.toEmbeddingSource(row)),
         );
 
         // số text theo số chunk cắt
@@ -157,7 +143,7 @@ export class PineconeService {
           records.push({
             id: row.id.toString(),
             values,
-            metadata: this.toMetadata(row, numericPrice), // chuyển meta
+            metadata: PineconeMapper.toMetadata(row, numericPrice), // chuyển meta
           });
         }
 
@@ -193,77 +179,5 @@ export class PineconeService {
       return Math.floor(batchSize);
     }
     return DEFAULT_BATCH_SIZE;
-  }
-  //
-  private toMetadata(
-    row: SearchIndexVariantRow,
-    numericPrice: number,
-  ): BookVariantPineconeMetadata {
-    const langHintSet = new Set<string>();
-
-    for (const translation of row.translations) {
-      const code = translation.language.code?.trim().toLowerCase();
-      if (code) langHintSet.add(code);
-    }
-
-    const categoryIdSet = new Set<string>();
-    for (const category of row.categories) {
-      categoryIdSet.add(category.category.id.toString());
-    }
-
-    let title = `Book ${row.id.toString()}`;
-    for (const translation of row.translations) {
-      if (translation.title?.trim()) {
-        title = translation.title;
-        break;
-      }
-    }
-
-    const metadata: BookVariantPineconeMetadata = {
-      bookId: row.id.toString(),
-      variantId: row.id.toString(),
-      price: numericPrice,
-      categoryIds: Array.from(categoryIdSet), ///???
-      langHints: Array.from(langHintSet), //???
-      title,
-      type: 'book',
-    };
-
-    if (row.variants[0].currencyCode) {
-      metadata.currencyCode = row.variants[0].currencyCode;
-    }
-
-    return metadata;
-  }
-
-  private toEmbeddingSource(
-    row: SearchIndexVariantRow,
-  ): BookVariantEmbeddingSource {
-    const titleSet = new Set<string>();
-    const descriptionSet = new Set<string>();
-
-    for (const translation of row.translations) {
-      if (translation.title?.trim()) titleSet.add(translation.title.trim());
-      if (translation.description?.trim()) {
-        descriptionSet.add(translation.description.trim());
-      }
-    }
-
-    const categoryNameSet = new Set<string>();
-    for (const bookCategory of row.categories) {
-      for (const translation of bookCategory.category.categoryTranslation) {
-        if (translation.name?.trim()) {
-          categoryNameSet.add(translation.name.trim());
-        }
-      }
-    }
-
-    return {
-      titles: Array.from(titleSet),
-      descriptions: Array.from(descriptionSet),
-      categoryNames: Array.from(categoryNameSet),
-      price: Number(row.variants[0].price),
-      currencyCode: row.variants[0].currencyCode,
-    };
   }
 }

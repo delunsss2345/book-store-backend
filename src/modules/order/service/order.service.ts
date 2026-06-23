@@ -117,7 +117,7 @@ export class OrderService {
     variants.forEach((v) => {
       const variantCardItem = mapVariantIds.get(v.id);
       const quantity = mapVariantIds.get(v.id);
-      const available = v ? v.stock - v.reserved! : 0;
+      const available = v ? v.stock - v.reserved : 0;
 
       if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
 

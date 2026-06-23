@@ -1,4 +1,4 @@
-import { SHIPPING_FEE } from '@/common';
+import { OrderMessage, SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
@@ -16,8 +16,9 @@ import { PaymentIntentService } from '@/modules/payment/service/payment-intent.s
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { UserAddressService } from '@/modules/user/service/user-address.service';
+import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
   CurrencyCode,
@@ -113,69 +114,75 @@ export class OrderService {
     })
     const variants = await this.bookVariantService.findByVariantIds([...mapVariantIds.keys()]);
 
-
     variants.forEach((v) => {
       const variantCardItem = mapVariantIds.get(v.id);
-      const variant = mapVariantIds.get(v.id);
+      const quantity = mapVariantIds.get(v.id);
       const available = v ? v.stock - v.reserved! : 0;
 
-      // if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
+      if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
 
-      // if (!v.stock || available < (variantCardItem?.quantity ?? 0)) {
-      //   Logger.error(
-      //     `Book variant ${v.id} out of stock. Available: ${available}, Required: ${variantCardItem?.quantity ?? 0}`,
-      //   );
-      //   throw new ForbiddenException(
-      //     OrderMessage.BOOK_OUT_OF_STOCK(
-      //       "Sản phẩm vừa hết hàng"
-      //     ),
-      //   );
-      // }
+      if (!v.stock || available < (quantity ?? 0)) {
+        Logger.error(
+          `Book variant ${v.id} out of stock. Available: ${available}, Required: ${quantity ?? 0}`,
+        );
+        throw new ForbiddenException(
+          OrderMessage.BOOK_OUT_OF_STOCK(
+            "Sản phẩm vừa hết hàng"
+          ),
+        );
+      }
     });
 
-    const subtotal = 0;
-    // await Promise.all(
-    //   items.map(async (item) => {
-    //     const bookVariant = variantMap.get(item.bookVariantId.toString());
-    //     if (!bookVariant) {
-    //       throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
-    //     }
+    let subtotal = 0;
+    const snapshots: {
+      bookVariantSnapshotId: number,
+      quantity: number,
+      unitPrice: number,
+      lineTotal: number,
+    }[] = [];
+    await Promise.all(
+      variants.map(async (variant) => {
+        const quantity = mapVariantIds.get(variant.id)!;
+        const unitPrice = Number(variant.price);
+        const lineTotal = unitPrice * mapVariantIds.get(variant.id)!;
 
-    //     const unitPrice = Number(bookVariant.price);
-    //     const lineTotal = unitPrice * item.quantity;
+        subtotal += lineTotal;
 
-    //     subtotal += lineTotal;
+        const contentHash = generateContentHash({
+          id: variant.id,
+          format: variant.format,
+          price: Number(variant.price),
+          isbn: variant.isbn
+        });
 
-    //     const contentHash = generateContentHash(bookVariant);
+        const [snapshot, _] = await Promise.all([
+          this.bookVariantSnapshotService.upsertByContentHash(
+            contentHash,
+            {
+              bookVariantId: variant.id,
+              contentHash,
+              priceSnapshot: unitPrice,
+              formatSnapshot: variant.format,
+            },
+            tx,
+          ),
+          this.bookVariantService.updateReservedById(variant.id, quantity, tx)
+        ])
 
-    //     const snapshot = await this.bookVariantSnapshotService.upsertByContentHash(
-    //       contentHash,
-    //       {
-    //         bookVariantId: bookVariant.id.toString(),
-    //         contentHash,
-    //         priceSnapshot: unitPrice,
-    //         formatSnapshot: bookVariant.format,
-    //         currencyCodeSnapshot: bookVariant.currencyCode ?? 'VND',
-    //       },
-    //       tx,
-    //     );
+        snapshots.push({
+          bookVariantSnapshotId: snapshot.id,
+          quantity,
+          unitPrice,
+          lineTotal,
+        });
 
-    //     await this.orderItemService.create(
-    //       {
-    //         orderId,
-    //         bookVariantSnapshotId: snapshot.id,
-    //         quantity: item.quantity,
-    //         unitPrice,
-    //         lineTotal,
-    //       },
-    //       tx,
-    //     );
+      }),
+    );
 
-    //     await this.bookVariantService.updateReservedById(bookVariant.id, item.quantity, tx);
-    //   }),
-    // );
-
-    return subtotal;
+    return {
+      subtotal,
+      snapshots
+    };
   }
 
   async createCheckout(
@@ -194,7 +201,7 @@ export class OrderService {
         if (!body.guestAddress) throw new BadRequestException('Address required');
         const guestAddress = body.guestAddress;
 
-        const subtotal = await this.processOrderItems(tx, body.items);
+        const { subtotal, snapshots } = await this.processOrderItems(tx, body.items);
         totalAmount = subtotal + SHIPPING_FEE;
         order = await this.orderRepository.create({
           guestSessionId,
@@ -207,6 +214,12 @@ export class OrderService {
           totalAmount,
           subtotal,
         }, tx);
+
+        await this.orderItemService.createMany(
+          order.id,
+          snapshots,
+          tx,
+        );
 
         await this.orderAddressService.create({
           orderId: order.id,
@@ -228,7 +241,7 @@ export class OrderService {
         const address = await this.userAddressService.findByAddressIdAndUserId(addressId, userId, tx);
         if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
 
-        const subtotal = await this.processOrderItems(tx, body.items);
+        const { subtotal } = await this.processOrderItems(tx, body.items);
         totalAmount = subtotal + SHIPPING_FEE;
         order = await this.orderRepository.create({
           userId,

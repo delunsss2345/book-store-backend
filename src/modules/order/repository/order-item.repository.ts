@@ -97,6 +97,16 @@ export class OrderItemRepository {
     ) {
         return tx.orderItem.create({ data });
     }
+
+    createMany(
+        orderId: number,
+        snapshots: Array<{ bookVariantSnapshotId: number; quantity: number; unitPrice: number; lineTotal: number }>,
+        tx: PrismaClientTransaction,
+    ) {
+        return tx.orderItem.createMany({
+            data: snapshots.map(s => ({ ...s, orderId })),
+        });
+    }
     /// Chưa fix bổ sug userId vào tìm chưa ra
     findOrderItemsByOrderId(orderId: number, userId: number, langId: number) {
         return this.prisma.orderItem.findMany({

@@ -12,7 +12,7 @@ export class CreateBookSnapshotDto {
     })
     @IsNotEmpty()
     @IsString()
-    bookVariantId: string;
+    bookVariantId: number;
 
     @ApiPropertyOptional({
         description: 'Hash nội dung',

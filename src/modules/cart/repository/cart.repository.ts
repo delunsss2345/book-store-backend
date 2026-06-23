@@ -2,7 +2,7 @@ import { PrismaClientTransaction, PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
 import { Cart, Prisma } from '@prisma/client';
 
-const buildCartWithItemsInclude = (languageId?: number): Prisma.CartInclude => ({
+const buildCartWithItemsInclude = (languageId: number): Prisma.CartInclude => ({
     items: {
         orderBy: { addedAt: 'desc' },
         select: {
@@ -22,7 +22,7 @@ const buildCartWithItemsInclude = (languageId?: number): Prisma.CartInclude => (
                             coverImageUrl: true,
                             id: true,
                             translations: {
-                                ...(languageId ? { where: { languageId } } : {}),
+                                where: { languageId },
                                 orderBy: { languageId: 'asc' },
                                 take: 1,
                                 select: {
@@ -43,7 +43,7 @@ const buildCartWithItemsInclude = (languageId?: number): Prisma.CartInclude => (
 export class CartRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    findByUserId(userId: number, languageId?: number) {
+    findByUserId(userId: number, languageId: number) {
         return this.prisma.cart.findFirst({
             where: { userId },
             orderBy: { updatedAt: 'desc' },
@@ -100,7 +100,7 @@ export class CartRepository {
         });
     }
 
-    createCartByGuestSessionId(guestSessionId: string, languageId?: number) {
+    createCartByGuestSessionId(guestSessionId: string, languageId: number) {
         return this.prisma.cart.create({
             data: {
                 guestSessionId,
@@ -109,7 +109,7 @@ export class CartRepository {
         });
     }
 
-    createCartByUserId(userId: number, languageId?: number) {
+    createCartByUserId(userId: number, languageId: number) {
         return this.prisma.cart.create({
             data: {
                 userId,
@@ -131,7 +131,7 @@ export class CartRepository {
         });
     }
 
-    findByGuestSessionId(guestSessionId: string, languageId?: number) {
+    findByGuestSessionId(guestSessionId: string, languageId: number) {
         return this.prisma.cart.findFirst({
             where: { guestSessionId },
             include: buildCartWithItemsInclude(languageId),

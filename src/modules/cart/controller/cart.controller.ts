@@ -8,6 +8,7 @@ import {
     AddCartItemRequestDto,
     UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
+import { CartResponseDto } from '@/modules/cart/dto/response/cart.response.dto';
 import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
 import {
     Body,
@@ -29,6 +30,7 @@ export class CartController {
     constructor(private readonly cartService: CartService) { }
 
     @Get()
+    @ApiOkResponse({ type: CartResponseDto })
     getCart(
         @GetGuestSessionId() guestSessionId: string | null,
         @GetLanguageId() langId: number,
@@ -50,8 +52,9 @@ export class CartController {
         @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
         @Body() body: AddCartItemRequestDto,
+        @GetLanguageId() langId: number
     ) {
-        return this.cartService.addCartItem(guestSessionId, user, body);
+        return this.cartService.addCartItem(guestSessionId, user, body, langId);
     }
 
     @Patch('items/:itemKey/delta')

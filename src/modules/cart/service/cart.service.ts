@@ -5,6 +5,7 @@ import {
   AddCartItemRequestDto,
   UpdateCartItemDeltaRequestDto,
 } from '@/modules/cart/dto/request';
+import { CartDayGroupDto, CartItemDto, CartResponseDto } from '@/modules/cart/dto/response/cart.response.dto';
 import { MergeCartResponseDto } from '@/modules/cart/dto/response/merge-cart.response.dto';
 import { CartItemMapper } from '@/modules/cart/mapper';
 import { CartItemService } from '@/modules/cart/service/cart-item.service';
@@ -32,22 +33,56 @@ export class CartService {
     private readonly transactionService: TransactionService,
   ) { }
 
-  async getCartUser(userId: number, langId: number) {
-    const result = await this.cartRepository.findByUserId(userId, langId);
-    if (result) return result;
-    return this.cartRepository.createCartByUserId(userId, langId);
+  async getCartUser(userId: number, langId: number): Promise<CartResponseDto> {
+    const cart = await this.cartRepository.findByUserId(userId, langId)
+      ?? await this.cartRepository.createCartByUserId(userId, langId);
+    return this.toGroupedCart(cart);
   }
 
-  async getCartGuest(guestSessionId: string, langId: number) {
-    const result = await this.cartRepository.findByGuestSessionId(
-      guestSessionId,
-      langId,
-    );
-    if (result) return result;
-    return this.cartRepository.createCartByGuestSessionId(
-      guestSessionId,
-      langId,
-    );
+  async getCartGuest(guestSessionId: string, langId: number): Promise<CartResponseDto> {
+    const cart = await this.cartRepository.findByGuestSessionId(guestSessionId, langId)
+      ?? await this.cartRepository.createCartByGuestSessionId(guestSessionId, langId);
+    return this.toGroupedCart(cart);
+  }
+
+  private toGroupedCart(cart: { id: number; items: any[] }): CartResponseDto {
+    const groups = new Map<string, CartItemDto[]>();
+
+    for (const item of cart.items) {
+      const date = (item.addedAt as Date).toISOString().slice(0, 10);
+      const dto: CartItemDto = {
+        id: item.id,
+        bookVariantId: item.bookVariantId,
+        quantity: item.quantity,
+        addedAt: item.addedAt,
+        variant: {
+          id: item.variant.id,
+          price: Number(item.variant.price).toFixed(2),
+          format: item.variant.format,
+          currencyCode: item.variant.currencyCode ?? null,
+          stock: item.variant.stock,
+        },
+        book: {
+          id: item.variant.book.id,
+          coverImageUrl: item.variant.book.coverImageUrl ?? null,
+          title: item.variant.book.translations.title ?? null,
+          slug: item.variant.book.translations.slug ?? null,
+        },
+      };
+
+      const existing = groups.get(date);
+      if (existing) {
+        existing.push(dto);
+      } else {
+        groups.set(date, [dto]);
+      }
+    }
+
+    const dayGroups: CartDayGroupDto[] = Array.from(groups.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, items]) => ({ date, items }));
+
+    return { id: cart.id, groups: dayGroups };
   }
 
   // Cho phép domain khác (vd OrderService) xoá cart theo userId qua service thay vì repository
@@ -67,6 +102,7 @@ export class CartService {
     guestSessionId: string | null,
     user: JwtPayload | null,
     body: AddCartItemRequestDto,
+    langId: number
   ) {
     const bookVariantId = Number(body.bookVariantId);
     const quantity = body.quantity ?? 1;
@@ -80,9 +116,9 @@ export class CartService {
         throw new ForbiddenException();
       }
 
-      let cart = await this.cartRepository.findByUserId(foundUser.id);
+      let cart = await this.cartRepository.findByUserId(foundUser.id, langId);
       if (!cart) {
-        cart = await this.cartRepository.createCartByUserId(foundUser.id);
+        cart = await this.cartRepository.createCartByUserId(foundUser.id, langId);
       }
 
       const existedItem = await this.cartItemService.findByCartIdAndBookVariantId(
@@ -114,10 +150,10 @@ export class CartService {
       };
     }
     if (guestSessionId) {
-      let guestCart = await this.cartRepository.findByGuestSessionId(guestSessionId);
+      let guestCart = await this.cartRepository.findByGuestSessionId(guestSessionId, langId);
 
       if (!guestCart) {
-        guestCart = await this.cartRepository.createCartByGuestSessionId(guestSessionId);
+        guestCart = await this.cartRepository.createCartByGuestSessionId(guestSessionId, langId);
       }
 
       const existedItem = guestCart.items.find(

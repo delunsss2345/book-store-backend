@@ -1,4 +1,5 @@
 import { OrderMessage } from '@/common';
+import { GetGuestSessionId } from '@/common/decorators/getGuestSessionId.decorator';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
@@ -33,8 +34,8 @@ export class OrderController {
   createOrders(
     @Body() body: CreateGuestOrdersAndPaymentDTO,
     @Req() req: Request,
+    @GetGuestSessionId() guestSessionId: string
   ) {
-    const guestSessionId = req['guestSessionId'] as string;
     return this.orderService.createOrdersGuest(guestSessionId, body);
   }
 
@@ -45,8 +46,8 @@ export class OrderController {
     @Req() req: Request,
     @Query() query: GetOrderDto,
     @GetUser() user: User,
+    @GetGuestSessionId() guestSessionId: string
   ) {
-    const guestSessionId = req['guestSessionId'] as string;
     if (guestSessionId) {
       return this.orderService.getOrderGuest(
         guestSessionId,

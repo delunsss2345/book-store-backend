@@ -159,11 +159,11 @@ function toCatalogBookVariants(
   return (book.variants ?? []).map((variant) => ({
     id: variant.id,
     format: variant.format,
-    edition: variant.edition ?? null,
-    isbn: variant.isbn ?? null,
-    price: toRequiredString(variant.price),
-    currencyCode: variant.currencyCode ?? null,
-    available: variant.available ?? null,
+    edition: variant.edition,
+    isbn: variant.isbn,
+    price: String(variant.price),
+    currencyCode: variant.currencyCode,
+    available: variant.available,
   }));
 }
 
@@ -205,12 +205,6 @@ function toFixedPrice(
 
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(2) : null;
-}
-
-function toRequiredString(
-  value: { toString: () => string } | number | string,
-): string {
-  return value?.toString?.() ?? String(value);
 }
 
 function toNullableString(

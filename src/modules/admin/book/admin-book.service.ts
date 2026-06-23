@@ -59,7 +59,7 @@ export class AdminBookService {
     private readonly prisma: PrismaService,
     private readonly supplierService: SupplierService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) {}
+  ) { }
 
   async getDetail(bookId: number): Promise<AdminBookDetailResponseDto> {
     const book = await this.adminBookRepository.findBookById(bookId);
@@ -184,10 +184,7 @@ export class AdminBookService {
           createBook.id,
           body.variants.map((v) => ({
             format: v.format,
-            edition: v.edition,
             isbn: v.isbn,
-            price: v.price,
-            currencyCode: v.currencyCode,
             isActive: false,
           })),
           tx,

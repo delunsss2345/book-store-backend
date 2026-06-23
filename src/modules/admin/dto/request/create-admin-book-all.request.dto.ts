@@ -97,30 +97,17 @@ export class CreateBookVariantAndSupplierImportDto {
     @IsEnum(BookFormat)
     format!: BookFormat;
 
-    @ApiPropertyOptional({ example: 1, description: 'Edition, có thể null' })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    edition?: number;
-
     @ApiPropertyOptional({ example: '9786040000001', maxLength: 20 })
     @IsOptional()
     @IsString()
     @MaxLength(20)
-    isbn?: string;
+    isbn: string;
 
     @ApiProperty({ example: 79000, description: 'Giá bán' })
     @Type(() => Number)
     @IsNumber()
     @Min(0)
     price!: number;
-
-    @ApiPropertyOptional({ example: 'VND', maxLength: 3 })
-    @IsOptional()
-    @IsString()
-    @MaxLength(3)
-    currencyCode?: string;
 
     @ApiPropertyOptional({ example: true, default: true })
     @IsOptional()
@@ -138,32 +125,14 @@ export class CreateBookVariantAndSupplierImportDto {
 export class CreateBookVariantDto {
     @ApiProperty({ enum: BookFormat, example: BookFormat.PAPERBACK })
     @IsEnum(BookFormat)
-    format!: BookFormat;
-
-    @ApiPropertyOptional({ example: 1, description: 'Edition, có thể null' })
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    edition?: number;
+    format: BookFormat;
 
     @ApiPropertyOptional({ example: '9786040000001', maxLength: 20 })
     @IsOptional()
     @IsString()
     @MaxLength(20)
-    isbn?: string;
+    isbn: string;
 
-    @ApiProperty({ example: 79000, description: 'Giá bán' })
-    @Type(() => Number)
-    @IsNumber()
-    @Min(0)
-    price!: number;
-
-    @ApiPropertyOptional({ example: 'VND', maxLength: 3 })
-    @IsOptional()
-    @IsString()
-    @MaxLength(3)
-    currencyCode?: string;
 
     @ApiPropertyOptional({ example: true, default: true })
     @IsOptional()

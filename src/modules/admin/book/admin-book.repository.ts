@@ -54,7 +54,7 @@ export type CreateBookAuthorLinkInput = {
 
 @Injectable()
 export class AdminBookRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findPublisherById(publisherId: number) {
     return this.prisma.publisher.findUnique({
@@ -106,10 +106,7 @@ export class AdminBookRepository {
       data: {
         bookId: bookId,
         format: body.format,
-        edition: body.edition,
         isbn: body.isbn,
-        price: body.price,
-        currencyCode: body.currencyCode,
         isActive: body.isActive,
       },
     });
@@ -159,10 +156,7 @@ export class AdminBookRepository {
       (body) => ({
         bookId,
         format: body.format,
-        edition: body.edition ?? null,
         isbn: body.isbn ?? null,
-        price: body.price as any,
-        currencyCode: body.currencyCode ?? null,
         isActive: body.isActive ?? true,
       }),
     );
@@ -296,15 +290,15 @@ export class AdminBookRepository {
       deletedAt: null,
       ...(searchPhrase
         ? {
-            translations: {
-              some: {
-                languageId,
-                title: {
-                  contains: searchPhrase,
-                },
+          translations: {
+            some: {
+              languageId,
+              title: {
+                contains: searchPhrase,
               },
             },
-          }
+          },
+        }
         : {}),
     };
   }

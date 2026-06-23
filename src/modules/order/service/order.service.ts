@@ -1,15 +1,12 @@
-import { OrderMessage, SHIPPING_FEE } from '@/common';
+import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
-import { PrismaClientTransaction, PrismaService } from '@/database';
-import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
+import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
-import { CartService } from '@/modules/cart/service/cart.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import {
-  CreateGuestOrdersAndPaymentDTO,
-  CreateUserOrdersAndPaymentDTO,
+  CreateCheckOutDTO
 } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
@@ -19,11 +16,12 @@ import { PaymentIntentService } from '@/modules/payment/service/payment-intent.s
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { UserAddressService } from '@/modules/user/service/user-address.service';
-import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
+  CurrencyCode,
+  Order,
   OrderStatus,
   PaymentGateway,
   PaymentStatus,
@@ -35,10 +33,7 @@ import crypto from 'crypto';
 export class OrderService {
   constructor(
     private readonly paymentService: PaymentService,
-    private readonly catalogService: CatalogService,
     private readonly orderRepository: OrderRepository,
-    private readonly prisma: PrismaService,
-    private readonly cartService: CartService,
     private readonly orderItemRepository: OrderItemRepository,
     private readonly emailProducer: EmailProducer,
     private readonly emailOutbox: EmailOutboxService,
@@ -58,8 +53,7 @@ export class OrderService {
    * @param cartId Cart id to generate the hash string from.
    * @returns A hash string representing the given cart items and cartId.
    */
-  getCartHash(items: CartItem[], cartId: number) {
-    // Clone để tránh đổi array
+  getCartHash(items: CartItem[]) {
     const sortedItems = [...items].sort((a, b) =>
       a.id.toString().localeCompare(b.id.toString()),
     );
@@ -71,7 +65,7 @@ export class OrderService {
 
     return crypto
       .createHash('md5')
-      .update(content + cartId.toString())
+      .update(content)
       .digest('hex');
   }
 
@@ -94,7 +88,7 @@ export class OrderService {
       orderCode: string;
       status: OrderStatus;
       paymentStatus: PaymentStatus;
-      currencyCode: string;
+      currencyCode: CurrencyCode;
       shippingFee: number;
       expiredAt: Date;
     },
@@ -111,221 +105,171 @@ export class OrderService {
   // Optimize from N + 1 queries to 5 queries
   private async processOrderItems(
     tx: any,
-    cart: any,
-    orderId: number,
+    items: any,
   ) {
-    const mapBookVariant = new Map<
-      string,
-      { quantity: number; price: number }
-    >();
+    const mapVariantIds = new Map<number, number>();
+    items.forEach(i => {
+      mapVariantIds.set(i.bookVariantId, i.quantity);
+    })
+    const variants = await this.bookVariantService.findByVariantIds([...mapVariantIds.keys()]);
 
-    cart.items.forEach((item) =>
-      mapBookVariant.set(item.bookVariantId.toString(), {
-        quantity: item.quantity,
-        price: Number(item.variant.price),
-      }),
-    );
 
-    const bookVariants = await this.catalogService.findBookVariantByIds(
-      [...mapBookVariant.keys()].map((id) => Number(id)),
-    );
+    variants.forEach((v) => {
+      const variantCardItem = mapVariantIds.get(v.id);
+      const variant = mapVariantIds.get(v.id);
+      const available = v ? v.stock - v.reserved! : 0;
 
-    const variantMap = new Map(bookVariants.map((v) => [v.id.toString(), v]));
+      // if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
 
-    bookVariants.forEach((v) => {
-      const variantCardItem = mapBookVariant.get(v.id.toString());
-      const variant = variantMap.get(v.id.toString());
-      const available = variant ? variant.stock! - variant.reserved! : 0;
-
-      if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
-
-      if (!v.stock || available < (variantCardItem?.quantity ?? 0)) {
-        Logger.error(
-          `Book variant ${v.id} out of stock. Available: ${available}, Required: ${variantCardItem?.quantity ?? 0}`,
-        );
-        throw new ForbiddenException(
-          OrderMessage.BOOK_OUT_OF_STOCK(
-            "Sản phẩm vừa hết hàng"
-          ),
-        );
-      }
+      // if (!v.stock || available < (variantCardItem?.quantity ?? 0)) {
+      //   Logger.error(
+      //     `Book variant ${v.id} out of stock. Available: ${available}, Required: ${variantCardItem?.quantity ?? 0}`,
+      //   );
+      //   throw new ForbiddenException(
+      //     OrderMessage.BOOK_OUT_OF_STOCK(
+      //       "Sản phẩm vừa hết hàng"
+      //     ),
+      //   );
+      // }
     });
 
-    let subtotal = 0;
-    await Promise.all(
-      cart.items.map(async (item) => {
-        const bookVariant = variantMap.get(item.bookVariantId.toString());
-        if (!bookVariant) {
-          throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
-        }
+    const subtotal = 0;
+    // await Promise.all(
+    //   items.map(async (item) => {
+    //     const bookVariant = variantMap.get(item.bookVariantId.toString());
+    //     if (!bookVariant) {
+    //       throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
+    //     }
 
-        const unitPrice = Number(bookVariant.price);
-        const lineTotal = unitPrice * item.quantity;
+    //     const unitPrice = Number(bookVariant.price);
+    //     const lineTotal = unitPrice * item.quantity;
 
-        subtotal += lineTotal;
+    //     subtotal += lineTotal;
 
-        const contentHash = generateContentHash(bookVariant);
+    //     const contentHash = generateContentHash(bookVariant);
 
-        const snapshot = await this.bookVariantSnapshotService.upsertByContentHash(
-          contentHash,
-          {
-            bookVariantId: bookVariant.id.toString(),
-            contentHash,
-            priceSnapshot: unitPrice,
-            formatSnapshot: bookVariant.format,
-            currencyCodeSnapshot: bookVariant.currencyCode ?? 'VND',
-          },
-          tx,
-        );
+    //     const snapshot = await this.bookVariantSnapshotService.upsertByContentHash(
+    //       contentHash,
+    //       {
+    //         bookVariantId: bookVariant.id.toString(),
+    //         contentHash,
+    //         priceSnapshot: unitPrice,
+    //         formatSnapshot: bookVariant.format,
+    //         currencyCodeSnapshot: bookVariant.currencyCode ?? 'VND',
+    //       },
+    //       tx,
+    //     );
 
-        await this.orderItemService.create(
-          {
-            orderId,
-            bookVariantSnapshotId: snapshot.id,
-            quantity: item.quantity,
-            unitPrice,
-            lineTotal,
-          },
-          tx,
-        );
+    //     await this.orderItemService.create(
+    //       {
+    //         orderId,
+    //         bookVariantSnapshotId: snapshot.id,
+    //         quantity: item.quantity,
+    //         unitPrice,
+    //         lineTotal,
+    //       },
+    //       tx,
+    //     );
 
-        await this.bookVariantService.updateReservedById(bookVariant.id, item.quantity, tx);
-      }),
-    );
-    await this.cartService.deleteByUserId(cart.userId);
+    //     await this.bookVariantService.updateReservedById(bookVariant.id, item.quantity, tx);
+    //   }),
+    // );
 
     return subtotal;
   }
 
-  /**
-   * Tạo order cho người dùng khách
-   * @param guestSessionId id của phiên guest
-   * @param body thông tin về order
-   * @param langId id ngôn ngữ
-   *
-   **/
-  async createOrdersGuest(
-    guestSessionId: string,
-    body: CreateGuestOrdersAndPaymentDTO,
+  async createCheckout(
+    body: CreateCheckOutDTO,
+    guestSessionId: string | null,
+    userId: number | null,
   ) {
-    return this.transactionService.doInTransaction(async (tx) => {
-      const cart = await this.cartService.findByGuestSessionId(guestSessionId, tx);
+    return this.transactionService.doInTransaction(async tx => {
+      const isGuest = body?.isGuest;
+      let order: Order | undefined;
+      let totalAmount = 0;
+      let email: string | undefined | null;
 
-      if (!cart || cart.items.length === 0) {
-        throw new ForbiddenException(OrderMessage.CART_NOT_FOUND);
-      }
+      if (isGuest) {
+        if (!guestSessionId) throw new BadRequestException('Bạn không phải là khách vãn lai');
+        if (!body.guestAddress) throw new BadRequestException('Address required');
+        const guestAddress = body.guestAddress;
 
-      const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-      const existing = await this.findOrderNotSuccessByCartHash(cartHash, tx);
-
-      if (cartHash === existing?.cartHash) {
-        // Nếu bấm mà chưa tạo payment chỉ toàn kiểu tạo order (ko thanh toán) thì mình tiếng hành gửi lại cái mã mới mà không phải tạo lại order
-        if (existing?.payments.length <= 0) {
-          const gatewayResp = this.paymentService.createTransactionUrl({
-            orderId: existing.id,
-            gateway: PaymentGateway.SEPAY,
-            amount: Number(existing.totalAmount),
-          });
-
-          await this.paymentIntent.createPaymentIntent(
-            {
-              orderId: existing.id,
-              gateway: PaymentGateway.SEPAY,
-              orderCode: existing.orderCode,
-              tokenUrl: gatewayResp.result.token,
-              paymentUrl: gatewayResp.result.url,
-              content: gatewayResp.result.content,
-              status: PaymentStatus.PENDING,
-            },
-            tx,
-          );
-
-          return {
-            id: existing.id,
-            subtotal: existing.subtotal,
-            orderCode: existing.orderCode,
-            payment: gatewayResp,
-            totalAmount: existing.totalAmount,
-          };
-        }
-
-        const gatewayResp = this.paymentService.createTransactionUrl({
-          orderId: existing.id,
-          gateway: PaymentGateway.SEPAY,
-          amount: Number(existing.totalAmount),
-        });
-
-        await this.paymentIntent.createPaymentIntent(
-          {
-            orderId: existing.id,
-            gateway: PaymentGateway.SEPAY,
-            orderCode: existing.orderCode,
-            tokenUrl: gatewayResp.result.token,
-            paymentUrl: gatewayResp.result.url,
-            content: gatewayResp.result.content,
-            status: PaymentStatus.PENDING,
-          },
-          tx,
-        );
-
-        return {
-          id: existing.id,
-          payment: gatewayResp,
-          orderCode: existing.orderCode,
-        };
-      }
-
-      const order = await this.createWithGuest(
-        {
+        const subtotal = await this.processOrderItems(tx, body.items);
+        totalAmount = subtotal + SHIPPING_FEE;
+        order = await this.orderRepository.create({
           guestSessionId,
           status: OrderStatus.PENDING_PAYMENT,
           paymentStatus: PaymentStatus.PENDING,
-          currencyCode: 'VND',
+          currencyCode: CurrencyCode.VND,
           orderCode: generateOrderCode(),
-          cartHash,
           shippingFee: SHIPPING_FEE,
           expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-        },
-        tx,
-      );
-
-      await this.orderAddressService.createWithGuest(order.id, body.orderAddress, body.note, tx);
-
-      const subtotal = await this.processOrderItems(tx, cart, order.id);
-      const totalAmount = subtotal + SHIPPING_FEE;
-
-      const updatedOrder = await this.updateById(
-        order.id,
-        {
-          subtotal,
           totalAmount,
-          discountAmount: 0,
+          subtotal,
+        }, tx);
+
+        await this.orderAddressService.create({
+          orderId: order.id,
+          recipientName: guestAddress.name,
+          phoneNumber: guestAddress.phoneNumber,
+          addressLine: guestAddress.addressLine,
+          ward: guestAddress.ward,
+          district: guestAddress.district,
+          city: guestAddress.city,
+          countryCode: 'VN',
+          note: guestAddress.note,
+        }, tx);
+
+        email = body.guestEmail;
+      } else if (userId) {
+        if (!body.addressId) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
+        const addressId = body.addressId;
+
+        const address = await this.userAddressService.findByAddressIdAndUserId(addressId, userId, tx);
+        if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
+
+        const subtotal = await this.processOrderItems(tx, body.items);
+        totalAmount = subtotal + SHIPPING_FEE;
+        order = await this.orderRepository.create({
+          userId,
+          status: OrderStatus.PENDING_PAYMENT,
+          paymentStatus: PaymentStatus.PENDING,
+          currencyCode: CurrencyCode.VND,
+          orderCode: generateOrderCode(),
           shippingFee: SHIPPING_FEE,
-        },
-        tx,
-      );
+          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+          totalAmount,
+          subtotal,
+          addressId,
+        }, tx);
+
+        email = address.user.email;
+      }
+
+      if (!order) throw new BadRequestException('Không thể tạo đơn hàng');
 
       if (body.paymentGateway === PaymentGateway.COD) {
-        if (body.guestEmail) {
+        if (email) {
           const outbox = await this.emailOutbox.createOutboxOrderEmail({
             orderId: order.id,
             orderCode: order.orderCode,
             orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-            toEmail: body.guestEmail,
+            toEmail: email,
           });
           await this.emailProducer.enqueueOrderEmail(outbox.id);
         }
         return {
           orderId: order.id,
-          subtotal: updatedOrder.subtotal,
-          totalAmount: updatedOrder.totalAmount,
+          subtotal: order.subtotal,
+          totalAmount: order.totalAmount,
           orderCode: order.orderCode,
         };
       }
-      Logger.log(`Đã tạo order: ${JSON.stringify(updatedOrder)}`);
+
+      Logger.log(`Đã tạo order: ${JSON.stringify(order)}`);
 
       const gatewayResp = this.paymentService.createTransactionUrl({
-        orderId: updatedOrder.id,
+        orderId: order.id,
         gateway: body.paymentGateway,
         amount: totalAmount,
       });
@@ -333,7 +277,7 @@ export class OrderService {
       Logger.log(`Đã tạo gatewayResp: ${JSON.stringify(gatewayResp)}`);
 
       return this.paymentIntent.createPaymentIntent({
-        orderId: updatedOrder.id,
+        orderId: order.id,
         gateway: body.paymentGateway,
         orderCode: order.orderCode,
         tokenUrl: gatewayResp.result.token,
@@ -341,114 +285,6 @@ export class OrderService {
         content: gatewayResp.result.content,
         status: PaymentStatus.PENDING,
       }, tx);
-    });
-  }
-
-  async createOrdersUser(
-    userId: number,
-    body: CreateUserOrdersAndPaymentDTO,
-  ) {
-    return this.transactionService.doInTransaction(async (tx) => {
-      const cartId = Number(body.cartId);
-      const cart = await this.cartService.findByCartIdAndUserId(cartId, userId, tx);
-
-      if (!cart || cart.items.length === 0) {
-        throw new ForbiddenException(OrderMessage.CART_NOT_FOUND);
-      }
-
-      // Đã fix logic sử dụng cartHash (tránh trường hợp 2 cart có dùng số sản phẩm giống nhau)
-      const cartHash = this.getCartHash(cart?.items as CartItem[], cart.id);
-      const existing = await this.findByCartHash(cartHash, tx);
-
-      if (cartHash === existing?.cartHash) {
-        return {
-          id: existing.id,
-          subtotal: existing.subtotal,
-          orderCode: existing.orderCode,
-          payment: existing.payments[0].paymentUrl,
-          totalAmount: existing.payments[0].amount,
-        };
-      }
-
-      const address = await this.userAddressService.findByAddressIdAndUserId(
-        Number(body.addressId),
-        userId,
-        tx,
-      );
-
-      if (!address)
-        throw new ForbiddenException(OrderMessage.ADDRESS_NOT_FOUND);
-
-      const order = await this.create(
-        {
-          userId,
-          addressId: address.id,
-          status: OrderStatus.PENDING_PAYMENT,
-          paymentStatus: PaymentStatus.PENDING,
-          currencyCode: 'VND',
-          orderCode: generateOrderCode(),
-          cartHash,
-          shippingFee: SHIPPING_FEE,
-          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-        },
-        tx,
-      );
-
-      const subtotal = await this.processOrderItems(tx, cart, order.id);
-      const totalAmount = subtotal + SHIPPING_FEE;
-
-      const updatedOrder = await this.updateById(
-        order.id,
-        {
-          subtotal,
-          totalAmount,
-          discountAmount: 0,
-          shippingFee: SHIPPING_FEE,
-        },
-        tx,
-      );
-
-      if (body.paymentGateway === PaymentGateway.COD) {
-        console.log('Đã tạo order với phương thức COD');
-        return {
-          orderId: order.id,
-          subtotal: updatedOrder.subtotal,
-          totalAmount: updatedOrder.totalAmount,
-          orderCode: order.orderCode,
-        };
-      }
-      console.log('Đã tạo order, chuẩn bị tạo transaction');
-      // Tạo transaction ở web hooks là tốt hơn (lúc trước là tạo ngay khi checkout)
-      // - nhưng phát sinh ra chuyển sai tiền thì sẽ hiện các bản ghi null, không theo dõi chính xác người dùng chuyển tiền
-      // 8) gọi gateway tạo transaction
-      const gatewayResp = this.paymentService.createTransactionUrl({
-        orderId: order.id,
-        gateway: body.paymentGateway,
-        amount: totalAmount,
-      });
-
-      const paymentIntent = await this.paymentIntent.createPaymentIntent(
-        {
-          orderId: order.id,
-          gateway: body.paymentGateway,
-          orderCode: order.orderCode,
-          tokenUrl: gatewayResp.result.token,
-          paymentUrl: gatewayResp.result.url,
-          content: gatewayResp.result.content,
-          status: PaymentStatus.PENDING,
-        },
-        tx,
-      );
-
-      return {
-        orderId: order.id,
-        subtotal: updatedOrder.subtotal,
-        totalAmount: updatedOrder.totalAmount,
-        payment: paymentIntent,
-        paymentUrl: gatewayResp.result.url,
-        paymentContent: gatewayResp.result.content,
-        orderCode: order.orderCode,
-      };
     });
   }
 

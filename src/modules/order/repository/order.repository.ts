@@ -3,7 +3,7 @@ import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { Injectable, Logger } from '@nestjs/common';
-import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
+import { CurrencyCode, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 
 
 export type OrderByUserRow = {
@@ -292,7 +292,7 @@ export class OrderRepository {
             orderCode: string;
             status: OrderStatus;
             paymentStatus: PaymentStatus;
-            currencyCode: string;
+            currencyCode: CurrencyCode;
             shippingFee: number;
             expiredAt: Date;
         },

@@ -7,7 +7,7 @@ type DbClient = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class BookVariantRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findBookVariantInventoryById(bookVariantId: number, tx?: DbClient) {
     const db = this.getDb(tx);
@@ -18,6 +18,16 @@ export class BookVariantRepository {
     });
   }
 
+
+  findByIds(variantIds: number[]) {
+    return this.prisma.bookVariant.findMany({
+      where: {
+        id: {
+          in: variantIds
+        }
+      }
+    })
+  }
   updateBookVariantInventory(
     params: {
       bookVariantId: number;

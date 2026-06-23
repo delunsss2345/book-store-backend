@@ -4,16 +4,12 @@ import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { ShopperSessionGuard } from '@/common/security/guard/shopper-session.guard';
-import {
-  CreateGuestOrdersAndPaymentDTO,
-  CreateUserOrdersAndPaymentDTO,
-} from '@/modules/order/dto/request/create-orders.dto';
+import { CreateCheckOutDTO } from '@/modules/order/dto/request/create-orders.dto';
 import { GetOrderDto } from '@/modules/order/dto/request/get-order.dto';
 import { OrderService } from '@/modules/order/service/order.service';
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Param,
   Post,
@@ -29,21 +25,21 @@ import type { Request } from 'express';
 export class OrderController {
   constructor(private readonly orderService: OrderService) { }
 
-  @Post('/guest/checkout')
+  @Post('/checkout')
   @Public()
-  createOrders(
-    @Body() body: CreateGuestOrdersAndPaymentDTO,
-    @Req() req: Request,
-    @GetGuestSessionId() guestSessionId: string
+  createCheckout(
+    @Body() body: CreateCheckOutDTO,
+    @GetGuestSessionId() guestSessionId: string | null,
+    @GetUser() user: User | null,
   ) {
-    return this.orderService.createOrdersGuest(guestSessionId, body);
+    const userId = user?.id ? Number(user.id) : null;
+    return this.orderService.createCheckout(body, guestSessionId, userId);
   }
 
   @Get('/')
   @Public()
   @ApiBearerAuth('access-token')
   getOrders(
-    @Req() req: Request,
     @Query() query: GetOrderDto,
     @GetUser() user: User,
     @GetGuestSessionId() guestSessionId: string
@@ -84,17 +80,6 @@ export class OrderController {
     );
   }
 
-  @Post('/user/checkout')
-  createOrdersUser(
-    @Body() body: CreateUserOrdersAndPaymentDTO,
-    @GetUser() user: User,
-  ) {
-    if (!user?.id) {
-      throw new ForbiddenException(OrderMessage.USER_NOT_AUTHENTICATED);
-    }
-    const userId = Number(user.id);
-    return this.orderService.createOrdersUser(userId, body);
-  }
 
 
 

@@ -28,8 +28,7 @@ export class BookSnapshotRepository {
             create: {
                 bookVariantId: Number(dto.bookVariantId),
                 contentHash,
-                priceSnapshot: dto.priceSnapshot, // nếu Prisma Decimal, có thể nhận string
-                currencyCodeSnapshot: dto.currencyCodeSnapshot ?? null,
+                priceSnapshot: dto.priceSnapshot,
                 formatSnapshot: dto.formatSnapshot,
                 isbnSnapshot: dto.isbnSnapshot ?? null,
             },
@@ -53,7 +52,6 @@ export class BookSnapshotRepository {
                 bookVariantId: Number(dto.bookVariantId),
                 contentHash,
                 priceSnapshot: dto.priceSnapshot,
-                currencyCodeSnapshot: dto.currencyCodeSnapshot ?? null,
                 formatSnapshot: dto.formatSnapshot,
                 isbnSnapshot: dto.isbnSnapshot ?? null,
             },

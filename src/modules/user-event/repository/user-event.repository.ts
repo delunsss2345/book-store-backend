@@ -22,7 +22,6 @@ export class UserEventRepository {
                     body.amount === undefined
                         ? null
                         : new Prisma.Decimal(body.amount),
-                currencyCode: body.currencyCode?.trim() ?? null,
                 metadata: body.metadata as Prisma.InputJsonValue | undefined,
             },
             select: {

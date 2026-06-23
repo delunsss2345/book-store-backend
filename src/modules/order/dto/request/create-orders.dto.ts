@@ -2,7 +2,95 @@ import { CreateOrderAddressDTO } from "@/modules/order/dto/request/create-order-
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { PaymentGateway } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
+
+export class GuestAddressDto {
+    @ApiProperty({ example: 'Nguyễn Văn A' })
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @ApiProperty({ example: '123 Đường ABC, Phường 4' })
+    @IsString()
+    @IsNotEmpty()
+    addressLine: string;
+
+    @ApiProperty({ example: 'TP. Hồ Chí Minh' })
+    @IsString()
+    @IsNotEmpty()
+    city: string;
+
+    @ApiPropertyOptional({ example: 'Phường 4' })
+    @IsString()
+    @IsOptional()
+    ward: string;
+
+    @ApiPropertyOptional({ example: 'Quận Tân Bình' })
+    @IsString()
+    @IsOptional()
+    district: string;
+
+    @ApiProperty({ example: '0901234567' })
+    @IsString()
+    @IsNotEmpty()
+    phoneNumber: string;
+
+    @ApiPropertyOptional({ example: '700000' })
+    @IsString()
+    @IsOptional()
+    postalCode?: string;
+
+    @ApiPropertyOptional({ example: 'Giao giờ hành chính' })
+    @IsString()
+    @IsOptional()
+    note?: string;
+}
+
+export class CheckoutItemDto {
+    @ApiProperty({ example: 1 })
+    @IsNumber()
+    @IsNotEmpty()
+    bookVariantId: number;
+
+    @ApiProperty({ example: 2 })
+    @IsNumber()
+    @IsNotEmpty()
+    quantity: number;
+}
+
+export class CreateCheckOutDTO {
+    @ApiProperty({ example: true, description: 'true = guest checkout, false = user checkout' })
+    @IsBoolean()
+    @IsNotEmpty()
+    isGuest: boolean;
+
+    @ApiPropertyOptional({ example: 'guest@example.com' })
+    @IsEmail()
+    @IsOptional()
+    guestEmail?: string;
+
+    @ApiPropertyOptional({ type: () => GuestAddressDto })
+    @ValidateNested()
+    @Type(() => GuestAddressDto)
+    @IsOptional()
+    guestAddress?: GuestAddressDto;
+
+    @ApiPropertyOptional({ example: 1, description: 'Saved address ID (user checkout)' })
+    @IsNumber()
+    @IsOptional()
+    addressId?: number;
+
+    @ApiProperty({ enum: PaymentGateway, example: PaymentGateway.VNPAY })
+    @IsEnum(PaymentGateway)
+    @IsNotEmpty()
+    paymentGateway: PaymentGateway;
+
+    @ApiProperty({ type: () => [CheckoutItemDto] })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CheckoutItemDto)
+    items: CheckoutItemDto[];
+}
 
 
 

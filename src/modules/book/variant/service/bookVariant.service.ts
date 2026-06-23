@@ -5,8 +5,10 @@ import { BookVariantRepository } from '../repository/bookVariant.repository';
 
 @Injectable()
 export class BookVariantService {
-  constructor(private readonly bookVariantRepository: BookVariantRepository) {}
-
+  constructor(private readonly bookVariantRepository: BookVariantRepository) { }
+  findByVariantIds(variantIds: number[]) {
+    return this.bookVariantRepository.findByIds(variantIds);
+  }
   async applyStockImport(
     params: {
       bookVariantId: number;

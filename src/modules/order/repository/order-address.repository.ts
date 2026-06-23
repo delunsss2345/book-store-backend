@@ -7,6 +7,10 @@ import { OrderAddress, Prisma } from '@prisma/client';
 export class OrderAddressRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    create(data: Prisma.OrderAddressUncheckedCreateInput, tx: PrismaClientTransaction): Promise<OrderAddress> {
+        return tx.orderAddress.create({ data });
+    }
+
     createGuestAddress(orderId: number, body: CreateOrderAddressDTO, orderNote?: string): Promise<OrderAddress> {
         const recipientName = this.buildRecipientName(body);
 

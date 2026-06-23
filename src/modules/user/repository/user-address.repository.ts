@@ -209,7 +209,14 @@ export class UserAddressRepository {
 
   findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction) {
     return tx.userAddress.findFirst({
-      where: { id: addressId, userId, deletedAt: null },
+      where: { id: addressId, userId, deletedAt: null, },
+      include: {
+        user: {
+          select: {
+            email: true
+          }
+        }
+      }
     });
   }
 }

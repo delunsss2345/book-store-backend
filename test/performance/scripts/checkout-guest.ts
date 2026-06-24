@@ -1,5 +1,5 @@
 import { uuidv4 } from 'https://jslib.k6.io/k6-utils/1.4.0/index.js';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 import http from 'k6/http';
 import { Options } from 'k6/options';
 
@@ -92,6 +92,4 @@ export default function () {
             }
         },
     });
-
-    sleep(1);
 }

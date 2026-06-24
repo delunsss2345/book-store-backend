@@ -4,6 +4,7 @@ import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { CreateCheckOutDTO } from '@/modules/order/dto/request/create-orders.dto';
+import { OrderMapper } from '@/modules/order/mapper';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { OrderAddressService } from '@/modules/order/service/order-address.service';
@@ -15,17 +16,13 @@ import { UserAddressService } from '@/modules/user/service/user-address.service'
 import { CheckoutQueue } from '@/queue/checkout/checkout.queue';
 import { EmailQueue } from '@/queue/email/email.queue';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import {
-  BadRequestException,
-  Injectable,
-  Logger
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
   CurrencyCode,
   OrderStatus,
   PaymentStatus,
-  Prisma
+  Prisma,
 } from '@prisma/client';
 import crypto from 'crypto';
 
@@ -47,7 +44,7 @@ export class OrderService {
     private readonly bookVariantService: BookVariantService,
     private readonly orderAddressService: OrderAddressService,
     private readonly checkoutQueue: CheckoutQueue,
-  ) { }
+  ) {}
 
   /**
    * Generates a hash string for the given cart items and cartId.
@@ -110,16 +107,19 @@ export class OrderService {
     userId: number | null,
   ) {
     const isGuest = body.isGuest;
-    this.logger.log(`[createCheckout] START - isGuest=${isGuest}, userId=${userId}, items=${body.items.length}`);
+    this.logger.log(
+      `[createCheckout] START - isGuest=${isGuest}, userId=${userId}, items=${body.items.length}`,
+    );
 
     let email: string | undefined;
 
     if (isGuest) {
       if (!guestSessionId)
         throw new BadRequestException('Bạn không phải là khách vãn lai');
-      if (!body.guestAddress)
-        throw new BadRequestException('Address required');
-      this.logger.log(`[createCheckout] GUEST validation passed - guestSessionId=${guestSessionId}`);
+      if (!body.guestAddress) throw new BadRequestException('Address required');
+      this.logger.log(
+        `[createCheckout] GUEST validation passed - guestSessionId=${guestSessionId}`,
+      );
     } else {
       if (!body.addressId)
         throw new BadRequestException('Bạn cần phải tạo địa chỉ');
@@ -130,7 +130,9 @@ export class OrderService {
       );
       if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
       email = address.user.email;
-      this.logger.log(`[createCheckout] USER validation passed - userId=${userId}, addressId=${body.addressId}, email=${email}`);
+      this.logger.log(
+        `[createCheckout] USER validation passed - userId=${userId}, addressId=${body.addressId}, email=${email}`,
+      );
     }
 
     const mapVariantIds: Record<number, number> = {};
@@ -141,20 +143,21 @@ export class OrderService {
     });
 
     const variants = await this.bookVariantService.findByVariantIds(
-      items.map(i => i.bookVariantId),
+      items.map((i) => i.bookVariantId),
     );
 
     if (variants.length !== items.length)
       throw new BadRequestException('Có sản phẩm đã bị xoá');
     variants.forEach((v) => {
-      if (v.stock - v.reserved === 0)
-        throw new BadRequestException('Hết hàng');
+      if (v.available <= 0) throw new BadRequestException('Hết hàng');
     });
 
     await this.transactionService.doInTransaction(async (tx) => {
       await this.bookVariantService.updateReservedByIds(items, tx);
     });
-    this.logger.log(`[createCheckout] Stock reserved for ${items.length} variant(s)`);
+    this.logger.log(
+      `[createCheckout] Stock reserved for ${items.length} variant(s)`,
+    );
 
     const subtotal = variants.reduce(
       (sum, v) => sum + Number(v.price) * mapVariantIds[v.id],
@@ -164,10 +167,17 @@ export class OrderService {
     const totalAmount = subtotal + SHIPPING_FEE;
     const orderCode = generateOrderCode();
 
-
-    const orderVariants = variants.map(({ id, format, isbn, price, stock, isActive, edition }) => ({
-      id, format, isbn, price, stock, isActive, edition,
-    }));
+    const orderVariants = variants.map(
+      ({ id, format, isbn, price, stock, isActive, edition }) => ({
+        id,
+        format,
+        isbn,
+        price,
+        stock,
+        isActive,
+        edition,
+      }),
+    );
 
     await this.checkoutQueue.enqueueCheckout({
       isGuest,
@@ -186,18 +196,21 @@ export class OrderService {
     this.logger.log(`[createCheckout] Job enqueued - orderCode=${orderCode}`);
 
     return {
-      orderCode, totalAmount, items: {
-
-      }, shipFee: SHIPPING_FEE
+      orderCode,
+      totalAmount,
+      orderVariants,
+      shipFee: SHIPPING_FEE,
     };
   }
 
   async getOrderGuest(sessionGuestId: string, page: number, limit: number) {
-    return this.orderRepository.findOrderBySessionGuestId(
+    const orders = await this.orderRepository.findOrderBySessionGuestId(
       sessionGuestId,
       page,
       limit,
     );
+
+    return OrderMapper.toList(orders);
   }
 
   async getOrderDetailGuest(
@@ -213,7 +226,13 @@ export class OrderService {
   }
 
   async getOrderUser(userId: number, page: number, limit: number) {
-    return this.orderRepository.findOrderByUserId(userId, page, limit);
+    const orders = await this.orderRepository.findOrderByUserId(
+      userId,
+      page,
+      limit,
+    );
+
+    return OrderMapper.toList(orders);
   }
 
   async getOrderDetailUser(orderId: number, userId: number, langId: number) {

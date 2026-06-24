@@ -1,4 +1,4 @@
-import { OrderMessage, SHIPPING_FEE } from '@/common';
+import { SHIPPING_FEE } from '@/common';
 import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
@@ -14,13 +14,11 @@ import { TransactionService } from '@/modules/transaction/service/transaction.se
 import { UserAddressService } from '@/modules/user/service/user-address.service';
 import { CheckoutQueue } from '@/queue/checkout/checkout.queue';
 import { EmailQueue } from '@/queue/email/email.queue';
-import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
-  Logger,
+  Logger
 } from '@nestjs/common';
 import {
   CartItem,
@@ -104,85 +102,6 @@ export class OrderService {
     tx: PrismaClientTransaction,
   ) {
     return this.orderRepository.updateById(id, data, tx);
-  }
-
-  // Xử lí orderItems
-  // Optimize from N + 1 queries to 5 queries
-  private async processOrderItems(tx: any, items: any) {
-    const mapVariantIds = new Map<number, number>();
-    items.forEach((i) => {
-      mapVariantIds.set(i.bookVariantId, i.quantity);
-    });
-    const variants = await this.bookVariantService.findByVariantIds([
-      ...mapVariantIds.keys(),
-    ]);
-
-    variants.forEach((v) => {
-      const variantCardItem = mapVariantIds.get(v.id);
-      const quantity = mapVariantIds.get(v.id);
-      const available = v ? v.stock - v.reserved : 0;
-
-      if (!v) throw new ForbiddenException(OrderMessage.BOOK_VARIANT_NOT_FOUND);
-
-      if (!v.stock || available < (quantity ?? 0)) {
-        Logger.error(
-          `Book variant ${v.id} out of stock. Available: ${available}, Required: ${quantity ?? 0}`,
-        );
-        throw new ForbiddenException(
-          OrderMessage.BOOK_OUT_OF_STOCK('Sản phẩm vừa hết hàng'),
-        );
-      }
-    });
-
-    let subtotal = 0;
-    const snapshots: {
-      bookVariantSnapshotId: number;
-      quantity: number;
-      unitPrice: number;
-      lineTotal: number;
-    }[] = [];
-    await Promise.all(
-      variants.map(async (variant) => {
-        const quantity = mapVariantIds.get(variant.id)!;
-        const unitPrice = Number(variant.price);
-        const lineTotal = unitPrice * mapVariantIds.get(variant.id)!;
-
-        subtotal += lineTotal;
-
-        const contentHash = generateContentHash({
-          id: variant.id,
-          format: variant.format,
-          price: Number(variant.price),
-          isbn: variant.isbn,
-        });
-
-        const [snapshot, _] = await Promise.all([
-          this.bookVariantSnapshotService.upsertByContentHash(
-            contentHash,
-            {
-              bookVariantId: variant.id,
-              contentHash,
-              priceSnapshot: unitPrice,
-              formatSnapshot: variant.format,
-            },
-            tx,
-          ),
-          this.bookVariantService.updateReservedById(variant.id, quantity, tx),
-        ]);
-
-        snapshots.push({
-          bookVariantSnapshotId: snapshot.id,
-          quantity,
-          unitPrice,
-          lineTotal,
-        });
-      }),
-    );
-
-    return {
-      subtotal,
-      snapshots,
-    };
   }
 
   async createCheckout(

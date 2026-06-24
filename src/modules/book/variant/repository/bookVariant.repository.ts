@@ -34,11 +34,15 @@ export class BookVariantRepository {
   ) {
     return tx.$executeRaw`
     UPDATE book_variants SET reserved = reserved + CASE id 
-    ${Prisma.join(
-      payload.map(p => Prisma.sql`WHEN ${p.bookVariantId} THEN ${p.quantity}`)
+     ${Prisma.join(
+      payload.map(p => Prisma.sql`WHEN ${p.bookVariantId} THEN 
+        CASE WHEN (stock - reserved) >= ${p.quantity} 
+          THEN ${p.quantity} 
+          ELSE 0        
+        END`)
     )}
      END
-       WHERE id IN (${Prisma.join(payload.map(p => p.bookVariantId))})
+       WHERE id IN (${Prisma.join(payload.map(p => p.bookVariantId))}) 
       `
   }
   updateBookVariantInventory(

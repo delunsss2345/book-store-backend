@@ -24,6 +24,19 @@ export class BookVariantRepository {
         id: {
           in: variantIds
         }
+      },
+      select: {
+        id: true,
+        bookId: true,
+        format: true,
+        isbn: true,
+        price: true,
+        currencyCode: true,
+        stock: true,
+        available: true,
+        isActive: true,
+        reserved: true,
+        edition: true
       }
     })
   }

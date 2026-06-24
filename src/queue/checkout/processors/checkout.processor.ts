@@ -22,11 +22,9 @@ export type CheckoutJobPayload = {
     id: number;
     format: BookFormat;
     isbn: string;
-    stock: number;
-    available: number;
     price: number;
+    stock: number;
     isActive: boolean;
-    reserved: number;
     edition: number;
   }>;
   mapVariantIds: Record<number, number>,

@@ -165,12 +165,16 @@ export class OrderService {
     const orderCode = generateOrderCode();
 
 
+    const orderVariants = variants.map(({ id, format, isbn, price, stock, isActive, edition }) => ({
+      id, format, isbn, price, stock, isActive, edition,
+    }));
+
     await this.checkoutQueue.enqueueCheckout({
       isGuest,
       orderCode,
       totalAmount,
       subtotal,
-      variants,
+      variants: orderVariants,
       mapVariantIds,
       guestEmail: body.guestEmail,
       guestSessionId: isGuest ? guestSessionId! : undefined,
@@ -181,7 +185,11 @@ export class OrderService {
     });
     this.logger.log(`[createCheckout] Job enqueued - orderCode=${orderCode}`);
 
-    return { orderCode, totalAmount, shipFee: SHIPPING_FEE };
+    return {
+      orderCode, totalAmount, items: {
+
+      }, shipFee: SHIPPING_FEE
+    };
   }
 
   async getOrderGuest(sessionGuestId: string, page: number, limit: number) {

@@ -1,18 +1,17 @@
-import { PrismaClientTransaction, PrismaService } from '@/database';
+import { PrismaService } from '@/database';
+import { CheckoutItemDto } from '@/modules/order/dto/request/create-orders.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { bookVariantInventorySelect } from '../select';
 
-type DbClient = Prisma.TransactionClient | PrismaService;
+type DbClient = Prisma.TransactionClient;
 
 @Injectable()
 export class BookVariantRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  findBookVariantInventoryById(bookVariantId: number, tx?: DbClient) {
-    const db = this.getDb(tx);
-
-    return db.bookVariant.findUnique({
+  findBookVariantInventoryById(bookVariantId: number, tx: DbClient = this.prisma) {
+    return tx.bookVariant.findUnique({
       where: { id: bookVariantId },
       select: bookVariantInventorySelect,
     });
@@ -28,6 +27,21 @@ export class BookVariantRepository {
       }
     })
   }
+
+  updateReservedByIds(
+    payload: CheckoutItemDto[],
+    tx: DbClient = this.prisma,
+  ) {
+    return tx.$executeRaw`
+    UPDATE book_variants SET reserved = CASE id 
+      SET reserved = CASE id
+    ${Prisma.join(
+      payload.map(p => Prisma.sql`WHEN ${p.bookVariantId} THEN ${p.quantity}`)
+    )}
+     END
+       WHERE id IN (${Prisma.join(payload.map(p => p.bookVariantId))})
+      `
+  }
   updateBookVariantInventory(
     params: {
       bookVariantId: number;
@@ -35,11 +49,10 @@ export class BookVariantRepository {
       costPrice: number;
       price?: number;
     },
-    tx?: DbClient,
+    tx: DbClient = this.prisma,
   ) {
-    const db = this.getDb(tx);
 
-    return db.bookVariant.update({
+    return tx.bookVariant.update({
       where: { id: params.bookVariantId },
       data: {
         stock: params.stock,
@@ -50,14 +63,12 @@ export class BookVariantRepository {
     });
   }
 
-  updateReservedById(id: number, quantity: number, tx: PrismaClientTransaction) {
+  updateReservedById(id: number, quantity: number, tx: DbClient = this.prisma) {
     return tx.bookVariant.update({
       where: { id },
       data: { reserved: { increment: quantity } },
     });
   }
 
-  private getDb(tx?: DbClient): DbClient {
-    return tx ?? this.prisma;
-  }
+
 }

@@ -22,11 +22,11 @@ import { UserDeviceService } from '@/modules/auth/service/user-device.service';
 import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
-import { EmailProducer } from '@/modules/jobs/producers/email.producer';
 import { RoleService } from '@/modules/role/service/role.service';
 import { UserRoleService } from '@/modules/user/service/user-role.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/constants/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/service/verification-code.service';
+import { EmailQueue } from '@/queue/email/email.queue';
 import { hashToken, tokenHash } from '@/utils/hashToken.util';
 import { randomKey } from '@/utils/randomKey.util';
 import {
@@ -57,7 +57,7 @@ export class AuthService {
     private readonly userSessionService: UserSessionService,
     private readonly revokedTokenService: RevokedTokenService,
     private readonly userDeviceService: UserDeviceService,
-    private readonly emailProducer: EmailProducer,
+    private readonly emailQueue: EmailQueue,
     private readonly userRoleService: UserRoleService,
     private readonly roleService: RoleService,
     private readonly guestSessionService: GuestSessionService,
@@ -138,7 +138,7 @@ export class AuthService {
         expiresAt,
       });
     // Add queue
-    await this.emailProducer.enqueueOutboxEmail(
+    await this.emailQueue.enqueueOutboxEmail(
       verificationBundle.outbox.id,
       verificationBundle.verification.id,
     );
@@ -247,7 +247,7 @@ export class AuthService {
       });
 
     // thêm ngăn xếp
-    await this.emailProducer.enqueueOutboxEmail(
+    await this.emailQueue.enqueueOutboxEmail(
       verificationBundle.outbox.id,
       verificationBundle.verification.id,
     );
@@ -402,7 +402,7 @@ export class AuthService {
         expiresAt: this.signVerifyCode(),
       });
 
-    await this.emailProducer.enqueueOutboxEmail(
+    await this.emailQueue.enqueueOutboxEmail(
       verificationBundle.outbox.id,
       verificationBundle.verification.id,
     );

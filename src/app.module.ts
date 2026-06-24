@@ -9,9 +9,12 @@ import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { BookVariantModule } from '@/modules/book/variant';
 import { CartModule } from '@/modules/cart/cart.module';
 import { CategoryModule } from '@/modules/category/category.module';
+import { CheckoutModule } from '@/queue/checkout/checkout.module';
+import { EmailModule } from '@/queue/email/email.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
+import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { PurchaseOrderModule } from '@/modules/purchase-order/purchase-order.module';
 import { SearchModule } from '@/modules/search/search.module';
@@ -27,8 +30,6 @@ import { LanguageMiddleware } from './common/middleware/language.middleware';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth/auth.module';
 import { HooksModule } from './modules/hooks/hooks.module';
-import { JobsModule } from './modules/jobs/jobs.module';
-import { MailModule } from './modules/mail/mail.module';
 import { OrderModule } from './modules/order/order.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { R2ServiceModule } from './modules/r2-service/r2-service.module';
@@ -36,7 +37,6 @@ import { RoleModule } from './modules/role/role.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.module';
 
 @Module({
   imports: [
@@ -52,8 +52,8 @@ import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.
     RateLimitProvider,
     VerificationCodeModule,
     PermissionScanModule,
-    MailModule,
-    JobsModule,
+    EmailModule,
+    CheckoutModule,
     PermissionModule,
     RoleModule,
     AuditLogModule,

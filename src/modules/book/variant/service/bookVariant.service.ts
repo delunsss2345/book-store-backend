@@ -1,4 +1,5 @@
 import { PrismaClientTransaction } from '@/database';
+import { CheckoutItemDto } from '@/modules/order/dto/request/create-orders.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BookVariantRepository } from '../repository/bookVariant.repository';
@@ -48,6 +49,10 @@ export class BookVariantService {
 
   updateReservedById(id: number, quantity: number, tx: PrismaClientTransaction) {
     return this.bookVariantRepository.updateReservedById(id, quantity, tx);
+  }
+
+  updateReservedByIds(payload: CheckoutItemDto[], tx: PrismaClientTransaction) {
+    return this.bookVariantRepository.updateReservedByIds(payload, tx);
   }
 
   private toDecimalNumber(value: Prisma.Decimal | number | null | undefined) {

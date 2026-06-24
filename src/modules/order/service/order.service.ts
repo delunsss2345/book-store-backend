@@ -4,10 +4,7 @@ import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
-import { EmailProducer } from '@/modules/jobs/producers/email.producer';
-import {
-  CreateCheckOutDTO
-} from '@/modules/order/dto/request/create-orders.dto';
+import { CreateCheckOutDTO } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { OrderAddressService } from '@/modules/order/service/order-address.service';
@@ -16,9 +13,15 @@ import { PaymentIntentService } from '@/modules/payment/service/payment-intent.s
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { UserAddressService } from '@/modules/user/service/user-address.service';
+import { EmailQueue } from '@/queue/email/email.queue';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import {
   CartItem,
   CurrencyCode,
@@ -36,7 +39,7 @@ export class OrderService {
     private readonly paymentService: PaymentService,
     private readonly orderRepository: OrderRepository,
     private readonly orderItemRepository: OrderItemRepository,
-    private readonly emailProducer: EmailProducer,
+    private readonly emailQueue: EmailQueue,
     private readonly emailOutbox: EmailOutboxService,
     private readonly paymentIntent: PaymentIntentService,
     private readonly transactionService: TransactionService,
@@ -63,11 +66,7 @@ export class OrderService {
       .map((item) => `${item.bookVariantId}:${item.quantity}`)
       .join('|');
 
-
-    return crypto
-      .createHash('md5')
-      .update(content)
-      .digest('hex');
+    return crypto.createHash('md5').update(content).digest('hex');
   }
 
   findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
@@ -98,21 +97,24 @@ export class OrderService {
     return this.orderRepository.createWithGuest(data, tx);
   }
 
-  updateById(id: number, data: Prisma.OrderUncheckedUpdateInput, tx: PrismaClientTransaction) {
+  updateById(
+    id: number,
+    data: Prisma.OrderUncheckedUpdateInput,
+    tx: PrismaClientTransaction,
+  ) {
     return this.orderRepository.updateById(id, data, tx);
   }
 
   // Xử lí orderItems
   // Optimize from N + 1 queries to 5 queries
-  private async processOrderItems(
-    tx: any,
-    items: any,
-  ) {
+  private async processOrderItems(tx: any, items: any) {
     const mapVariantIds = new Map<number, number>();
-    items.forEach(i => {
+    items.forEach((i) => {
       mapVariantIds.set(i.bookVariantId, i.quantity);
-    })
-    const variants = await this.bookVariantService.findByVariantIds([...mapVariantIds.keys()]);
+    });
+    const variants = await this.bookVariantService.findByVariantIds([
+      ...mapVariantIds.keys(),
+    ]);
 
     variants.forEach((v) => {
       const variantCardItem = mapVariantIds.get(v.id);
@@ -126,19 +128,17 @@ export class OrderService {
           `Book variant ${v.id} out of stock. Available: ${available}, Required: ${quantity ?? 0}`,
         );
         throw new ForbiddenException(
-          OrderMessage.BOOK_OUT_OF_STOCK(
-            "Sản phẩm vừa hết hàng"
-          ),
+          OrderMessage.BOOK_OUT_OF_STOCK('Sản phẩm vừa hết hàng'),
         );
       }
     });
 
     let subtotal = 0;
     const snapshots: {
-      bookVariantSnapshotId: number,
-      quantity: number,
-      unitPrice: number,
-      lineTotal: number,
+      bookVariantSnapshotId: number;
+      quantity: number;
+      unitPrice: number;
+      lineTotal: number;
     }[] = [];
     await Promise.all(
       variants.map(async (variant) => {
@@ -152,7 +152,7 @@ export class OrderService {
           id: variant.id,
           format: variant.format,
           price: Number(variant.price),
-          isbn: variant.isbn
+          isbn: variant.isbn,
         });
 
         const [snapshot, _] = await Promise.all([
@@ -166,8 +166,8 @@ export class OrderService {
             },
             tx,
           ),
-          this.bookVariantService.updateReservedById(variant.id, quantity, tx)
-        ])
+          this.bookVariantService.updateReservedById(variant.id, quantity, tx),
+        ]);
 
         snapshots.push({
           bookVariantSnapshotId: snapshot.id,
@@ -175,13 +175,12 @@ export class OrderService {
           unitPrice,
           lineTotal,
         });
-
       }),
     );
 
     return {
       subtotal,
-      snapshots
+      snapshots,
     };
   }
 
@@ -190,71 +189,96 @@ export class OrderService {
     guestSessionId: string | null,
     userId: number | null,
   ) {
-    return this.transactionService.doInTransaction(async tx => {
+    return this.transactionService.doInTransaction(async (tx) => {
       const isGuest = body?.isGuest;
       let order: Order | undefined;
       let totalAmount = 0;
       let email: string | undefined | null;
 
       if (isGuest) {
-        if (!guestSessionId) throw new BadRequestException('Bạn không phải là khách vãn lai');
-        if (!body.guestAddress) throw new BadRequestException('Address required');
+        if (!guestSessionId)
+          throw new BadRequestException('Bạn không phải là khách vãn lai');
+        if (!body.guestAddress)
+          throw new BadRequestException('Address required');
         const guestAddress = body.guestAddress;
+        const mapVariantIds = new Map<number, number>();
+        const items = body.items;
+        items.forEach((i) => {
+          mapVariantIds.set(i.bookVariantId, i.quantity);
+        });
+        const variants = await this.bookVariantService.findByVariantIds([
+          ...mapVariantIds.keys(),
+        ]);
+        if (variants.length !== items.length)
+          throw new BadRequestException('Có sản phẩm đã bị xoá');
+        variants.forEach((v) => {
+          if (v.stock - v.reserved === 0)
+            throw new BadRequestException('Hết hàng');
+        });
+        await this.bookVariantService.updateReservedByIds(items, tx);
 
-        const { subtotal, snapshots } = await this.processOrderItems(tx, body.items);
-        totalAmount = subtotal + SHIPPING_FEE;
-        order = await this.orderRepository.create({
-          guestSessionId,
-          status: OrderStatus.PENDING_PAYMENT,
-          paymentStatus: PaymentStatus.PENDING,
-          currencyCode: CurrencyCode.VND,
-          orderCode: generateOrderCode(),
-          shippingFee: SHIPPING_FEE,
-          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-          totalAmount,
-          subtotal,
-        }, tx);
+        // const { subtotal, snapshots } = await this.processOrderItems(tx, body.items);
+        // totalAmount = subtotal + SHIPPING_FEE;
+        // order = await this.orderRepository.create({
+        //   guestSessionId,
+        //   status: OrderStatus.PENDING_PAYMENT,
+        //   paymentStatus: PaymentStatus.PENDING,
+        //   currencyCode: CurrencyCode.VND,
+        //   orderCode: generateOrderCode(),
+        //   shippingFee: SHIPPING_FEE,
+        //   expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+        //   totalAmount,
+        //   subtotal,
+        // }, tx);
 
-        await this.orderItemService.createMany(
-          order.id,
-          snapshots,
-          tx,
-        );
+        // await this.orderItemService.createMany(
+        //   order.id,
+        //   snapshots,
+        //   tx,
+        // );
 
-        await this.orderAddressService.create({
-          orderId: order.id,
-          recipientName: guestAddress.name,
-          phoneNumber: guestAddress.phoneNumber,
-          addressLine: guestAddress.addressLine,
-          ward: guestAddress.ward,
-          district: guestAddress.district,
-          city: guestAddress.city,
-          countryCode: 'VN',
-          note: guestAddress.note,
-        }, tx);
+        // await this.orderAddressService.create({
+        //   orderId: order.id,
+        //   recipientName: guestAddress.name,
+        //   phoneNumber: guestAddress.phoneNumber,
+        //   addressLine: guestAddress.addressLine,
+        //   ward: guestAddress.ward,
+        //   district: guestAddress.district,
+        //   city: guestAddress.city,
+        //   countryCode: 'VN',
+        //   note: guestAddress.note,
+        // }, tx);
 
-        email = body.guestEmail;
+        // email = body.guestEmail;
       } else if (userId) {
-        if (!body.addressId) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
+        if (!body.addressId)
+          throw new BadRequestException('Bạn cần phải tạo địa chỉ');
         const addressId = body.addressId;
 
-        const address = await this.userAddressService.findByAddressIdAndUserId(addressId, userId, tx);
+        const address = await this.userAddressService.findByAddressIdAndUserId(
+          addressId,
+          userId,
+          tx,
+        );
         if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
 
         const { subtotal } = await this.processOrderItems(tx, body.items);
         totalAmount = subtotal + SHIPPING_FEE;
-        order = await this.orderRepository.create({
-          userId,
-          status: OrderStatus.PENDING_PAYMENT,
-          paymentStatus: PaymentStatus.PENDING,
-          currencyCode: CurrencyCode.VND,
-          orderCode: generateOrderCode(),
-          shippingFee: SHIPPING_FEE,
-          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-          totalAmount,
-          subtotal,
-          addressId,
-        }, tx);
+        order = await this.orderRepository.create(
+          {
+            userId,
+            status: OrderStatus.PENDING_PAYMENT,
+            paymentStatus: PaymentStatus.PENDING,
+            currencyCode: CurrencyCode.VND,
+            orderCode: generateOrderCode(),
+            shippingFee: SHIPPING_FEE,
+            expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+            totalAmount,
+            subtotal,
+            addressId,
+          },
+          tx,
+        );
 
         email = address.user.email;
       }
@@ -269,7 +293,7 @@ export class OrderService {
             orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
             toEmail: email,
           });
-          await this.emailProducer.enqueueOrderEmail(outbox.id);
+          await this.emailQueue.enqueueOrderEmail(outbox.id);
         }
         return {
           orderId: order.id,
@@ -289,15 +313,18 @@ export class OrderService {
 
       Logger.log(`Đã tạo gatewayResp: ${JSON.stringify(gatewayResp)}`);
 
-      return this.paymentIntent.createPaymentIntent({
-        orderId: order.id,
-        gateway: body.paymentGateway,
-        orderCode: order.orderCode,
-        tokenUrl: gatewayResp.result.token,
-        paymentUrl: gatewayResp.result.url,
-        content: gatewayResp.result.content,
-        status: PaymentStatus.PENDING,
-      }, tx);
+      return this.paymentIntent.createPaymentIntent(
+        {
+          orderId: order.id,
+          gateway: body.paymentGateway,
+          orderCode: order.orderCode,
+          tokenUrl: gatewayResp.result.token,
+          paymentUrl: gatewayResp.result.url,
+          content: gatewayResp.result.content,
+          status: PaymentStatus.PENDING,
+        },
+        tx,
+      );
     });
   }
 
@@ -309,8 +336,16 @@ export class OrderService {
     );
   }
 
-  async getOrderDetailGuest(orderId: number, sessionGuestId: string, langId: number) {
-    return this.orderItemRepository.findOrderDetailBySessionGuestId(orderId, sessionGuestId, langId);
+  async getOrderDetailGuest(
+    orderId: number,
+    sessionGuestId: string,
+    langId: number,
+  ) {
+    return this.orderItemRepository.findOrderDetailBySessionGuestId(
+      orderId,
+      sessionGuestId,
+      langId,
+    );
   }
 
   async getOrderUser(userId: number, page: number, limit: number) {
@@ -326,12 +361,18 @@ export class OrderService {
   }
 
   async cleanOrder(orderSecondMinutes: number) {
-    Logger.debug(`Bắt đầu dọn dẹp order đã hết hạn trước ${orderSecondMinutes} giây`, 'OrderService');
+    Logger.debug(
+      `Bắt đầu dọn dẹp order đã hết hạn trước ${orderSecondMinutes} giây`,
+      'OrderService',
+    );
 
     const expiredOrders =
       await this.orderRepository.findOrderIsExpire(orderSecondMinutes);
 
-    Logger.debug(`Tìm thấy ${expiredOrders.length} order đã hết hạn`, 'OrderService');
+    Logger.debug(
+      `Tìm thấy ${expiredOrders.length} order đã hết hạn`,
+      'OrderService',
+    );
     if (expiredOrders.length === 0) {
       return { cleanedCount: 0 };
     }

@@ -207,7 +207,7 @@ export class UserAddressRepository {
     });
   }
 
-  findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction) {
+  findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction = this.prisma) {
     return tx.userAddress.findFirst({
       where: { id: addressId, userId, deletedAt: null, },
       include: {

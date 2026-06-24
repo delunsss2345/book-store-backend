@@ -7,6 +7,7 @@ import { BookVariantModule } from '@/modules/book/variant/bookVariant.module';
 import { CartModule } from '@/modules/cart/cart.module';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
 import { OrderCleanupJob } from '@/modules/order/job/order.cleanup.job';
+import { CheckoutModule } from '@/queue/checkout/checkout.module';
 import { EmailModule } from '@/queue/email/email.module';
 import { Module } from '@nestjs/common';
 import { AuthRepository } from '../auth/repository/auth.repository';
@@ -34,6 +35,7 @@ import { OrderService } from './service/order.service';
     EmailOutboxModule,
     EmailModule,
     UserModule,
+    CheckoutModule,
   ],
   controllers: [OrderController],
   providers: [

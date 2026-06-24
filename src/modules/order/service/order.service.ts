@@ -1,5 +1,4 @@
 import { OrderMessage, SHIPPING_FEE } from '@/common';
-import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
@@ -13,6 +12,7 @@ import { PaymentIntentService } from '@/modules/payment/service/payment-intent.s
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { UserAddressService } from '@/modules/user/service/user-address.service';
+import { CheckoutQueue } from '@/queue/checkout/checkout.queue';
 import { EmailQueue } from '@/queue/email/email.queue';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
@@ -25,16 +25,16 @@ import {
 import {
   CartItem,
   CurrencyCode,
-  Order,
   OrderStatus,
-  PaymentGateway,
   PaymentStatus,
-  Prisma,
+  Prisma
 } from '@prisma/client';
 import crypto from 'crypto';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private readonly paymentService: PaymentService,
     private readonly orderRepository: OrderRepository,
@@ -48,6 +48,7 @@ export class OrderService {
     private readonly orderItemService: OrderItemService,
     private readonly bookVariantService: BookVariantService,
     private readonly orderAddressService: OrderAddressService,
+    private readonly checkoutQueue: CheckoutQueue,
   ) { }
 
   /**
@@ -189,143 +190,80 @@ export class OrderService {
     guestSessionId: string | null,
     userId: number | null,
   ) {
-    return this.transactionService.doInTransaction(async (tx) => {
-      const isGuest = body?.isGuest;
-      let order: Order | undefined;
-      let totalAmount = 0;
-      let email: string | undefined | null;
+    const isGuest = body.isGuest;
+    this.logger.log(`[createCheckout] START - isGuest=${isGuest}, userId=${userId}, items=${body.items.length}`);
 
-      if (isGuest) {
-        if (!guestSessionId)
-          throw new BadRequestException('Bạn không phải là khách vãn lai');
-        if (!body.guestAddress)
-          throw new BadRequestException('Address required');
-        const guestAddress = body.guestAddress;
-        const mapVariantIds = new Map<number, number>();
-        const items = body.items;
-        items.forEach((i) => {
-          mapVariantIds.set(i.bookVariantId, i.quantity);
-        });
-        const variants = await this.bookVariantService.findByVariantIds([
-          ...mapVariantIds.keys(),
-        ]);
-        if (variants.length !== items.length)
-          throw new BadRequestException('Có sản phẩm đã bị xoá');
-        variants.forEach((v) => {
-          if (v.stock - v.reserved === 0)
-            throw new BadRequestException('Hết hàng');
-        });
-        await this.bookVariantService.updateReservedByIds(items, tx);
+    let email: string | undefined;
 
-        // const { subtotal, snapshots } = await this.processOrderItems(tx, body.items);
-        // totalAmount = subtotal + SHIPPING_FEE;
-        // order = await this.orderRepository.create({
-        //   guestSessionId,
-        //   status: OrderStatus.PENDING_PAYMENT,
-        //   paymentStatus: PaymentStatus.PENDING,
-        //   currencyCode: CurrencyCode.VND,
-        //   orderCode: generateOrderCode(),
-        //   shippingFee: SHIPPING_FEE,
-        //   expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-        //   totalAmount,
-        //   subtotal,
-        // }, tx);
+    if (isGuest) {
+      if (!guestSessionId)
+        throw new BadRequestException('Bạn không phải là khách vãn lai');
+      if (!body.guestAddress)
+        throw new BadRequestException('Address required');
+      this.logger.log(`[createCheckout] GUEST validation passed - guestSessionId=${guestSessionId}`);
+    } else {
+      if (!body.addressId)
+        throw new BadRequestException('Bạn cần phải tạo địa chỉ');
 
-        // await this.orderItemService.createMany(
-        //   order.id,
-        //   snapshots,
-        //   tx,
-        // );
-
-        // await this.orderAddressService.create({
-        //   orderId: order.id,
-        //   recipientName: guestAddress.name,
-        //   phoneNumber: guestAddress.phoneNumber,
-        //   addressLine: guestAddress.addressLine,
-        //   ward: guestAddress.ward,
-        //   district: guestAddress.district,
-        //   city: guestAddress.city,
-        //   countryCode: 'VN',
-        //   note: guestAddress.note,
-        // }, tx);
-
-        // email = body.guestEmail;
-      } else if (userId) {
-        if (!body.addressId)
-          throw new BadRequestException('Bạn cần phải tạo địa chỉ');
-        const addressId = body.addressId;
-
-        const address = await this.userAddressService.findByAddressIdAndUserId(
-          addressId,
-          userId,
-          tx,
-        );
-        if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
-
-        const { subtotal } = await this.processOrderItems(tx, body.items);
-        totalAmount = subtotal + SHIPPING_FEE;
-        order = await this.orderRepository.create(
-          {
-            userId,
-            status: OrderStatus.PENDING_PAYMENT,
-            paymentStatus: PaymentStatus.PENDING,
-            currencyCode: CurrencyCode.VND,
-            orderCode: generateOrderCode(),
-            shippingFee: SHIPPING_FEE,
-            expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-            totalAmount,
-            subtotal,
-            addressId,
-          },
-          tx,
-        );
-
-        email = address.user.email;
-      }
-
-      if (!order) throw new BadRequestException('Không thể tạo đơn hàng');
-
-      if (body.paymentGateway === PaymentGateway.COD) {
-        if (email) {
-          const outbox = await this.emailOutbox.createOutboxOrderEmail({
-            orderId: order.id,
-            orderCode: order.orderCode,
-            orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-            toEmail: email,
-          });
-          await this.emailQueue.enqueueOrderEmail(outbox.id);
-        }
-        return {
-          orderId: order.id,
-          subtotal: order.subtotal,
-          totalAmount: order.totalAmount,
-          orderCode: order.orderCode,
-        };
-      }
-
-      Logger.log(`Đã tạo order: ${JSON.stringify(order)}`);
-
-      const gatewayResp = this.paymentService.createTransactionUrl({
-        orderId: order.id,
-        gateway: body.paymentGateway,
-        amount: totalAmount,
-      });
-
-      Logger.log(`Đã tạo gatewayResp: ${JSON.stringify(gatewayResp)}`);
-
-      return this.paymentIntent.createPaymentIntent(
-        {
-          orderId: order.id,
-          gateway: body.paymentGateway,
-          orderCode: order.orderCode,
-          tokenUrl: gatewayResp.result.token,
-          paymentUrl: gatewayResp.result.url,
-          content: gatewayResp.result.content,
-          status: PaymentStatus.PENDING,
-        },
-        tx,
+      const address = await this.userAddressService.findByAddressIdAndUserId(
+        body.addressId,
+        userId!,
       );
+      if (!address) throw new BadRequestException('Bạn cần phải tạo địa chỉ');
+      email = address.user.email;
+      this.logger.log(`[createCheckout] USER validation passed - userId=${userId}, addressId=${body.addressId}, email=${email}`);
+    }
+
+    const mapVariantIds = new Map<number, number>();
+    const items = body.items;
+    items.forEach((i) => {
+      mapVariantIds.set(i.bookVariantId, i.quantity);
     });
+
+    const variants = await this.bookVariantService.findByVariantIds([
+      ...mapVariantIds.keys(),
+    ]);
+    this.logger.log(`[createCheckout] Variants fetched - requested=${items.length}, found=${variants.length}`);
+
+    if (variants.length !== items.length)
+      throw new BadRequestException('Có sản phẩm đã bị xoá');
+    variants.forEach((v) => {
+      if (v.stock - v.reserved === 0)
+        throw new BadRequestException('Hết hàng');
+    });
+    this.logger.log(`[createCheckout] Stock check passed`);
+
+    await this.transactionService.doInTransaction(async (tx) => {
+      this.logger.log(`[doInTransaction] doInTransaction`);
+      console.log(items);
+      await this.bookVariantService.updateReservedByIds(items, tx);
+    });
+    this.logger.log(`[createCheckout] Stock reserved for ${items.length} variant(s)`);
+
+    const subtotal = variants.reduce(
+      (sum, v) => sum + Number(v.price) * mapVariantIds.get(v.id)!,
+      0,
+    );
+    const totalAmount = subtotal + SHIPPING_FEE;
+    const orderCode = generateOrderCode();
+    this.logger.log(`[createCheckout] Computed - orderCode=${orderCode}, subtotal=${subtotal}, totalAmount=${totalAmount}`);
+
+    await this.checkoutQueue.enqueueCheckout({
+      isGuest,
+      orderCode,
+      totalAmount,
+      subtotal,
+      items,
+      guestEmail: body.guestEmail,
+      guestSessionId: isGuest ? guestSessionId! : undefined,
+      guestAddress: isGuest ? body.guestAddress : undefined,
+      addressId: !isGuest ? body.addressId : undefined,
+      userId: !isGuest ? userId! : undefined,
+      email,
+    });
+    this.logger.log(`[createCheckout] Job enqueued - orderCode=${orderCode}`);
+
+    return { orderCode, totalAmount, shipFee: SHIPPING_FEE };
   }
 
   async getOrderGuest(sessionGuestId: string, page: number, limit: number) {

@@ -28,7 +28,7 @@ export class UserAddressService {
         return this.userAddressRepository.softDeleteByIdAndUserId(id, userId);
     }
 
-    findByAddressIdAndUserId(addressId: number, userId: number, tx: PrismaClientTransaction) {
+    findByAddressIdAndUserId(addressId: number, userId: number, tx?: PrismaClientTransaction) {
         return this.userAddressRepository.findByAddressIdAndUserId(addressId, userId, tx);
     }
 }

@@ -81,6 +81,6 @@ export const EmailQueueProvider = BullModule.registerQueue({
   name: 'email',
 });
 
-export const CheckoutQueueProvider = BullModule.registerQueue({
-  name: 'checkout',
+export const OrderQueueProvider = BullModule.registerQueue({
+  name: 'order',
 });

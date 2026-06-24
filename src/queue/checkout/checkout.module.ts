@@ -1,9 +1,9 @@
-import { CheckoutQueueProvider, RedisProvider } from '@/config/redis.config';
+import { OrderQueueProvider, RedisProvider } from '@/config/redis.config';
 import { Module } from '@nestjs/common';
 import { CheckoutQueue } from './checkout.queue';
 
 @Module({
-  imports: [RedisProvider, CheckoutQueueProvider],
+  imports: [RedisProvider, OrderQueueProvider],
   providers: [CheckoutQueue],
   exports: [CheckoutQueue],
 })

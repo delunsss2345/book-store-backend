@@ -33,8 +33,7 @@ export class BookVariantRepository {
     tx: DbClient = this.prisma,
   ) {
     return tx.$executeRaw`
-    UPDATE book_variants SET reserved = CASE id 
-      SET reserved = CASE id
+    UPDATE book_variants SET reserved = reserved + CASE id 
     ${Prisma.join(
       payload.map(p => Prisma.sql`WHEN ${p.bookVariantId} THEN ${p.quantity}`)
     )}

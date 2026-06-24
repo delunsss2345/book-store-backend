@@ -2,18 +2,15 @@ import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { ORDER_JOBS } from '@/common/constants/order-jobs.constant';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
-import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
-import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { GuestAddressDto } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { OrderAddressService } from '@/modules/order/service/order-address.service';
 import { OrderItemService } from '@/modules/order/service/order-item.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
-import { EmailQueue } from '@/queue/email/email.queue';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { CurrencyCode, OrderStatus, PaymentStatus } from '@prisma/client';
+import { BookFormat, CurrencyCode, OrderStatus, PaymentStatus } from '@prisma/client';
 import { Job } from 'bullmq';
 
 export type CheckoutJobPayload = {
@@ -21,7 +18,18 @@ export type CheckoutJobPayload = {
   orderCode: string;
   totalAmount: number;
   subtotal: number;
-  items: Array<{ bookVariantId: number; quantity: number }>;
+  variants: Array<{
+    id: number;
+    format: BookFormat;
+    isbn: string;
+    stock: number;
+    available: number;
+    price: number;
+    isActive: boolean;
+    reserved: number;
+    edition: number;
+  }>;
+  mapVariantIds: Record<number, number>,
   guestEmail?: string;
   guestSessionId?: string;
   guestAddress?: GuestAddressDto;
@@ -31,19 +39,16 @@ export type CheckoutJobPayload = {
 };
 
 @Injectable()
-@Processor('order')
+@Processor('order', { concurrency: 5 })
 export class CheckoutProcessor extends WorkerHost {
   private readonly logger = new Logger(CheckoutProcessor.name);
 
   constructor(
     private readonly transactionService: TransactionService,
-    private readonly bookVariantService: BookVariantService,
     private readonly bookVariantSnapshotService: BookVariantSnapshotService,
     private readonly orderRepository: OrderRepository,
     private readonly orderItemService: OrderItemService,
     private readonly orderAddressService: OrderAddressService,
-    private readonly emailOutbox: EmailOutboxService,
-    private readonly emailQueue: EmailQueue,
   ) {
     super();
   }
@@ -56,55 +61,74 @@ export class CheckoutProcessor extends WorkerHost {
 
   private async processCheckout(job: Job) {
     const payload = job.data as CheckoutJobPayload;
-    this.logger.debug(`Processing checkout job ${job.id} - orderCode: ${payload.orderCode}`);
+    const mapVariantIds = payload.mapVariantIds;
+    this.logger.debug(`[${payload.orderCode}] START processCheckout job=${job.id} isGuest=${payload.isGuest} variants=${payload.variants.length}`);
 
     await this.transactionService.doInTransaction(async (tx) => {
-      const mapVariantIds = new Map<number, number>();
-      payload.items.forEach((i) => mapVariantIds.set(i.bookVariantId, i.quantity));
+      const variants = payload.variants;
+      this.logger.debug(`[${payload.orderCode}] Building upsertSnapshots for ${variants.length} variant(s)`);
 
-      const variants = await this.bookVariantService.findByVariantIds([
-        ...mapVariantIds.keys(),
-      ]);
-
-      const snapshots: {
-        bookVariantSnapshotId: number;
-        quantity: number;
-        unitPrice: number;
-        lineTotal: number;
+      const upsertSnapshots: {
+        contentHash: string,
+        bookVariantId: number,
+        priceSnapshot: number,
+        formatSnapshot: BookFormat,
       }[] = [];
 
-      await Promise.all(
-        variants.map(async (variant) => {
-          const quantity = mapVariantIds.get(variant.id)!;
-          const unitPrice = Number(variant.price);
-          const contentHash = generateContentHash({
-            id: variant.id,
-            format: variant.format,
-            price: unitPrice,
-            isbn: variant.isbn,
-          });
+      variants.map((variant) => {
+        const unitPrice = Number(variant.price);
+        const contentHash = generateContentHash({
+          id: variant.id,
+          format: variant.format,
+          price: unitPrice,
+          isbn: variant.isbn,
+        });
 
-          const snapshot = await this.bookVariantSnapshotService.upsertByContentHash(
-            contentHash,
-            {
-              bookVariantId: variant.id,
-              contentHash,
-              priceSnapshot: unitPrice,
-              formatSnapshot: variant.format,
-            },
-            tx,
-          );
+        upsertSnapshots.push({
+          contentHash,
+          bookVariantId: variant.id,
+          priceSnapshot: unitPrice,
+          formatSnapshot: variant.format,
+        });
+      });
 
-          snapshots.push({
-            bookVariantSnapshotId: snapshot.id,
-            quantity,
-            unitPrice,
-            lineTotal: unitPrice * quantity,
-          });
-        }),
+      this.logger.debug(`[${payload.orderCode}] createMany snapshots count=${upsertSnapshots.length}`);
+      await this.bookVariantSnapshotService.createMany(upsertSnapshots);
+      this.logger.debug(`[${payload.orderCode}] createMany done`);
+
+      const foundSnapshots = await this.bookVariantSnapshotService.findAllByContentHashes(
+        upsertSnapshots.map(s => s.contentHash),
       );
+      this.logger.debug(`[${payload.orderCode}] findAllByContentHashes returned ${foundSnapshots.length} snapshot(s) ${JSON.stringify(foundSnapshots)}`);
+
+      const snapshotIdMap = new Map(foundSnapshots.map(s => [s.contentHash, s.id]));
+      this.logger.debug(`[${payload.orderCode}] snapshotIdMap size=${snapshotIdMap.size} keys=${JSON.stringify([...snapshotIdMap.keys()])}`);
+      this.logger.debug(`[${payload.orderCode}] upsertSnapshots contentHashes=${JSON.stringify(upsertSnapshots.map(s => s.contentHash))}`);
+      this.logger.debug(`${JSON.stringify(upsertSnapshots)}`)
+      const snapshotItems = upsertSnapshots.map(s => {
+        const quantity = mapVariantIds[s.bookVariantId];
+        console.log(quantity);
+        const bookVariantSnapshotId = snapshotIdMap.get(s.contentHash);
+        this.logger.debug(
+          `[${payload.orderCode}] mapping variantId=${s.bookVariantId} contentHash=${s.contentHash} -> snapshotId=${bookVariantSnapshotId} quantity=${quantity}`,
+        );
+        if (bookVariantSnapshotId === undefined) {
+          this.logger.error(`[${payload.orderCode}] MISSING snapshot for contentHash=${s.contentHash} variantId=${s.bookVariantId}`);
+        }
+        if (quantity === undefined) {
+          this.logger.error(`[${payload.orderCode}] MISSING quantity for variantId=${s.bookVariantId}`);
+        }
+        return {
+          bookVariantSnapshotId: bookVariantSnapshotId!,
+          quantity: quantity,
+          unitPrice: s.priceSnapshot,
+          lineTotal: s.priceSnapshot * quantity,
+        };
+      });
+      this.logger.debug(`[${payload.orderCode}] snapshotItems built: ${JSON.stringify(snapshotItems)}`);
 
       if (payload.isGuest) {
+        this.logger.debug(`[${payload.orderCode}] Creating order (guest)`);
         const order = await this.orderRepository.create(
           {
             guestSessionId: payload.guestSessionId,
@@ -119,8 +143,10 @@ export class CheckoutProcessor extends WorkerHost {
           },
           tx,
         );
+        this.logger.debug(`[${payload.orderCode}] Order created id=${order.id}`);
 
-        await this.orderItemService.createMany(order.id, snapshots, tx);
+        await this.orderItemService.createMany(order.id, snapshotItems, tx);
+        this.logger.debug(`[${payload.orderCode}] Order items created`);
 
         const guestAddress = payload.guestAddress!;
         await this.orderAddressService.create(
@@ -137,17 +163,19 @@ export class CheckoutProcessor extends WorkerHost {
           },
           tx,
         );
+        this.logger.debug(`[${payload.orderCode}] Guest address created`);
 
-        if (payload.guestEmail) {
-          const outbox = await this.emailOutbox.createOutboxOrderEmail({
-            orderId: order.id,
-            orderCode: order.orderCode,
-            orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-            toEmail: payload.guestEmail,
-          });
-          await this.emailQueue.enqueueOrderEmail(outbox.id);
-        }
+        // if (payload.guestEmail) {
+        //   const outbox = await this.emailOutbox.createOutboxOrderEmail({
+        //     orderId: order.id,
+        //     orderCode: order.orderCode,
+        //     orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
+        //     toEmail: payload.guestEmail,
+        //   });
+        //   await this.emailQueue.enqueueOrderEmail(outbox.id);
+        // }
       } else {
+        this.logger.debug(`[${payload.orderCode}] Creating order (user=${payload.userId})`);
         const order = await this.orderRepository.create(
           {
             userId: payload.userId,
@@ -163,21 +191,23 @@ export class CheckoutProcessor extends WorkerHost {
           },
           tx,
         );
+        this.logger.debug(`[${payload.orderCode}] Order created id=${order.id}`);
 
-        await this.orderItemService.createMany(order.id, snapshots, tx);
+        await this.orderItemService.createMany(order.id, snapshotItems, tx);
+        this.logger.debug(`[${payload.orderCode}] Order items created`);
 
-        if (payload.email) {
-          const outbox = await this.emailOutbox.createOutboxOrderEmail({
-            orderId: order.id,
-            orderCode: order.orderCode,
-            orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-            toEmail: payload.email,
-          });
-          await this.emailQueue.enqueueOrderEmail(outbox.id);
-        }
+        // if (payload.email) {
+        //   const outbox = await this.emailOutbox.createOutboxOrderEmail({
+        //     orderId: order.id,
+        //     orderCode: order.orderCode,
+        //     orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
+        //     toEmail: payload.email,
+        //   });
+        //   await this.emailQueue.enqueueOrderEmail(outbox.id);
+        // }
       }
     });
 
-    this.logger.debug(`Completed checkout job ${job.id} - orderCode: ${payload.orderCode}`);
+    this.logger.debug(`[${payload.orderCode}] DONE processCheckout job=${job.id}`);
   }
 }

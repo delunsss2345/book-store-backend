@@ -3,12 +3,27 @@ import { check, sleep } from 'k6';
 import http from 'k6/http';
 import { Options } from 'k6/options';
 
+// export const options: Options = {
+//     stages: [
+//         { duration: '30s', target: 100 }, // 30 giây đầu: tăng dần từ 0 lên 100 VU
+//         { duration: '1m', target: 500 },  // 1 phút tiếp theo: tăng mạnh lên 500 VU và giữ tải
+//         { duration: '30s', target: 0 },   // 30 giây cuối: giảm dần về 0 VU để hệ thống hồi phục
+//     ],
+//     thresholds: {
+//         http_req_failed: ['rate<0.05'],    // Tỷ lệ lỗi phải dưới 5%
+//         http_req_duration: ['p(95)<3000'], // 95% request phải phản hồi dưới 3 giây
+//     },
+// };
+
 export const options: Options = {
-    vus: 100,         // 5 VU cùng lúc
-    iterations: 100,  // tổng 5 request
+    stages: [
+        { duration: '30s', target: 100 },  // ramp up
+        { duration: '1m', target: 200 },  // sustained load
+        { duration: '30s', target: 0 },    // ramp down
+    ],
     thresholds: {
-        http_req_failed: ['rate<0.05'],
-        http_req_duration: ['p(95)<3000'],
+        http_req_duration: ['p(95)<500'],  // ← đây là số đẹp
+        http_req_failed: ['rate<0.01'],  // ← 99% success
     },
 }
 const BASE_URL = 'http://localhost:3301/api/v1';

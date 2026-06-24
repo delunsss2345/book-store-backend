@@ -1,3 +1,3 @@
-export enum ORDER_JOBS {
-  CHECKOUT = 'ORDER_JOBS.CHECKOUT',
+export const ORDER_JOBS = {
+  CHECKOUT: 'ORDER_JOBS.CHECKOUT',
 }

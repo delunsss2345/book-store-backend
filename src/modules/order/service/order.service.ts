@@ -133,16 +133,16 @@ export class OrderService {
       this.logger.log(`[createCheckout] USER validation passed - userId=${userId}, addressId=${body.addressId}, email=${email}`);
     }
 
-    const mapVariantIds = new Map<number, number>();
+    const mapVariantIds: Record<number, number> = {};
     const items = body.items;
+
     items.forEach((i) => {
-      mapVariantIds.set(i.bookVariantId, i.quantity);
+      mapVariantIds[i.bookVariantId] = i.quantity;
     });
 
-    const variants = await this.bookVariantService.findByVariantIds([
-      ...mapVariantIds.keys(),
-    ]);
-    this.logger.log(`[createCheckout] Variants fetched - requested=${items.length}, found=${variants.length}`);
+    const variants = await this.bookVariantService.findByVariantIds(
+      items.map(i => i.bookVariantId),
+    );
 
     if (variants.length !== items.length)
       throw new BadRequestException('Có sản phẩm đã bị xoá');
@@ -150,29 +150,28 @@ export class OrderService {
       if (v.stock - v.reserved === 0)
         throw new BadRequestException('Hết hàng');
     });
-    this.logger.log(`[createCheckout] Stock check passed`);
 
     await this.transactionService.doInTransaction(async (tx) => {
-      this.logger.log(`[doInTransaction] doInTransaction`);
-      console.log(items);
       await this.bookVariantService.updateReservedByIds(items, tx);
     });
     this.logger.log(`[createCheckout] Stock reserved for ${items.length} variant(s)`);
 
     const subtotal = variants.reduce(
-      (sum, v) => sum + Number(v.price) * mapVariantIds.get(v.id)!,
+      (sum, v) => sum + Number(v.price) * mapVariantIds[v.id],
       0,
     );
+
     const totalAmount = subtotal + SHIPPING_FEE;
     const orderCode = generateOrderCode();
-    this.logger.log(`[createCheckout] Computed - orderCode=${orderCode}, subtotal=${subtotal}, totalAmount=${totalAmount}`);
+
 
     await this.checkoutQueue.enqueueCheckout({
       isGuest,
       orderCode,
       totalAmount,
       subtotal,
-      items,
+      variants,
+      mapVariantIds,
       guestEmail: body.guestEmail,
       guestSessionId: isGuest ? guestSessionId! : undefined,
       guestAddress: isGuest ? body.guestAddress : undefined,

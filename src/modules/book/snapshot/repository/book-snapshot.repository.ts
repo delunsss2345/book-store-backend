@@ -1,10 +1,23 @@
 import { PrismaClientTransaction, PrismaService } from "@/database";
 import { CreateBookSnapshotDto } from "@/modules/book/snapshot/dto/request/create-book-snapshot.dto";
 import { Injectable } from '@nestjs/common';
+import { BookFormat } from "@prisma/client";
 
 @Injectable()
 export class BookSnapshotRepository {
     constructor(private readonly prisma: PrismaService) { }
+
+    async createMany(items: {
+        contentHash: string;
+        bookVariantId: number;
+        priceSnapshot: number;
+        formatSnapshot: BookFormat;
+    }[]) {
+        return this.prisma.bookVariantSnapshot.createMany({
+            data: items.map(i => (i)),
+            skipDuplicates: true
+        })
+    }
 
     async findSnapshotIdsByVariantIds(variantIds: number[]) {
         const rows = await this.prisma.bookVariantSnapshot.findMany({
@@ -41,6 +54,13 @@ export class BookSnapshotRepository {
         return this.prisma.bookVariantSnapshot.findFirst({
             where: { contentHash },
             select: { id: true, priceSnapshot: true },
+        });
+    }
+
+    findAllByContentHashes(contentHashes: string[]) {
+        return this.prisma.bookVariantSnapshot.findMany({
+            where: { contentHash: { in: contentHashes } },
+            select: { id: true, contentHash: true, priceSnapshot: true },
         });
     }
 

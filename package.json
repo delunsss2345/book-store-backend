@@ -9,6 +9,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "worker": "nest start --entryFile worker",
     "start:dev": "nest start --watch --compiler swc",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
@@ -18,8 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:seed": "prisma db seed",
-    "contract:export": "tsx scripts/export-api-contract.ts"
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",

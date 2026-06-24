@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 
 @Injectable()
 export class CheckoutQueue {
-  constructor(@InjectQueue('order') private readonly orderQueue: Queue) {}
+  constructor(@InjectQueue('order') private readonly orderQueue: Queue) { }
 
   async enqueueCheckout(data: unknown, jobId?: string) {
     return this.orderQueue.add(ORDER_JOBS.CHECKOUT, data, {

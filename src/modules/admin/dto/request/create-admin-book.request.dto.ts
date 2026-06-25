@@ -11,7 +11,6 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  Max,
   MaxLength,
   Min,
   ValidateNested
@@ -62,14 +61,6 @@ export class CreateAdminBookRequestDto {
   @ValidateNested()
   @Type(() => CreateBookSpecDto)
   spec?: CreateBookSpecDto;
-
-  @ApiPropertyOptional({ example: 2026 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(9999)
-  publicationYear?: number;
 
   @ApiPropertyOptional({ example: 320 })
   @IsOptional()

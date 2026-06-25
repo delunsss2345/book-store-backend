@@ -619,6 +619,7 @@ model BookVariant {
   updatedAt    DateTime   @updatedAt @map("updated_at")
   reserved     Int        @default(0)
   edition      Int        @default(1)
+  publicationYear Int?      @map("publication_year")
   supplierId   Int?
 
   // Relations

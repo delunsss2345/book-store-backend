@@ -123,18 +123,15 @@ export class AdminBookService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const createdBook = await tx.book.create({
-        data: {
+      const createdBook = await this.adminBookRepository.createBook(
+        {
           publisherId,
-          publicationYear: body.publicationYear ?? null,
-          pageCount: body.pageCount ?? null,
-          coverImageUrl: body.coverImageUrl ?? null,
-          isActive: false,
-          createdBy: actorUserId,
-          updatedBy: actorUserId,
+          pageCount: body.pageCount,
+          coverImageUrl: body.coverImageUrl,
+          actorUserId,
         },
-        select: { id: true },
-      });
+        tx,
+      );
 
       const baseSlug = generateSlug(body.title) || `book-${createdBook.id.toString()}`;
       const slug = await this.buildUniqueSlug(langId, baseSlug, tx);

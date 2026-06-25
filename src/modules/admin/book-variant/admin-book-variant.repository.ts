@@ -45,6 +45,7 @@ export type CreateBookVariantInput = {
   format: BookFormat;
   isbn: string;
   edition: number;
+  publicationYear: number
 };
 
 @Injectable()
@@ -161,6 +162,7 @@ export class AdminBookVariantsRepository {
         format: item.format,
         isbn: item.isbn,
         edition: item.edition,
+        publicationYear: item.publicationYear
       })),
       skipDuplicates: true,
     });

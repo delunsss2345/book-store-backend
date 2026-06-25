@@ -3,39 +3,37 @@ import { PrismaService } from '@/database';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import {
-  CreatePurchaseOrderItemRequestDto,
-  CreatePurchaseOrderRequestDto,
   GetPurchaseOrdersQueryDto,
 } from '../dto';
 import {
   buildPurchaseOrderItemWithBookVariantSelect,
   purchaseOrderDetailSelect,
-  purchaseOrderItemSelect,
   purchaseOrderListSelect,
   purchaseOrderSummarySelect,
 } from '../select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
 
+export type CreatePurchaseOrderInput = {
+  code: string;
+  supplierId: number;
+  createdById: number;
+  note?: string;
+  taxAmount: number;
+  totalAmount: number;
+  createdAt?: string | Date;
+};
+
 @Injectable()
 export class PurchaseOrderRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  withTransaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>,
-  ): Promise<T> {
-    return this.prisma.$transaction((tx) => callback(tx));
-  }
-
   async createPurchaseOrder(
-    createdById: number,
-    body: CreatePurchaseOrderRequestDto,
-    tx?: DbClient,
+    input: CreatePurchaseOrderInput,
+    tx: DbClient = this.prisma,
   ) {
-    const db = this.getDb(tx);
-    const supplierId = Number(body.supplierId);
-    const supplier = await db.supplier.findUnique({
-      where: { id: supplierId },
+    const supplier = await tx.supplier.findUnique({
+      where: { id: input.supplierId },
       select: { id: true },
     });
 
@@ -43,17 +41,31 @@ export class PurchaseOrderRepository {
       throw new BadRequestException(PurchaseOrderMessage.INVALID_SUPPLIER);
     }
 
-    return db.purchaseOrder.create({
+    return tx.purchaseOrder.create({
       data: {
-        supplierId,
-        code: body.code,
-        createdById: createdById.toString(),
-        createdAt: this.toDate(body.createdAt),
-        note: body.note,
-        totalAmount: body.totalAmount,
-        taxAmount: body.taxAmount,
+        supplierId: input.supplierId,
+        code: input.code,
+        createdById: input.createdById,
+        ...(input.createdAt ? { createdAt: new Date(input.createdAt) } : {}),
+        note: input.note,
+        totalAmount: input.totalAmount,
+        taxAmount: input.taxAmount,
       },
       select: purchaseOrderSummarySelect,
+    });
+  }
+
+  findBookVariantsByIdsAndBookId(
+    variantIds: number[],
+    bookId: number,
+    tx: DbClient = this.prisma,
+  ) {
+    return tx.bookVariant.findMany({
+      where: {
+        id: { in: variantIds },
+        bookId,
+      },
+      select: { id: true },
     });
   }
 
@@ -76,17 +88,15 @@ export class PurchaseOrderRepository {
     });
   }
 
-  findPurchaseOrderById(purchaseOrderId: string, tx?: DbClient) {
-    const db = this.getDb(tx);
-    return db.purchaseOrder.findUnique({
+  findPurchaseOrderById(purchaseOrderId: string, tx: DbClient = this.prisma) {
+    return tx.purchaseOrder.findUnique({
       where: { id: purchaseOrderId },
       select: purchaseOrderDetailSelect,
     });
   }
 
-  findPurchaseOrderByCode(code: string, tx?: DbClient) {
-    const db = this.getDb(tx);
-    return db.purchaseOrder.findUnique({
+  findPurchaseOrderByCode(code: string, tx: DbClient = this.prisma) {
+    return tx.purchaseOrder.findUnique({
       where: { code },
       select: purchaseOrderDetailSelect,
     });
@@ -113,11 +123,9 @@ export class PurchaseOrderRepository {
     purchaseOrderId: string,
     approvedById: number,
     status: PurchaseOrderStatus,
-    tx?: DbClient,
+    tx: DbClient = this.prisma,
   ) {
-    const db = this.getDb(tx);
-
-    return db.purchaseOrder.update({
+    return tx.purchaseOrder.update({
       where: { id: purchaseOrderId },
       data: {
         status,
@@ -125,65 +133,5 @@ export class PurchaseOrderRepository {
         approvedAt: new Date(),
       },
     });
-  }
-
-  async createPurchaseOrderItems(
-    purchaseOrderId: string,
-    items: CreatePurchaseOrderItemRequestDto[],
-    tx?: DbClient,
-  ) {
-    if (!items.length) {
-      return [];
-    }
-
-    const db = this.getDb(tx);
-    const bookVariantIds = [
-      ...new Set(items.map((item) => Number(item.bookVariantId))),
-    ];
-    const existingBookVariants = await db.bookVariant.findMany({
-      where: {
-        id: {
-          in: bookVariantIds,
-        },
-      },
-      select: { id: true },
-    });
-
-    const existingIds = new Set(
-      existingBookVariants.map((item) => item.id.toString()),
-    );
-    const missingIds = bookVariantIds
-      .filter((id) => !existingIds.has(id.toString()))
-      .map((id) => id.toString());
-
-    if (missingIds.length > 0) {
-      throw new BadRequestException(
-        PurchaseOrderMessage.INVALID_BOOK_VARIANT_IDS(missingIds),
-      );
-    }
-
-    await db.purchaseOrderItem.createMany({
-      data: items.map((item) => ({
-        purchaseOrderId,
-        bookVariantId: Number(item.bookVariantId),
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-      })),
-    });
-
-    return db.purchaseOrderItem.findMany({
-      where: { purchaseOrderId },
-      select: purchaseOrderItemSelect,
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    });
-  }
-
-  private getDb(tx?: DbClient): any {
-    return (tx ?? this.prisma) as any;
-  }
-
-  private toDate(value: Date | string): Date {
-    return value instanceof Date ? value : new Date(value);
   }
 }

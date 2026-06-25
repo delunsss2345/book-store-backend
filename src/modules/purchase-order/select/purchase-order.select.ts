@@ -6,6 +6,8 @@ export const purchaseOrderItemSelect = {
   bookVariantId: true,
   quantity: true,
   unitPrice: true,
+  discountPrice: true,
+  price: true,
   totalPrice: true,
   createdAt: true,
   updatedAt: true,

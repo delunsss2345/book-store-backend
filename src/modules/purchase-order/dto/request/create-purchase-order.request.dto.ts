@@ -14,7 +14,7 @@ import {
 export class CreatePurchaseOrderItemRequestDto {
     @ApiProperty({
         example: 1,
-        description: 'ID của đầu sách',
+        description: 'ID của biến thể sách',
         type: Number,
     })
     @Type(() => Number)
@@ -42,26 +42,16 @@ export class CreatePurchaseOrderItemRequestDto {
     unitPrice: number;
 
     @ApiProperty({
-        example: 10.5,
-        description: 'Chiết khấu nhập theo phần trăm',
+        example: 0.1,
+        description: 'Tỷ lệ chiết khấu (0–1), ví dụ 0.1 = 10%',
         type: Number,
         format: 'float',
     })
     @Type(() => Number)
     @IsNumber()
     @Min(0)
-    @Max(100)
-    discountPercent: number;
-
-    @ApiProperty({
-        example: 1200000,
-        description: 'Tổng tiền',
-        type: Number,
-    })
-    @Type(() => Number)
-    @IsNumber()
-    @Min(0)
-    totalPrice: number;
+    @Max(1)
+    discountPrice: number;
 }
 
 export class CreatePurchaseOrderRequestDto {
@@ -73,6 +63,15 @@ export class CreatePurchaseOrderRequestDto {
     @Type(() => Number)
     @IsNumber()
     supplierId: number;
+
+    @ApiProperty({
+        example: 1,
+        description: 'ID sách',
+        type: Number,
+    })
+    @Type(() => Number)
+    @IsNumber()
+    bookId: number;
 
     @ApiProperty({
         example: 'PO-20260312-001',
@@ -98,16 +97,6 @@ export class CreatePurchaseOrderRequestDto {
     @IsOptional()
     @IsString()
     note?: string;
-
-    @ApiProperty({
-        example: 1500000,
-        description: 'Tổng tiền trước thuế',
-        type: Number,
-    })
-    @Type(() => Number)
-    @IsNumber()
-    @Min(0)
-    totalAmount: number;
 
     @ApiProperty({
         example: 150000,

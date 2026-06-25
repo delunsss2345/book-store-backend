@@ -26,6 +26,8 @@ export type PurchaseOrderCreateResponse = {
     bookVariantId: string;
     quantity: number;
     unitPrice: number;
+    discountPrice: number;
+    price: number;
     totalPrice: number;
     createdAt: Date;
     updatedAt: Date;
@@ -58,6 +60,8 @@ function toPurchaseOrderItem(
     bookVariantId: row.bookVariantId.toString(),
     quantity: row.quantity,
     unitPrice: toDecimalNumber(row.unitPrice),
+    discountPrice: toDecimalNumber(row.discountPrice),
+    price: toDecimalNumber(row.price),
     totalPrice: toDecimalNumber(row.totalPrice),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

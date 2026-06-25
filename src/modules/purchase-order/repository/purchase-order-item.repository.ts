@@ -1,19 +1,50 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
-import { CreatePurchaseOrderRequestDto } from '../dto';
+import { Prisma } from '@prisma/client';
+import { purchaseOrderItemSelect } from '../select';
+
+type DbClient = Prisma.TransactionClient | PrismaService;
+
+export type CreatePurchaseOrderItemInput = {
+  bookVariantId: number;
+  quantity: number;
+  unitPrice: number;
+  discountPrice: number;
+  price: number;
+  totalPrice: number;
+};
 
 @Injectable()
 export class PurchaseOrderItemRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   createPurchaseOrderItems(
     purchaseOrderId: string,
-    body: CreatePurchaseOrderRequestDto,
+    items: CreatePurchaseOrderItemInput[],
+    tx: DbClient = this.prisma,
   ) {
-    throw new Error('Method not implemented.');
+    if (!items.length) return Promise.resolve({ count: 0 });
+    return tx.purchaseOrderItem.createMany({
+      data: items.map((item) => ({
+        purchaseOrderId,
+        bookVariantId: item.bookVariantId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discountPrice: item.discountPrice,
+        price: item.price,
+        totalPrice: item.totalPrice,
+      })),
+    });
   }
 
-  findPurchaseOrderItemsByPurchaseOrderId(purchaseOrderId: string) {
-    throw new Error('Method not implemented.');
+  findPurchaseOrderItemsByPurchaseOrderId(
+    purchaseOrderId: string,
+    tx: DbClient = this.prisma,
+  ) {
+    return tx.purchaseOrderItem.findMany({
+      where: { purchaseOrderId },
+      select: purchaseOrderItemSelect,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
   }
 }

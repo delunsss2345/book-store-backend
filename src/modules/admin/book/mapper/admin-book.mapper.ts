@@ -12,9 +12,10 @@ import { AdminBookRepository } from '../admin-book.repository';
 type BookRow = NonNullable<
   Awaited<ReturnType<AdminBookRepository['findBookById']>>
 >;
-type BookListRow = Awaited<
-  ReturnType<AdminBookRepository['findBooks']>
->[number];
+type BookListRow = any
+// Awaited <
+//   ReturnType < AdminBookRepository['findBooks'] >
+// > [];
 type SnapshotRow = Awaited<
   ReturnType<AdminBookRepository['findBookSnapshots']>
 >[number];

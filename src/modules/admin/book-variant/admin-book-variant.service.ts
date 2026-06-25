@@ -28,7 +28,7 @@ export class AdminBookVariantsService {
     ) {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        const searchPhrase = query.searchPhrase?.trim() || undefined;
+        const searchPhrase = undefined;
 
         const [total, rows] = await Promise.all([
             this.adminBookVariantsRepository.countBookVariants(langId, searchPhrase),

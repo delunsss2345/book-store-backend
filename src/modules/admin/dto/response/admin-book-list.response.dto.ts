@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AdminBookItemResponseDto } from './admin-book-item.response.dto';
+import { AdminBookListItemResponseDto } from './admin-book-list-item.response.dto';
 
 export class AdminBookListResponseDto {
     @ApiProperty({ example: 1 })
@@ -14,6 +14,6 @@ export class AdminBookListResponseDto {
     @ApiProperty({ example: 5 })
     totalPages: number;
 
-    @ApiProperty({ type: () => [AdminBookItemResponseDto] })
-    items: AdminBookItemResponseDto[];
+    @ApiProperty({ type: () => [AdminBookListItemResponseDto] })
+    items: AdminBookListItemResponseDto[];
 }

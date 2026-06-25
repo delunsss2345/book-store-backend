@@ -39,10 +39,9 @@ import {
 } from './admin-book.repository';
 import {
   toAdminBookItem,
-  toAdminBookListItem,
   toBookDetail,
   toMapperUpdateBook,
-  toSnapshotItem,
+  toSnapshotItem
 } from './mapper';
 
 const ADMIN_STATS_CACHE_KEY = 'admin:stats';
@@ -408,15 +407,16 @@ export class AdminBookService {
   ): Promise<AdminBookListResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const searchPhrase = query.searchPhrase?.trim() || undefined;
+    const searchPhrase = query.searchPhrase;
 
     const [total, rows] = await Promise.all([
       this.adminBookRepository.countBooks(langId, searchPhrase),
       this.adminBookRepository.findBooks(page, limit, langId, searchPhrase),
     ]);
+    console.log(rows);
 
     return buildPaginatedResult(
-      rows.map((row) => toAdminBookListItem(row)),
+      rows,
       total,
       page,
       limit,

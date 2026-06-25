@@ -495,7 +495,7 @@ model Author {
 
   // Relations
   books BookAuthor[]
-
+  @@fulltext([defaultName], map: "idx_author_default_name_fulltext")
   @@map("authors")
 }
 

@@ -36,6 +36,7 @@ export function buildAdminBookVariantListSelect(languageId: number) {
       },
       take: 1,
     },
+    authors: true,
     variants: adminBookVariantListSelect,
   } satisfies Prisma.BookSelect;
 }

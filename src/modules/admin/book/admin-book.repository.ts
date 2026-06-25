@@ -4,14 +4,14 @@ import {
   CreateBookSpecDto,
   CreateBookVariantDto,
 } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { AdminBookListItemResponseDto } from '@/modules/admin/dto/response';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   adminBookDetailSelect,
   adminBookSelect,
   adminBookSnapshotSelect,
-  adminBookTranslationCreateSelect,
-  buildAdminBookListSelect,
+  adminBookTranslationCreateSelect
 } from './select';
 
 type DbClient = Prisma.TransactionClient | PrismaService;
@@ -339,15 +339,57 @@ export class AdminBookRepository {
     limit: number,
     languageId: number,
     searchPhrase?: string,
-  ) {
-    return this.prisma.book.findMany({
-      where: this.buildBookListWhere(languageId, searchPhrase),
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      skip: (page - 1) * limit,
-      take: limit,
-      select: buildAdminBookListSelect(languageId),
-    });
+  ): Promise<AdminBookListItemResponseDto[]> {
+    const offset = (page - 1) * limit;
+
+    if (!searchPhrase) {
+      return this.prisma.$queryRaw`
+    SELECT DISTINCT
+      b.id,
+      bt.title,
+      bt.description,
+      bt.slug,
+      GROUP_CONCAT(a.default_name SEPARATOR ', ') AS authors
+    FROM book_translations bt
+    JOIN books b        ON b.id  = bt.book_id
+    JOIN book_authors ba ON ba.book_id = b.id
+    JOIN authors a      ON a.id  = ba.author_id
+    WHERE bt.language_id = ${languageId}
+    GROUP BY b.id, bt.title, bt.description, bt.slug
+    LIMIT  ${Prisma.sql`${limit}`}
+    OFFSET  ${Prisma.sql`${offset}`}
+  `;
+    }
+
+    return this.prisma.$queryRaw`
+    SELECT DISTINCT
+      b.id,
+      bt.title,
+      bt.description,
+      bt.slug,
+      GROUP_CONCAT(a.default_name SEPARATOR ', ') AS authors
+    FROM book_translations bt
+    JOIN books b        ON b.id  = bt.book_id
+    JOIN book_authors ba ON ba.book_id = b.id
+    JOIN authors a      ON a.id  = ba.author_id
+    WHERE bt.language_id = ${languageId}
+      AND (
+        MATCH(bt.title, bt.description) AGAINST (${searchPhrase} IN BOOLEAN MODE)
+        OR MATCH(a.default_name) AGAINST (${searchPhrase} IN BOOLEAN MODE)
+      )
+    GROUP BY b.id, bt.title, bt.description, bt.slug
+    LIMIT  ${Prisma.sql`${limit}`}
+    OFFSET  ${Prisma.sql`${offset}`}
+  `;
+
   }
+  // return this.prisma.book.findMany({
+  //   where: this.buildBookListWhere(languageId, searchPhrase),
+  //   orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  //   skip: (page - 1) * limit,
+  //   take: limit,
+  //   select: buildAdminBookListSelect(languageId),
+  // });
 
   findBookTranslationByBookIdAndLanguage(
     bookId: number,

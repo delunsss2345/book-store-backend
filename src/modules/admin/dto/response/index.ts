@@ -1,4 +1,5 @@
 export * from './admin-book-item.response.dto';
+export * from './admin-book-list-item.response.dto';
 export * from './admin-book-list.response.dto';
 export * from './admin-book-snapshot-item.response.dto';
 export * from './admin-book-snapshot-list.response.dto';

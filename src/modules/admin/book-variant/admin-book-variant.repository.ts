@@ -1,6 +1,6 @@
 import { PrismaService } from '@/database';
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BookFormat, Prisma } from '@prisma/client';
 import {
   adminBookVariantSnapshotSelect,
   adminBookVariantTranslationCreateSelect,
@@ -41,9 +41,15 @@ export type CreateBookAuthorLinkInput = {
   isPrimary?: boolean;
 };
 
+export type CreateBookVariantInput = {
+  format: BookFormat;
+  isbn: string;
+  edition: number;
+};
+
 @Injectable()
 export class AdminBookVariantsRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private buildBookListWhere(
     languageId: number,
@@ -53,15 +59,15 @@ export class AdminBookVariantsRepository {
       deletedAt: null,
       ...(searchPhrase
         ? {
-            translations: {
-              some: {
-                languageId,
-                title: {
-                  contains: searchPhrase,
-                },
+          translations: {
+            some: {
+              languageId,
+              title: {
+                contains: searchPhrase,
               },
             },
-          }
+          },
+        }
         : {}),
     };
   }
@@ -139,6 +145,24 @@ export class AdminBookVariantsRepository {
         slug: params.slug,
       },
       select: adminBookVariantTranslationCreateSelect,
+    });
+  }
+
+  createVariants(
+    bookId: number,
+    items: CreateBookVariantInput[],
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: DbClient = tx ?? this.prisma;
+    if (!items.length) return Promise.resolve({ count: 0 });
+    return db.bookVariant.createMany({
+      data: items.map((item) => ({
+        bookId,
+        format: item.format,
+        isbn: item.isbn,
+        edition: item.edition,
+      })),
+      skipDuplicates: true,
     });
   }
 

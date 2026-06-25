@@ -142,6 +142,24 @@ export class CreateBookVariantDto {
 
 }
 
+export class CreateBookVariantItemDto {
+    @ApiProperty({ enum: BookFormat, example: BookFormat.PAPERBACK })
+    @IsEnum(BookFormat)
+    format: BookFormat;
+
+    @ApiProperty({ example: '9786041234567', maxLength: 20 })
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(20)
+    isbn: string;
+
+    @ApiProperty({ example: 1 })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    edition: number;
+}
+
 export class CreateAdminBookAllRequestDto {
     // Publisher
     @ApiProperty({ example: 'NXB Kim Đồng', description: 'Tên nhà xuất bản' })

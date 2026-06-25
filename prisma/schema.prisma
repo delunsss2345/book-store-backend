@@ -620,7 +620,7 @@ model BookVariant {
   reserved     Int        @default(0)
   edition      Int        @default(1)
   supplierId   Int?
-
+: b
   // Relations
   book                 Book                  @relation(fields: [bookId], references: [id], onDelete: Cascade)
   wishlistItems        WishlistItem[]
@@ -941,13 +941,15 @@ model PurchaseOrder {
 
 model PurchaseOrderItem {
   id              String   @id @default(cuid())
-  purchaseOrderId String
-  bookVariantId   Int
+  purchaseOrderId String   @map("purchase_order_id")
+  bookVariantId   Int      @map("book_variant_id")
   quantity        Int
-  unitPrice       Decimal  @db.Decimal(18, 2)
-  totalPrice      Decimal  @db.Decimal(18, 2)
+  unitPrice       Decimal  @db.Decimal(18, 2) @map("unit_price") 
+  price           Decimal  @db.Decimal(18, 2) 
+  discountPrice   Decimal  @map("discount_price") @db.Decimal(18, 2)
+  totalPrice      Decimal  @db.Decimal(18, 2) @map("total_price")
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @updatedAt 
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
   bookVariant   BookVariant   @relation(fields: [bookVariantId], references: [id])

@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Badge } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsEnum,
   IsInt,
@@ -17,10 +19,11 @@ import {
 import {
   CreateBookAuthorDto,
   CreateBookSpecDto,
+  CreateBookVariantItemDto,
   CreateCategoriesDto,
 } from './create-admin-book-all.request.dto';
 
-export { CreateBookAuthorDto, CreateBookSpecDto, CreateCategoriesDto };
+export { CreateBookAuthorDto, CreateBookSpecDto, CreateBookVariantItemDto, CreateCategoriesDto };
 
 export class CreateAdminBookRequestDto {
   @ApiProperty({ example: 'Dế Mèn Phiêu Lưu Ký' })
@@ -86,4 +89,12 @@ export class CreateAdminBookRequestDto {
   @IsOptional()
   @IsEnum(Badge)
   badgeCode?: Badge;
+
+  @ApiProperty({ type: () => [CreateBookVariantItemDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => CreateBookVariantItemDto)
+  bookVariantItems: CreateBookVariantItemDto[];
 }

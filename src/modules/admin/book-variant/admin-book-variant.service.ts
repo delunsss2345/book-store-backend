@@ -1,10 +1,14 @@
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
-import { AdminBookVariantsRepository } from '@/modules/admin/book-variant/admin-book-variant.repository';
+import {
+    AdminBookVariantsRepository,
+    CreateBookVariantInput,
+} from '@/modules/admin/book-variant/admin-book-variant.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
     Inject,
     Injectable
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { Cache } from 'cache-manager';
 import {
     AdminBookListQueryDto
@@ -21,6 +25,14 @@ export class AdminBookVariantsService {
         @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     ) { }
 
+
+    createVariants(
+        bookId: number,
+        items: CreateBookVariantInput[],
+        tx?: Prisma.TransactionClient,
+    ) {
+        return this.adminBookVariantsRepository.createVariants(bookId, items, tx);
+    }
 
     async getBookVariants(
         query: AdminBookListQueryDto,

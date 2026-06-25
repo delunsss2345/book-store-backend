@@ -13,6 +13,7 @@ import {
   Get,
   Ip,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -56,11 +57,8 @@ export class AdminBookController {
   // @RequirePermissions(PermissionCode.ADMIN_READ_DETAIL)
   // @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookDetailResponseDto })
-  getDetail(
-    @Param('bookId') bookId: string
-  ) {
-    const parsedBookId = Number(bookId);
-    return this.adminBookService.getDetail(parsedBookId);
+  getDetail(@Param('bookId', ParseIntPipe) bookId: number) {
+    return this.adminBookService.getDetail(bookId);
   }
 
 
@@ -83,19 +81,13 @@ export class AdminBookController {
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   updateBook(
-    @Param('bookId') bookId: string,
+    @Param('bookId', ParseIntPipe) bookId: number,
     @Body() body: UpdateAdminBookRequestDto,
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
-    const parsedBookId = Number(bookId);
     const actorUserId = Number(user?.sub);
-    return this.adminBookService.updateBook(
-      parsedBookId,
-      body,
-      actorUserId,
-      ip,
-    );
+    return this.adminBookService.updateBook(bookId, body, actorUserId, ip);
   }
 
   @Delete(':bookId')
@@ -103,13 +95,12 @@ export class AdminBookController {
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   deleteBook(
-    @Param('bookId') bookId: string,
+    @Param('bookId', ParseIntPipe) bookId: number,
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
-    const parsedBookId = Number(bookId);
     const actorUserId = Number(user?.sub);
-    return this.adminBookService.deleteBook(parsedBookId, actorUserId, ip);
+    return this.adminBookService.deleteBook(bookId, actorUserId, ip);
   }
 
   @Get()

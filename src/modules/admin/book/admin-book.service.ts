@@ -1,6 +1,7 @@
 import { AdminBookMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
+import { AdminBookVariantsService } from '@/modules/admin/book-variant/admin-book-variant.service';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import { AuditLogService } from '@/modules/audit-log/service/audit-log.service';
@@ -52,6 +53,7 @@ const ADMIN_STATS_CACHE_TTL = 86_400_000;
 export class AdminBookService {
   constructor(
     private readonly adminBookRepository: AdminBookRepository,
+    private readonly adminBookVariantsService: AdminBookVariantsService,
     private readonly languageService: LanguageService,
     private readonly auditLogService: AuditLogService,
     private readonly publisherService: PublisherService,
@@ -160,6 +162,14 @@ export class AdminBookService {
 
       if (body.spec) {
         await this.adminBookRepository.createBookSpecById(createdBook.id, body.spec, tx);
+      }
+
+      if (body.bookVariantItems?.length) {
+        await this.adminBookVariantsService.createVariants(
+          createdBook.id,
+          body.bookVariantItems,
+          tx,
+        );
       }
 
       const newBook = await this.adminBookRepository.findBookById(createdBook.id, tx);

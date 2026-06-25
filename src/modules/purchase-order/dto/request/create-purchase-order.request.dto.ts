@@ -6,6 +6,7 @@ import {
     IsNumber,
     IsOptional,
     IsString,
+    Max,
     Min,
     ValidateNested,
 } from 'class-validator';
@@ -13,7 +14,7 @@ import {
 export class CreatePurchaseOrderItemRequestDto {
     @ApiProperty({
         example: 1,
-        description: 'ID của biến thể sách',
+        description: 'ID của đầu sách',
         type: Number,
     })
     @Type(() => Number)
@@ -32,13 +33,25 @@ export class CreatePurchaseOrderItemRequestDto {
 
     @ApiProperty({
         example: 120000,
-        description: 'Giá mỗi đơn vị',
+        description: 'Giá mỗi đơn vị chưa chiết khấu',
         type: Number,
     })
     @Type(() => Number)
     @IsNumber()
     @Min(0)
     unitPrice: number;
+
+    @ApiProperty({
+        example: 10.5,
+        description: 'Chiết khấu nhập theo phần trăm',
+        type: Number,
+        format: 'float',
+    })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    @Max(100)
+    discountPercent: number;
 
     @ApiProperty({
         example: 1200000,

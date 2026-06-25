@@ -23,7 +23,7 @@ export type CreateAdminBookParams = {
   weightGrams?: number;
   coverImageUrl?: string;
   actorUserId: number;
-  supplerId: number;
+  supplerId?: number;
 };
 
 export type UpdateAdminBookTranslationParams = {
@@ -442,6 +442,76 @@ export class AdminBookRepository {
         slug: params.slug,
       },
       select: adminBookTranslationCreateSelect,
+    });
+  }
+
+  findBooksDetailed(
+    page: number,
+    limit: number,
+    languageId: number,
+    searchPhrase?: string,
+  ) {
+    return this.prisma.book.findMany({
+      where: {
+        deletedAt: null,
+        translations: {
+          some: searchPhrase
+            ? {
+              languageId,
+              OR: [
+                { title: { contains: searchPhrase } },
+                { description: { contains: searchPhrase } },
+              ],
+            }
+            : { languageId },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        isActive: true,
+        coverImageUrl: true,
+        specs: {
+          select: {
+            widthCm: true,
+            heightCm: true,
+            thicknessCm: true,
+            packaging: true,
+          },
+        },
+        translations: {
+          where: { languageId },
+          select: { title: true, description: true, slug: true },
+        },
+        authors: {
+          select: {
+            author: { select: { defaultName: true } },
+            isPrimary: true,
+          },
+          orderBy: { isPrimary: 'desc' },
+        },
+      },
+    });
+  }
+
+  countBooksDetailed(languageId: number, searchPhrase?: string) {
+    return this.prisma.book.count({
+      where: {
+        deletedAt: null,
+        translations: {
+          some: searchPhrase
+            ? {
+              languageId,
+              OR: [
+                { title: { contains: searchPhrase } },
+                { description: { contains: searchPhrase } },
+              ],
+            }
+            : { languageId },
+        },
+      },
     });
   }
 

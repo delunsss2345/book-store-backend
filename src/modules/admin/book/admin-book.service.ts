@@ -1,14 +1,12 @@
 import { AdminBookMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
-import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
 import { AuditLogService } from '@/modules/audit-log/service/audit-log.service';
 import { AuthorService } from '@/modules/author/service/author.service';
 import { LanguageService } from '@/modules/language/service/language.service';
 import { PublisherService } from '@/modules/publisher/service/publisher.service';
-import { SupplierService } from '@/modules/supplier/service/supplier.service';
 import { generateSlug } from '@/utils/generateSlug.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
@@ -23,11 +21,14 @@ import type { Cache } from 'cache-manager';
 import {
   AdminBookListQueryDto,
   AdminBookSnapshotListQueryDto,
+  CreateAdminBookRequestDto,
   CreateAdminBookTranslationRequestDto,
   UpdateAdminBookRequestDto,
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
+  AdminBookListDetailItemResponseDto,
+  AdminBookListDetailResponseDto,
   AdminBookListResponseDto,
   AdminBookSnapshotListResponseDto,
   AdminBookStatsResponseDto,
@@ -56,7 +57,6 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
-    private readonly supplierService: SupplierService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
@@ -67,50 +67,35 @@ export class AdminBookService {
     }
     return toBookDetail(book);
   }
-  // Tạo sách nhưng phải duyệt đơn cùng 1 lúc nhiều phần variant, translation, author
-  async createBookAll(
-    body: CreateAdminBookAllRequestDto,
+  async createBook(
+    body: CreateAdminBookRequestDto,
+    langId: number,
     actorUserId: number,
     ip?: string,
   ) {
-    // Kiem tra publisher
     const normalizedPublisherName = body.publisherName?.trim();
     if (!normalizedPublisherName) {
       throw new BadRequestException(AdminBookMessage.PUBLISHER_NAME_REQUIRED);
     }
 
-    const [publisher, supplier] = await Promise.all([
-      this.publisherService.createPublisher({
-        defaultName: normalizedPublisherName,
-      }),
-      this.supplierService.findSupplierById(body.supplierId),
-    ]);
+    const publisher = await this.publisherService.createPublisher({
+      defaultName: normalizedPublisherName,
+    });
     const publisherId = this.parsePublisherId(publisher.id);
-
     if (!publisherId) {
       throw new BadRequestException(AdminBookMessage.INVALID_PUBLISHER_ID);
     }
 
-    if (!supplier) {
-      throw new BadRequestException(AdminBookMessage.INVALID_SUPPLIER);
-    }
-    const normalizedAuthorMap = new Map<
-      string,
-      { name: string; isPrimary: boolean }
-    >();
+    const normalizedAuthorMap = new Map<string, { name: string; isPrimary: boolean }>();
     for (const author of body.authors ?? []) {
       const normalizedAuthorName = author.authorName?.trim();
-      if (!normalizedAuthorName) {
-        continue;
-      }
-
+      if (!normalizedAuthorName) continue;
       const key = normalizedAuthorName.toLowerCase();
       const existed = normalizedAuthorMap.get(key);
       if (existed) {
         existed.isPrimary = existed.isPrimary || Boolean(author.isPrimary);
         continue;
       }
-
       normalizedAuthorMap.set(key, {
         name: normalizedAuthorName,
         isPrimary: Boolean(author.isPrimary),
@@ -122,97 +107,62 @@ export class AdminBookService {
 
     if (normalizedAuthors.length > 0) {
       const createdAuthors = await this.authorService.createAuthorMany(
-        normalizedAuthors.map((author) => author.name),
+        normalizedAuthors.map((a) => a.name),
       );
-
       const authorIdByName = new Map<string, number>(
-        createdAuthors.map((author) => [
-          author.name.trim().toLowerCase(),
-          Number(author.id),
-        ]),
+        createdAuthors.map((a) => [a.name.trim().toLowerCase(), Number(a.id)]),
       );
-
-      bookAuthorsPayload = normalizedAuthors.reduce<
-        CreateBookAuthorLinkInput[]
-      >((acc, author) => {
+      bookAuthorsPayload = normalizedAuthors.reduce<CreateBookAuthorLinkInput[]>((acc, author) => {
         const authorId = authorIdByName.get(author.name.toLowerCase());
-        if (!authorId) {
-          return acc;
-        }
-
-        acc.push({
-          authorId,
-          isPrimary: author.isPrimary,
-        });
+        if (!authorId) return acc;
+        acc.push({ authorId, isPrimary: author.isPrimary });
         return acc;
       }, []);
     }
 
-    const language = await this.languageService.resolveLanguage(
-      body.translations[0].languageCode,
-    );
-
     return this.prisma.$transaction(async (tx) => {
-      const createBook = await this.adminBookRepository.createBook(
-        {
+      const createdBook = await tx.book.create({
+        data: {
           publisherId,
-          publicationYear: body.publicationYear,
-          pageCount: body.pageCount,
-          weightGrams: body.weightGrams,
-          coverImageUrl: body.coverImageUrl,
-          actorUserId,
-          supplerId: body.supplierId,
+          publicationYear: body.publicationYear ?? null,
+          pageCount: body.pageCount ?? null,
+          coverImageUrl: body.coverImageUrl ?? null,
+          isActive: false,
+          createdBy: actorUserId,
+          updatedBy: actorUserId,
         },
-        tx,
-      );
+        select: { id: true },
+      });
+
+      const baseSlug = generateSlug(body.title) || `book-${createdBook.id.toString()}`;
+      const slug = await this.buildUniqueSlug(langId, baseSlug, tx);
 
       const createTasks: Promise<unknown>[] = [
         this.adminBookRepository.createBookTranslation(
           {
-            bookId: createBook.id,
-            languageId: language.id,
-            title: body.translations[0].title,
-            description: body.translations[0].description,
-            slug:
-              body.translations[0].slug ??
-              generateSlug(body.translations[0].title),
+            bookId: createdBook.id,
+            languageId: langId,
+            title: body.title,
+            description: body.description,
+            slug,
           },
-          tx,
-        ),
-        this.adminBookRepository.createVariantsByBookId(
-          createBook.id,
-          body.variants.map((v) => ({
-            format: v.format,
-            isbn: v.isbn,
-            isActive: false,
-          })),
           tx,
         ),
       ];
 
       if (bookAuthorsPayload.length > 0) {
         createTasks.push(
-          this.adminBookRepository.createBookAuthors(
-            createBook.id,
-            bookAuthorsPayload,
-            tx,
-          ),
+          this.adminBookRepository.createBookAuthors(createdBook.id, bookAuthorsPayload, tx),
         );
       }
 
       await Promise.all(createTasks);
 
       if (body.spec) {
-        await this.adminBookRepository.createBookSpecById(
-          createBook.id,
-          body.spec,
-          tx,
-        );
+        await this.adminBookRepository.createBookSpecById(createdBook.id, body.spec, tx);
       }
-      const newBook = await this.adminBookRepository.findBookById(
-        createBook.id,
-        tx,
-      );
+
+      const newBook = await this.adminBookRepository.findBookById(createdBook.id, tx);
       return toAdminBookItem(newBook!);
     });
   }
@@ -421,6 +371,45 @@ export class AdminBookService {
       page,
       limit,
     );
+  }
+
+  async listBooks(
+    query: AdminBookListQueryDto,
+    langId: number,
+  ): Promise<AdminBookListDetailResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const searchPhrase = query.searchPhrase;
+
+    const [total, rows] = await Promise.all([
+      this.adminBookRepository.countBooksDetailed(langId, searchPhrase),
+      this.adminBookRepository.findBooksDetailed(page, limit, langId, searchPhrase),
+    ]);
+
+    const items: AdminBookListDetailItemResponseDto[] = rows.map((row) => {
+      const translation = row.translations[0];
+      return {
+        id: row.id.toString(),
+        title: translation?.title ?? '',
+        description: translation?.description ?? null,
+        slug: translation?.slug ?? null,
+        authors: row.authors
+          .map((ba) => ba.author.defaultName)
+          .join(', '),
+        isActive: row.isActive,
+        coverImageUrl: row.coverImageUrl ?? null,
+        spec: row.specs
+          ? {
+            widthCm: row.specs.widthCm ? Number(row.specs.widthCm) : null,
+            heightCm: row.specs.heightCm ? Number(row.specs.heightCm) : null,
+            thicknessCm: row.specs.thicknessCm ? Number(row.specs.thicknessCm) : null,
+            packaging: row.specs.packaging ?? null,
+          }
+          : null,
+      };
+    });
+
+    return buildPaginatedResult(items, total, page, limit);
   }
 
   async getStats(): Promise<AdminBookStatsResponseDto> {

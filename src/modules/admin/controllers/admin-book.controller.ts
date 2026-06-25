@@ -4,7 +4,7 @@ import { GetUser } from '@/common/decorators/getUser.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { CreateAdminBookAllRequestDto } from '@/modules/admin/dto/request/create-admin-book-all.request.dto';
+import { CreateAdminBookRequestDto } from '@/modules/admin/dto/request/create-admin-book.request.dto';
 import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
 import {
   Body,
@@ -25,6 +25,7 @@ import {
 } from '../dto/request';
 import {
   AdminBookItemResponseDto,
+  AdminBookListDetailResponseDto,
   AdminBookListResponseDto,
   AdminBookStatsResponseDto,
 } from '../dto/response';
@@ -42,6 +43,14 @@ export class AdminBookController {
     return this.adminBookService.getStats();
   }
 
+  @Get('list')
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminBookListDetailResponseDto })
+  listBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+    return this.adminBookService.listBooks(query, langId);
+  }
+
   @Public()
   @Get(":bookId")
   // @RequirePermissions(PermissionCode.ADMIN_READ_DETAIL)
@@ -55,17 +64,18 @@ export class AdminBookController {
   }
 
 
-  @Post('/all')
-  // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK_ALL)
+  @Post()
+  // @RequirePermissions(PermissionCode.ADMIN_CREATE_BOOK)
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: AdminBookItemResponseDto })
-  createBookAll(
-    @Body() body: CreateAdminBookAllRequestDto,
+  createBook(
+    @Body() body: CreateAdminBookRequestDto,
+    @GetLanguageId() langId: number,
     @GetUser() user: JwtPayload,
     @Ip() ip: string,
   ) {
     const actorUserId = Number(user?.sub);
-    return this.adminBookService.createBookAll(body, actorUserId, ip);
+    return this.adminBookService.createBook(body, langId, actorUserId, ip);
   }
 
   @Patch(':bookId')
@@ -109,5 +119,7 @@ export class AdminBookController {
   getBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
     return this.adminBookService.getBooks(query, langId);
   }
+
+
 
 }

@@ -13,10 +13,4 @@ export class AdminBookListQueryDto extends BasePaginationDto {
   @IsOptional()
   @IsISBN()
   isbn?: string;
-
-  @ApiPropertyOptional({ example: 'J.K. Rowling' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  authorName?: string;
 }

@@ -889,16 +889,14 @@ model Supplier {
 
 model StockImport {
   id              String   @id @default(cuid())
-  purchaseOrderId String?  @unique @map("purchase_order_id")
-  supplierId      Int   @map("supplier_id")
+  purchaseOrderId String  @unique @map("purchase_order_id")
   createdBy       Int   @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   note            String?
+  
   totalAmount     Decimal  @db.Decimal(18, 2)
-  taxAmount       Decimal  @db.Decimal(18, 2)
 
-  purchaseOrder PurchaseOrder?    @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
-  supplier      Supplier          @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder    @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
   creator       User              @relation("StockImportCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   items         StockImportItem[]
 
@@ -908,10 +906,11 @@ model StockImport {
 model StockImportItem {
   id            String  @id @default(cuid())
   stockImportId String  @map("stock_import_id")
-  bookVariantId Int  @map("variant_id")
-  quantity      Int
-  importPrice   Decimal @map("import_price") @db.Decimal(12, 2)
 
+  purchaseOrderItemId String  @map("purchase_order_item_id")
+  realQuantity          Int     @map("real_quantity")
+  lackQuantity          Int     @default(0) @map("lack_quantity")
+  
   stockImport StockImport @relation(fields: [stockImportId], references: [id], onDelete: Cascade)
   variant     BookVariant @relation("BookVariantToStockImportItem", fields: [bookVariantId], references: [id])
 

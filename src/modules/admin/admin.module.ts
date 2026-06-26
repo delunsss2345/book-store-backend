@@ -18,9 +18,12 @@ import { AdminBookController } from './controllers/admin-book.controller';
 import { AdminCategoryController } from './controllers/admin-category.controller';
 import { AdminOrderDetailController } from './controllers/admin-order-detail.controller';
 import { AdminOrderController } from './controllers/admin-order.controller';
+import { AdminStockImportController } from './controllers/admin-stock-import.controller';
 import { AdminUserController } from './controllers/admin-user.controller';
 import { AdminOrderRepository } from './order/admin-order.repository';
 import { AdminOrderService } from './order/admin-order.service';
+import { AdminStockImportRepository } from './stock-import/admin-stock-import.repository';
+import { AdminStockImportService } from './stock-import/admin-stock-import.service';
 import { AdminUserRepository } from './user/admin-user.repository';
 import { AdminUserService } from './user/admin-user.service';
 
@@ -41,7 +44,8 @@ import { AdminUserService } from './user/admin-user.service';
     AdminUserController,
     AdminOrderController,
     AdminOrderDetailController,
-    AdminBookVariantController
+    AdminBookVariantController,
+    AdminStockImportController,
   ],
   providers: [
     AdminBookService,
@@ -53,7 +57,9 @@ import { AdminUserService } from './user/admin-user.service';
     AdminCategoryService,
     AdminCategoryRepository,
     AdminOrderService,
-    AdminOrderRepository
+    AdminOrderRepository,
+    AdminStockImportService,
+    AdminStockImportRepository,
   ],
   exports: [
     AdminBookService,
@@ -66,6 +72,8 @@ import { AdminUserService } from './user/admin-user.service';
     AdminCategoryRepository,
     AdminOrderService,
     AdminOrderRepository,
+    AdminStockImportService,
+    AdminStockImportRepository,
   ],
 })
 export class AdminModule { }

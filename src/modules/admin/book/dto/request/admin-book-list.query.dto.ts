@@ -13,4 +13,10 @@ export class AdminBookListQueryDto extends BasePaginationDto {
   @IsOptional()
   @IsISBN()
   isbn?: string;
+
+
+  @ApiPropertyOptional({ example: 'books' })
+  @IsOptional()
+  @IsString()
+  type?: string;
 }

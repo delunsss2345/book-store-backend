@@ -1,12 +1,12 @@
 import { PrismaService } from '@/database';
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { UpdateAdminBookVariantRequestDto } from '../dto/request';
 import {
   CreateBookSpecDto,
   CreateBookVariantDto,
 } from '../dto/request/create-admin-book-all.request.dto';
 import { AdminBookListItemResponseDto } from '../dto/response';
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import {
   adminBookDetailSelect,
   adminBookSelect,
@@ -192,7 +192,28 @@ export class AdminBookRepository {
     const db: DbClient = tx ?? this.prisma;
     return db.book.findFirst({
       where: { id: bookId },
-      select: adminBookSelect,
+      select: {
+        ...adminBookSelect,
+        variants: {
+          select: {
+            id: true,
+            format: true,
+            isbn: true,
+            currencyCode: true,
+            stock: true,
+            isActive: true,
+            price: true,
+            edition: true,
+            purchaseOrderItem: {
+              select: {
+                price: true,
+                discountPrice: true,
+                unitPrice: true
+              }
+            }
+          }
+        }
+      },
     });
   }
 
@@ -219,7 +240,28 @@ export class AdminBookRepository {
     return db.book.update({
       where: { id: bookId },
       data: { ...params, ...data },
-      select: adminBookSelect,
+      select: {
+        ...adminBookSelect,
+        variants: {
+          select: {
+            id: true,
+            format: true,
+            isbn: true,
+            currencyCode: true,
+            stock: true,
+            isActive: true,
+            price: true,
+            edition: true,
+            purchaseOrderItem: {
+              select: {
+                price: true,
+                discountPrice: true,
+                unitPrice: true
+              }
+            }
+          }
+        }
+      },
     });
   }
 
@@ -278,7 +320,28 @@ export class AdminBookRepository {
         deletedAt: new Date(),
         updatedBy: actorUserId,
       },
-      select: adminBookSelect,
+      select: {
+        ...adminBookSelect,
+        variants: {
+          select: {
+            id: true,
+            format: true,
+            isbn: true,
+            currencyCode: true,
+            stock: true,
+            isActive: true,
+            price: true,
+            edition: true,
+            purchaseOrderItem: {
+              select: {
+                price: true,
+                discountPrice: true,
+                unitPrice: true
+              }
+            }
+          }
+        }
+      },
     });
   }
 

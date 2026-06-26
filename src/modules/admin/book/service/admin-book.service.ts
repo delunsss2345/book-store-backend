@@ -2,8 +2,6 @@ import { AdminBookMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { AdminBookVariantsService } from '@/modules/admin/book-variant/service/admin-book-variant.service';
-import { AdminBookDetailResponseDto } from '../dto/response/admin-book-detail.response.dto';
-import { AdminBookItemUpdateResponseDto } from '../dto/response/admin-book-update.response.dto';
 import { AuditLogService } from '@/modules/audit-log/service/audit-log.service';
 import { AuthorService } from '@/modules/author/service/author.service';
 import { LanguageService } from '@/modules/language/service/language.service';
@@ -35,16 +33,18 @@ import {
   AdminBookStatsResponseDto,
   AdminBookTranslationResponseDto,
 } from '../dto/response';
-import {
-  AdminBookRepository,
-  CreateBookAuthorLinkInput,
-} from '../repository/admin-book.repository';
+import { AdminBookDetailResponseDto } from '../dto/response/admin-book-detail.response.dto';
+import { AdminBookItemUpdateResponseDto } from '../dto/response/admin-book-update.response.dto';
 import {
   toAdminBookItem,
   toBookDetail,
   toMapperUpdateBook,
   toSnapshotItem
 } from '../mapper';
+import {
+  AdminBookRepository,
+  CreateBookAuthorLinkInput,
+} from '../repository/admin-book.repository';
 
 const ADMIN_STATS_CACHE_KEY = 'admin:stats';
 const ADMIN_STATS_CACHE_TTL = 86_400_000;
@@ -387,7 +387,9 @@ export class AdminBookService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const searchPhrase = query.searchPhrase;
-    if (!searchPhrase) return buildPaginatedResult([], 0, page, limit);
+    const type = query.type ?? undefined;
+    console.log(query.type)
+    if (!searchPhrase && !type) return buildPaginatedResult([], 0, page, limit);
 
     const [total, rows] = await Promise.all([
       this.adminBookRepository.countBooksDetailed(langId, searchPhrase),

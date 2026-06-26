@@ -1,5 +1,6 @@
 import { StockImportItemMessage } from '@/common';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
+import { PurchaseOrderService } from '@/modules/admin/purchase-order/service/purchase-order.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -8,8 +9,8 @@ import {
   AdminStockImportDetailResponseDto,
   AdminStockImportListResponseDto,
 } from '../dto/response';
-import { AdminStockImportRepository } from '../repository/admin-stock-import.repository';
 import { toAdminStockImportDetail, toAdminStockImportItem } from '../mapper';
+import { AdminStockImportRepository } from '../repository/admin-stock-import.repository';
 
 function toDecimalNumber(value: Prisma.Decimal | number): number {
   return value instanceof Prisma.Decimal ? value.toNumber() : Number(value);
@@ -19,6 +20,7 @@ function toDecimalNumber(value: Prisma.Decimal | number): number {
 export class AdminStockImportService {
   constructor(
     private readonly adminStockImportRepository: AdminStockImportRepository,
+    private readonly adminPurchaseService: PurchaseOrderService,
     private readonly transactionService: TransactionService,
   ) { }
 

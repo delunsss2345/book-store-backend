@@ -13,9 +13,6 @@ export class AdminBookVariantItemResponseDto {
     @ApiPropertyOptional({ example: '9786041234567' })
     isbn: string | null;
 
-    @ApiProperty({ example: '110000.00' })
-    costPrice: string;
-
     @ApiProperty({ example: '149000.00' })
     price: string;
 

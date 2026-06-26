@@ -55,6 +55,21 @@ export class PurchaseOrderRepository {
     });
   }
 
+  createPurchaseOrderItems(
+    items: {
+      purchaseOrderId: string;
+      bookVariantId: number;
+      quantity: number;
+      unitPrice: number;
+      price: number;
+      discountPrice: number;
+      totalPrice: number;
+    }[],
+    tx: DbClient = this.prisma,
+  ) {
+    return tx.purchaseOrderItem.createMany({ data: items });
+  }
+
   findBookVariantsByIdsAndBookId(
     variantIds: number[],
     bookId: number,

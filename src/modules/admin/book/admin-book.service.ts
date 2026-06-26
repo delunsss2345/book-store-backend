@@ -387,6 +387,7 @@ export class AdminBookService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const searchPhrase = query.searchPhrase;
+    if (!searchPhrase) return buildPaginatedResult([], 0, page, limit);
 
     const [total, rows] = await Promise.all([
       this.adminBookRepository.countBooksDetailed(langId, searchPhrase),

@@ -7,7 +7,7 @@ import {
   ApprovePurchaseOrderRequestDto,
   CreatePurchaseOrderRequestDto,
   GetPurchaseOrderItemsQueryDto,
-  GetPurchaseOrdersQueryDto,
+  GetPurchaseOrdersQueryDto
 } from '../dto';
 import { PurchaseOrderService } from '../service/purchase-order.service';
 

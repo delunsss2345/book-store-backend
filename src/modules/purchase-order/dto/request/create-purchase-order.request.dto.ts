@@ -2,13 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
     IsArray,
-    IsDateString,
     IsNumber,
     IsOptional,
     IsString,
     Max,
     Min,
-    ValidateNested,
+    ValidateNested
 } from 'class-validator';
 
 export class CreatePurchaseOrderItemRequestDto {
@@ -42,15 +41,15 @@ export class CreatePurchaseOrderItemRequestDto {
     unitPrice: number;
 
     @ApiProperty({
-        example: 0.1,
-        description: 'Tỷ lệ chiết khấu (0–1), ví dụ 0.1 = 10%',
+        example: 10,
+        description: 'Tỷ lệ chiết khấu (0–100), ví dụ 10 = 10%',
         type: Number,
         format: 'float',
     })
     @Type(() => Number)
     @IsNumber()
     @Min(0)
-    @Max(1)
+    @Max(100)
     discountPrice: number;
 }
 
@@ -64,14 +63,6 @@ export class CreatePurchaseOrderRequestDto {
     @IsNumber()
     supplierId: number;
 
-    @ApiProperty({
-        example: 1,
-        description: 'ID sách',
-        type: Number,
-    })
-    @Type(() => Number)
-    @IsNumber()
-    bookId: number;
 
     @ApiProperty({
         example: 'PO-20260312-001',
@@ -79,15 +70,6 @@ export class CreatePurchaseOrderRequestDto {
     })
     @IsString()
     code: string;
-
-    @ApiProperty({
-        example: '2026-03-12',
-        description: 'Ngày tạo đơn',
-        type: String,
-        format: 'date',
-    })
-    @IsDateString()
-    createdAt: string;
 
     @ApiProperty({
         example: 'Nhập hàng tháng 3',
@@ -119,3 +101,4 @@ export class CreatePurchaseOrderRequestDto {
     @Type(() => CreatePurchaseOrderItemRequestDto)
     items: CreatePurchaseOrderItemRequestDto[];
 }
+

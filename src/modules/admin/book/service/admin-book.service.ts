@@ -339,7 +339,7 @@ export class AdminBookService {
       }
 
       const beforeMapped = toAdminBookItem(before);
-      const afterMapped = toAdminBookItem(updated);
+      const afterMapped = toAdminBookItem(updated as any);
 
       await this.auditLogService.createAuditLog(
         {

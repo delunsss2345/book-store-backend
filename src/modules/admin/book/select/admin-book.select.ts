@@ -42,6 +42,42 @@ const adminBookVariantListSelect = {
   orderBy: adminBookVariantOrderBy,
 } satisfies Prisma.Book$variantsArgs;
 
+const adminBookVariantPurchaseOrderItemSelect = {
+  id: true,
+  purchaseOrderId: true,
+  unitPrice: true,
+  discountPrice: true,
+  price: true,
+} satisfies Prisma.PurchaseOrderItemSelect;
+
+const adminBookVariantForDetailItemSelect = {
+  id: true,
+  format: true,
+  edition: true,
+  isbn: true,
+  price: true,
+  currencyCode: true,
+  stock: true,
+  isActive: true,
+  purchaseOrderItem: {
+    select: adminBookVariantPurchaseOrderItemSelect,
+    orderBy: [{ createdAt: 'desc' as const }],
+  },
+} satisfies Prisma.BookVariantSelect;
+
+export const adminBookVariantForDetailSelect = {
+  select: adminBookVariantForDetailItemSelect,
+  orderBy: adminBookVariantOrderBy,
+} satisfies Prisma.Book$variantsArgs;
+
+export type AdminBookVariantPurchaseOrderItemRow = Prisma.PurchaseOrderItemGetPayload<{
+  select: typeof adminBookVariantPurchaseOrderItemSelect;
+}>;
+
+export type AdminBookVariantForDetailRow = Prisma.BookVariantGetPayload<{
+  select: typeof adminBookVariantForDetailItemSelect;
+}>;
+
 export const adminBookSelect = {
   ...adminBookBaseSelect,
   translations: {
@@ -69,9 +105,18 @@ export const adminBookSelect = {
 
 export const adminBookDetailSelect = {
   ...adminBookBaseSelect,
-  translations: true,
-  variants: adminBookVariantListSelect,
+  translations: {
+    select: adminBookTranslationItemSelect,
+    orderBy: [{ languageId: 'asc' as const }],
+  },
+  publisher: { select: { id: true, defaultName: true } },
+  authors: { select: { author: { select: { id: true, defaultName: true } } } },
+  variants: adminBookVariantForDetailSelect,
 } satisfies Prisma.BookSelect;
+
+export type AdminBookDetailRow = Prisma.BookGetPayload<{
+  select: typeof adminBookDetailSelect;
+}>;
 
 export function buildAdminBookListSelect(languageId: number) {
   return {

@@ -47,4 +47,13 @@ export class PurchaseOrderItemRepository {
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
   }
+
+  async findPurchaseOrderItemByVariantIdAndId(variantId: number, purchaseOrderItemId: string) {
+    return this.prisma.purchaseOrderItem.findFirst({
+      where: {
+        bookVariantId: variantId,
+        id: purchaseOrderItemId
+      }
+    })
+  }
 }

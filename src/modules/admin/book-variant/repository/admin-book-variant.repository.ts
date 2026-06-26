@@ -72,7 +72,16 @@ export class AdminBookVariantsRepository {
         : {}),
     };
   }
-
+  updatePriceVariant(bookVariantId: number, price: number) {
+    return this.prisma.bookVariant.update({
+      where: {
+        id: bookVariantId
+      },
+      data: {
+        price
+      }
+    })
+  }
   countBookVariants(languageId: number, searchPhrase?: string) {
     return this.prisma.bookVariant.count({
       where: {

@@ -192,28 +192,7 @@ export class AdminBookRepository {
     const db: DbClient = tx ?? this.prisma;
     return db.book.findFirst({
       where: { id: bookId },
-      select: {
-        ...adminBookSelect,
-        variants: {
-          select: {
-            id: true,
-            format: true,
-            isbn: true,
-            currencyCode: true,
-            stock: true,
-            isActive: true,
-            price: true,
-            edition: true,
-            purchaseOrderItem: {
-              select: {
-                price: true,
-                discountPrice: true,
-                unitPrice: true
-              }
-            }
-          }
-        }
-      },
+      select: adminBookDetailSelect,
     });
   }
 

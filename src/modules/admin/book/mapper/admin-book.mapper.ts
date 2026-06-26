@@ -3,9 +3,11 @@ import {
   AdminBookSnapshotItemResponseDto,
   AdminBookTranslationResponseDto,
   AdminBookVariantItemResponseDto,
+  AdminBookVariantPurchaseOrderItemResponseDto,
 } from '@/modules/admin/book/dto/response';
 import { AdminBookDetailResponseDto } from '@/modules/admin/book/dto/response/admin-book-detail.response.dto';
 import { AdminBookItemUpdateResponseDto } from '@/modules/admin/book/dto/response/admin-book-update.response.dto';
+import { AdminBookDetailRow } from '@/modules/admin/book/select';
 import { Prisma } from '@prisma/client';
 import { AdminBookRepository } from '../repository/admin-book.repository';
 
@@ -62,6 +64,13 @@ export function toAdminBookItem(row: BookRow): AdminBookItemResponseDto {
       currencyCode: variant.currencyCode ?? null,
       stock: variant.stock ?? null,
       isActive: variant.isActive,
+      purchaseOrderItem: variant.purchaseOrderItem.map(ps => ({
+        id: ps.id,
+        price: ps.price.toString(),
+        purchaseOrderId: ps.purchaseOrderId,
+        unitPrice: ps.unitPrice.toString(),
+        discountPrice: ps.discountPrice.toString(),
+      })),
     })),
   };
 }
@@ -120,7 +129,7 @@ export function toSnapshotItem(
   };
 }
 
-export function toBookDetail(book: any): AdminBookDetailResponseDto {
+export function toBookDetail(book: AdminBookDetailRow): AdminBookDetailResponseDto {
   return {
     id: String(book.id),
     publisherId: book.publisherId != null ? String(book.publisherId) : null,
@@ -132,36 +141,41 @@ export function toBookDetail(book: any): AdminBookDetailResponseDto {
     deletedAt: book.deletedAt ?? null,
     createdAt: book.createdAt,
     updatedAt: book.updatedAt,
-    translation: Array.isArray(book.translation || book.translations)
-      ? (book.translation || book.translations).map(
-        (item: any): AdminBookTranslationResponseDto => ({
-          id: String(item.id),
-          languageId: Number(item.languageId),
-          title: item.title,
-          description: item.description ?? null,
-          slug: item.slug,
-        }),
-      )
-      : [],
+    translation: book.translations.map(
+      (item): AdminBookTranslationResponseDto => ({
+        id: String(item.id),
+        languageId: Number(item.languageId),
+        title: item.title,
+        description: item.description ?? null,
+        slug: item.slug ?? '',
+      }),
+    ),
     authorName:
-      book.authors && book.authors.length > 0
+      book.authors.length > 0
         ? book.authors[0].author.defaultName
         : null,
-    publisherName: book.publisher ? book.publisher?.defaultName : null,
-    variants: Array.isArray(book.variants)
-      ? book.variants.map(
-        (item: any): AdminBookVariantItemResponseDto => ({
-          id: String(item.id),
-          format: item.format,
-          edition: item.edition ?? null,
-          isbn: item.isbn ?? null,
-          price: String(item.price),
-          currencyCode: item.currencyCode ?? null,
-          stock: item.stock ?? null,
-          isActive: Boolean(item.isActive),
-        }),
-      )
-      : [],
+    publisherName: book.publisher?.defaultName ?? null,
+    variants: book.variants.map(
+      (item): AdminBookVariantItemResponseDto => ({
+        id: String(item.id),
+        format: item.format,
+        edition: item.edition ?? null,
+        isbn: item.isbn ?? null,
+        price: String(item.price),
+        currencyCode: item.currencyCode ?? null,
+        stock: item.stock ?? null,
+        isActive: Boolean(item.isActive),
+        purchaseOrderItem: item.purchaseOrderItem.map(
+          (poi): AdminBookVariantPurchaseOrderItemResponseDto => ({
+            id: poi.id,
+            purchaseOrderId: poi.purchaseOrderId,
+            unitPrice: String(poi.unitPrice),
+            discountPrice: String(poi.discountPrice),
+            price: String(poi.price),
+          }),
+        ),
+      }),
+    ),
   };
 }
 

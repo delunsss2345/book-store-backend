@@ -11,7 +11,11 @@ export const purchaseOrderItemSelect = {
   totalPrice: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} satisfies Prisma.PurchaseOrderItemSelect;
+
+export type PurchaseOrderItemRow = Prisma.PurchaseOrderItemGetPayload<{
+  select: typeof purchaseOrderItemSelect;
+}>;
 
 export const purchaseOrderSummarySelect = {
   id: true,
@@ -62,3 +66,7 @@ export function buildPurchaseOrderItemWithBookVariantSelect(
     },
   } satisfies Prisma.PurchaseOrderItemSelect;
 }
+
+export type PurchaseOrderItemWithBookVariantRow = Prisma.PurchaseOrderItemGetPayload<{
+  select: ReturnType<typeof buildPurchaseOrderItemWithBookVariantSelect>;
+}>;

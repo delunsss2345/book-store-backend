@@ -1,6 +1,6 @@
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AdminBookTranslationResponseDto } from "./admin-book-translation.response.dto";
 import { AdminBookVariantItemResponseDto } from "./admin-book-variant-item.response.dto";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class AdminBookDetailResponseDto {
     @ApiProperty({ example: '12' })
@@ -12,8 +12,8 @@ export class AdminBookDetailResponseDto {
     @ApiPropertyOptional({ example: 'Name' })
     publisherName: string | null;
 
-    @ApiPropertyOptional({ example: 'Name' })
-    authorName: number | null;
+    @ApiPropertyOptional({ example: 'Nguyễn Nhật Ánh' })
+    authorName: string | null;
 
     @ApiPropertyOptional({ example: 2026 })
     publicationYear: number | null;

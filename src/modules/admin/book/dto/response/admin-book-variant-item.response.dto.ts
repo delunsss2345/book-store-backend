@@ -1,5 +1,22 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class AdminBookVariantPurchaseOrderItemResponseDto {
+    @ApiProperty({ example: 'clxyz123' })
+    id: string;
+
+    @ApiProperty({ example: 'clpurchase456' })
+    purchaseOrderId: string;
+
+    @ApiProperty({ example: '120000.00' })
+    unitPrice: string;
+
+    @ApiProperty({ example: '10000.00' })
+    discountPrice: string;
+
+    @ApiProperty({ example: '110000.00' })
+    price: string;
+}
+
 export class AdminBookVariantItemResponseDto {
     @ApiProperty({ example: '22' })
     id: string;
@@ -24,4 +41,7 @@ export class AdminBookVariantItemResponseDto {
 
     @ApiProperty({ example: true })
     isActive: boolean;
+
+    @ApiProperty({ type: () => [AdminBookVariantPurchaseOrderItemResponseDto] })
+    purchaseOrderItem: AdminBookVariantPurchaseOrderItemResponseDto[];
 }

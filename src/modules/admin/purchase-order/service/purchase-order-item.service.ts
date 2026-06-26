@@ -28,4 +28,11 @@ export class PurchaseOrderItemService {
       purchaseOrderId,
     );
   }
+
+  findPurchaseOrderItem(variantId: number, purchaseOrderId: string) {
+    return this.purchaseOrderItemRepository.findPurchaseOrderItemByVariantIdAndId(
+      variantId,
+      purchaseOrderId,
+    );
+  }
 }

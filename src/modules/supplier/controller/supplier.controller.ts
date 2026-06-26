@@ -11,7 +11,15 @@ import {
   Query,
   UseGuards
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags
+} from '@nestjs/swagger';
 import { CreateSupplierRequestDto } from '../dto/request/create-supplier.request.dto';
 import { GetSuppliersQueryDto } from '../dto/request/get-suppliers.query.dto';
 import { SupplierItemResponseDto } from '../dto/response/supplier-item.response.dto';
@@ -27,6 +35,7 @@ export class SupplierController {
   @Get()
   @RequirePermissions(PermissionCode.SUPPLIER_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of suppliers' })
   @ApiOkResponse({ type: SupplierListResponseDto })
   getSuppliers(@Query() query: GetSuppliersQueryDto) {
     return this.supplierService.getSuppliers(query);
@@ -35,7 +44,9 @@ export class SupplierController {
   @Post()
   @RequirePermissions(PermissionCode.SUPPLIER_CREATE)
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: SupplierItemResponseDto })
+  @ApiOperation({ summary: 'Create a new supplier' })
+  @ApiBody({ type: CreateSupplierRequestDto })
+  @ApiCreatedResponse({ type: SupplierItemResponseDto })
   createSupplier(@Body() body: CreateSupplierRequestDto) {
     return this.supplierService.createSupplier(body);
   }
@@ -43,6 +54,8 @@ export class SupplierController {
   @Patch(':supplierId/active')
   @RequirePermissions(PermissionCode.SUPPLIER_UPDATE)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Toggle active status of a supplier' })
+  @ApiParam({ name: 'supplierId', type: Number, description: 'ID of the supplier' })
   @ApiOkResponse({ type: SupplierItemResponseDto })
   toggleSupplierActive(@Param('supplierId') supplierId: string) {
     return this.supplierService.toggleSupplierActive(

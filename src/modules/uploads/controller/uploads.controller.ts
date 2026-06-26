@@ -17,13 +17,16 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiConsumes,
+  ApiCreatedResponse,
   ApiOperation,
-  ApiResponse
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { UploadFileDto } from '../dto/request/upload-file-single.dto';
 import { UploadsService } from '../service/uploads.service';
 
+@ApiTags('uploads')
 @Controller('uploads')
 @RequirePermissions(PermissionCode.UPLOAD_MANAGE)
 @ApiBearerAuth('access-token')
@@ -32,6 +35,7 @@ export class UploadsController {
 
   @Post('/')
   @ApiOperation({ summary: 'Upload product image' })
+  @ApiCreatedResponse({ description: 'Returns the storage key and CDN URL of the uploaded image', type: Object })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadFileDto })
   @UseInterceptors(
@@ -47,6 +51,7 @@ export class UploadsController {
 
 
   @Post("presigned-url/book")
+  @ApiOperation({ summary: 'Get a presigned URL for uploading a single book image directly to R2' })
   @ApiBody({ type: PresignRequestDto })
   @ApiResponse({ type: PresignResponseDto })
   getPresignedUrl(@Body() body: PresignRequestDto) {
@@ -55,6 +60,7 @@ export class UploadsController {
 
 
   @Post("presigned-url/multipart-books")
+  @ApiOperation({ summary: 'Get presigned URLs for uploading multiple book images directly to R2' })
   @ApiBody({ type: PresignMultipleRequestDto })
   @ApiResponse({ type: PresignMultipleResponseDto })
   getPresignedUrlMultipart(@Body() body: PresignMultipleRequestDto) {

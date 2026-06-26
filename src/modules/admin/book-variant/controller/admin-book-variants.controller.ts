@@ -4,14 +4,17 @@ import { RequirePermissions } from '@/common/security/decorators/requirePermissi
 import { AdminUpdatePriceVariant } from '@/modules/admin/book-variant/dto/resquest/update-price-variant.resquest';
 import { AdminBookListQueryDto } from '@/modules/admin/book/dto/request';
 import { AdminBookListResponseDto } from '@/modules/admin/book/dto/response';
+import { BookVariant } from '@prisma/client';
 import {
+    Body,
     Controller,
     Get,
     Param,
     Patch,
     Query
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { AdminBookVariantItemResponseDto } from '@/modules/admin/book/dto/response/admin-book-variant-item.response.dto';
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AdminBookVariantsService } from '../service/admin-book-variant.service';
 
 @ApiTags('admin')
@@ -22,6 +25,7 @@ export class AdminBookVariantController {
     @Get()
     @RequirePermissions(PermissionCode.ADMIN_READ)
     @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Get paginated list of book variants' })
     @ApiOkResponse({ type: AdminBookListResponseDto })
     getBookVariants(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
         return this.adminBookVariantService.getBookVariants(query, langId);
@@ -30,9 +34,12 @@ export class AdminBookVariantController {
     @Patch('/:variantId')
     @RequirePermissions(PermissionCode.ADMIN_READ)
     @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: AdminBookListResponseDto })
-    updatePrice(@Param('variantId') variantId, body: AdminUpdatePriceVariant) {
-        return this.adminBookVariantService.updatePriceVariant(variantId ,body);
+    @ApiOperation({ summary: 'Update price of a book variant' })
+    @ApiParam({ name: 'variantId', type: Number, description: 'Book variant ID' })
+    @ApiBody({ type: AdminUpdatePriceVariant })
+    @ApiOkResponse({ type: AdminBookVariantItemResponseDto })
+    updatePrice(@Param('variantId') variantId, @Body() body: AdminUpdatePriceVariant): Promise<BookVariant> {
+        return this.adminBookVariantService.updatePriceVariant(variantId, body);
     }
 
 }

@@ -5,7 +5,7 @@ import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CategoryService } from '../service/category.service';
 import { CreateCategoryRequestDto } from '../dto/request/create-category.request.dto';
 import { GetCategoriesQueryDto } from '../dto/request/get-categories.query.dto';
@@ -20,7 +20,9 @@ export class CategoryController {
     @Post()
     @RequirePermissions(PermissionCode.CATEGORY_CREATE)
     @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: CategoryItemResponseDto })
+    @ApiOperation({ summary: 'Create a new category' })
+    @ApiBody({ type: CreateCategoryRequestDto })
+    @ApiCreatedResponse({ type: CategoryItemResponseDto })
     createCategory(
         @Body() body: CreateCategoryRequestDto,
         @GetUser() user: JwtPayload,
@@ -32,6 +34,7 @@ export class CategoryController {
 
     @Public()
     @Get()
+    @ApiOperation({ summary: 'Get paginated list of categories' })
     @ApiOkResponse({ type: CategoryListResponseDto })
     getCategories(@Query() query: GetCategoriesQueryDto, @GetLanguageId() langId: number) {
         return this.categoryService.getCategories(query, langId);

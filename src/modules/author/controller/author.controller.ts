@@ -3,7 +3,7 @@ import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthorService } from '../service/author.service';
 import { CreateAuthorRequestDto } from '../dto/request/create-author.request.dto';
 import { GetAuthorBooksQueryDto } from '../dto/request/get-author-books.query.dto';
@@ -20,13 +20,15 @@ export class AuthorController {
     @Post()
     @RequirePermissions(PermissionCode.AUTHOR_CREATE)
     @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: AuthorItemResponseDto })
+    @ApiOperation({ summary: 'Create a new author' })
+    @ApiCreatedResponse({ type: AuthorItemResponseDto })
     createAuthor(@Body() body: CreateAuthorRequestDto) {
         return this.authorService.createAuthor(body);
     }
 
     @Public()
     @Get()
+    @ApiOperation({ summary: 'Get paginated list of authors' })
     @ApiOkResponse({ type: AuthorListResponseDto })
     getAuthors(@Query() query: GetAuthorsQueryDto, @GetLanguageId() langId: number) {
         return this.authorService.getAuthors(query, langId);
@@ -34,6 +36,8 @@ export class AuthorController {
 
     @Public()
     @Get(':authorId/books')
+    @ApiOperation({ summary: 'Get paginated list of books by author' })
+    @ApiParam({ name: 'authorId', type: String, description: 'Author ID' })
     @ApiOkResponse({ type: AuthorBookListResponseDto })
     getAuthorBooks(
         @Param('authorId') authorId: string,

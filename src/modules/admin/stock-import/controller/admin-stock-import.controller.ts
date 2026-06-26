@@ -3,7 +3,15 @@ import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   AdminStockImportListQueryDto,
   CreateAdminStockImportRequestDto,
@@ -24,7 +32,9 @@ export class AdminStockImportController {
   @Post("/create")
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminStockImportDetailResponseDto })
+  @ApiOperation({ summary: 'Create a new stock import record' })
+  @ApiBody({ type: CreateAdminStockImportRequestDto })
+  @ApiCreatedResponse({ type: AdminStockImportDetailResponseDto })
   createStockImport(
     @Body() body: CreateAdminStockImportRequestDto,
     @GetUser() user: JwtPayload,
@@ -38,6 +48,7 @@ export class AdminStockImportController {
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of stock imports' })
   @ApiOkResponse({ type: AdminStockImportListResponseDto })
   getStockImports(@Query() query: AdminStockImportListQueryDto) {
     return this.adminStockImportService.getStockImports(query);
@@ -46,6 +57,8 @@ export class AdminStockImportController {
   @Get('/:purchaseOrderId')
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get stock import detail by purchase order ID' })
+  @ApiParam({ name: 'purchaseOrderId', type: String, description: 'Purchase order ID' })
   @ApiOkResponse({ type: AdminStockImportDetailResponseDto })
   getStockImportDetail(@Param('purchaseOrderId') purchaseOrderId: string) {
     return this.adminStockImportService.getStockImportDetail(purchaseOrderId);

@@ -1,7 +1,7 @@
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminUserListQueryDto } from '../dto/request';
 import {
   AdminUserListResponseDto,
@@ -17,6 +17,7 @@ export class AdminUserController {
   @Get('stats')
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get user statistics' })
   @ApiOkResponse({ type: AdminUserStatsResponseDto })
   getStats() {
     return this.adminUserService.getStats();
@@ -25,6 +26,7 @@ export class AdminUserController {
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of all users' })
   @ApiOkResponse({ type: AdminUserListResponseDto })
   getUsers(@Query() query: AdminUserListQueryDto) {
     return this.adminUserService.getUsers(query);
@@ -33,6 +35,7 @@ export class AdminUserController {
   @Get('non-customer')
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of non-customer users' })
   @ApiOkResponse({ type: AdminUserListResponseDto })
   getNonCustomerUsers(@Query() query: AdminUserListQueryDto) {
     return this.adminUserService.getNonCustomerUsers(query);

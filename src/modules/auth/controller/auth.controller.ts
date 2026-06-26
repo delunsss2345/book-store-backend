@@ -45,12 +45,21 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBearerAuth, ApiHeader, ApiOkResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiHeader,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
 import type { CookieOptions, Request, Response } from 'express';
 import { v4 } from 'uuid';
 
 const DEVICE_FINGERPRINT_COOKIE = 'device_fingerprint';
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -59,7 +68,8 @@ export class AuthController {
   ) { }
   @Public()
   @Post('register')
-  @ApiOkResponse({ type: ResponseDto<RegisterResponseDto> })
+  @ApiOperation({ summary: 'Register a new user account' })
+  @ApiCreatedResponse({ type: ResponseDto<RegisterResponseDto> })
   register(
     @Body() body: RegisterRequestDto,
     @UserAgent() userAgent: string,
@@ -73,6 +83,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @ApiOperation({ summary: 'Login with email and password' })
   @ApiOkResponse({ type: ResponseDto<LoginResponseDto> })
   login(
     @Body() body: LoginRequestDto,
@@ -102,12 +113,16 @@ export class AuthController {
 
   @Get('me')
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get the currently authenticated user profile' })
+  @ApiOkResponse({ type: ResponseDto })
   me(@GetUser() user: JwtPayload) {
     return this.authService.getMe(Number(user.sub));
   }
 
   @Get('device/:userId')
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get active device sessions for a user' })
+  @ApiParam({ name: 'userId', type: Number, description: 'ID of the user' })
   @ApiOkResponse({ type: [UserSessionResponseDto] })
   getActiveDeviceSessions(@Param('userId', ParseIntPipe) userId: number) {
     return this.authService.getActiveDeviceSessions(userId);
@@ -116,7 +131,10 @@ export class AuthController {
   @Refresh()
   @UseGuards(RefreshGuard)
   @Post('refresh-token')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Refresh access token using a valid refresh token' })
   @ApiHeader({ name: 'x-refresh-token', required: true })
+  @ApiOkResponse({ type: ResponseDto<LoginResponseDto> })
   refreshToken(
     @RefreshSession() session: UserSession,
     @UserAgent() userAgent: string,
@@ -127,7 +145,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('logout')
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout and revoke the current session' })
   @ApiHeader({ name: 'x-refresh-token', required: true })
+  @ApiOkResponse({ type: ResponseDto })
   logout(
     @GetAccessToken() accessToken: string,
     @Headers('x-refresh-token') refreshToken: string,
@@ -138,6 +158,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('forgot-password')
+  @ApiOperation({ summary: 'Send a password reset email to the user' })
   @ApiOkResponse({ type: ResponseDto<ForgotPasswordResponseDto> })
   forgotPassword(@Body() body: ForgotPasswordRequestDto) {
     return this.authService.forgotPassword(body);
@@ -145,6 +166,7 @@ export class AuthController {
 
   @Public()
   @Get('verify-email')
+  @ApiOperation({ summary: 'Verify user email address using a token' })
   @ApiOkResponse({ type: ResponseDto<VerifyEmailResponseDto> })
   verifyEmail(@Query() query: VerifyEmailRequestDto) {
     return this.authService.verifyEmail(query);
@@ -153,6 +175,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('resend-email')
+  @ApiOperation({ summary: 'Resend the email verification link' })
   @ApiOkResponse({ type: ResponseDto<ResendEmailResponseDto> })
   resendEmail(@GetOriginUrl() url, @Body() body: ResendVerifyEmailRequestDto) {
     return this.authService.resendEmail(body, url);
@@ -161,6 +184,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('change-password')
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Change the authenticated user password' })
   @ApiOkResponse({ type: ResponseDto<ChangePasswordResponseDto> })
   changePassword(
     @GetUser() user: JwtPayload,
@@ -172,6 +196,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('reset-password/validate')
+  @ApiOperation({ summary: 'Validate a password reset token' })
   @ApiOkResponse({ type: ResponseDto<ResetPasswordValidateResponseDto> })
   validateResetPassword(@Body() body: ResetPasswordValidateRequestDto) {
     return this.authService.validateResetPasswordToken(body);
@@ -180,6 +205,7 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('reset-password')
+  @ApiOperation({ summary: 'Reset the user password using a valid reset token' })
   @ApiOkResponse({ type: ResponseDto<ResetPasswordResponseDto> })
   resetPassword(@Body() body: ResetPasswordRequestDto) {
     return this.authService.resetPassword(body);

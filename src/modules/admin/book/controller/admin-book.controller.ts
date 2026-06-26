@@ -16,7 +16,15 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AdminBookService } from '../service/admin-book.service';
 import { AdminBookListQueryDto, UpdateAdminBookRequestDto } from '../dto/request';
 import { CreateAdminBookRequestDto } from '../dto/request/create-admin-book.request.dto';
@@ -36,6 +44,7 @@ export class AdminBookController {
   @Get('stats')
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get book statistics for admin dashboard' })
   @ApiOkResponse({ type: AdminBookStatsResponseDto })
   getStats() {
     return this.adminBookService.getStats();
@@ -44,6 +53,7 @@ export class AdminBookController {
   @Get('list')
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of books with full detail for admin' })
   @ApiOkResponse({ type: AdminBookListDetailResponseDto })
   listBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
     return this.adminBookService.listBooks(query, langId);
@@ -51,6 +61,8 @@ export class AdminBookController {
 
   @Public()
   @Get(":bookId")
+  @ApiOperation({ summary: 'Get book detail by ID' })
+  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book' })
   @ApiOkResponse({ type: AdminBookDetailResponseDto })
   getDetail(@Param('bookId', ParseIntPipe) bookId: number) {
     return this.adminBookService.getDetail(bookId);
@@ -58,7 +70,9 @@ export class AdminBookController {
 
   @Post()
   @ApiBearerAuth('access-token')
-  @ApiOkResponse({ type: AdminBookItemResponseDto })
+  @ApiOperation({ summary: 'Create a new book' })
+  @ApiBody({ type: CreateAdminBookRequestDto })
+  @ApiCreatedResponse({ type: AdminBookItemResponseDto })
   createBook(
     @Body() body: CreateAdminBookRequestDto,
     @GetLanguageId() langId: number,
@@ -72,6 +86,9 @@ export class AdminBookController {
   @Patch(':bookId')
   @RequirePermissions(PermissionCode.ADMIN_UPDATE_BOOK)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a book by ID' })
+  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book to update' })
+  @ApiBody({ type: UpdateAdminBookRequestDto })
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   updateBook(
     @Param('bookId', ParseIntPipe) bookId: number,
@@ -86,6 +103,8 @@ export class AdminBookController {
   @Delete(':bookId')
   @RequirePermissions(PermissionCode.ADMIN_DELETE_BOOK)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a book by ID' })
+  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book to delete' })
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   deleteBook(
     @Param('bookId', ParseIntPipe) bookId: number,
@@ -99,6 +118,7 @@ export class AdminBookController {
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)
   @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get paginated list of books for admin' })
   @ApiOkResponse({ type: AdminBookListResponseDto })
   getBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
     return this.adminBookService.getBooks(query, langId);

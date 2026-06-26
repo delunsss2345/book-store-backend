@@ -1,7 +1,7 @@
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CatalogService } from '../service/catalog.service';
 import {
     CatalogBookListQueryDto,
@@ -21,6 +21,7 @@ export class CatalogController {
 
     @Public()
     @Get('home')
+    @ApiOperation({ summary: 'Get catalog home data (new arrivals, best sellers, top rated, recommendations)' })
     @ApiOkResponse({ type: CatalogHomeResponseDto })
     getCatalogHome(@Query() query: CatalogHomeQueryDto, @GetLanguageId() langId: number) {
         return this.catalogService.getCatalogHome(query, langId);
@@ -28,6 +29,7 @@ export class CatalogController {
 
     @Public()
     @Get('books')
+    @ApiOperation({ summary: 'List books with filtering and pagination' })
     @ApiOkResponse({ type: CatalogBookListResponseDto })
     listBooks(@Query() query: CatalogBookListQueryDto, @GetLanguageId() langId: number) {
         return this.catalogService.listBooks(query, langId);
@@ -35,6 +37,8 @@ export class CatalogController {
 
     @Public()
     @Get('books/:bookId')
+    @ApiOperation({ summary: 'Get book detail by book ID' })
+    @ApiParam({ name: 'bookId', type: Number, description: 'The ID of the book' })
     @ApiOkResponse({ type: CatalogBookDetailDto })
     getBookDetail(
         @Param('bookId') bookId: string,
@@ -45,6 +49,8 @@ export class CatalogController {
 
     @Public()
     @Get('books/slug/:slug')
+    @ApiOperation({ summary: 'Get book detail by slug' })
+    @ApiParam({ name: 'slug', type: String, description: 'The URL-friendly slug of the book' })
     @ApiOkResponse({ type: CatalogBookDetailDto })
     getBookDetailBySlug(
         @Param('slug') slug: string,
@@ -55,6 +61,7 @@ export class CatalogController {
 
     @Public()
     @Get('categories')
+    @ApiOperation({ summary: 'Get category tree' })
     @ApiOkResponse({ type: [CatalogCategoryTreeDto] })
     getCategories(@GetLanguageId() langId: number) {
         return this.catalogService.getCategories(langId);

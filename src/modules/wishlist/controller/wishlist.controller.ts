@@ -14,7 +14,14 @@ import {
     Req,
     UseGuards,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiBody,
+    ApiCreatedResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiParam,
+    ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { WishlistService } from '../service/wishlist.service';
 
@@ -26,7 +33,8 @@ export class WishlistController {
     constructor(private readonly wishlistService: WishlistService) { }
 
     @Get()
-    @ApiOkResponse()
+    @ApiOperation({ summary: 'Get the current wishlist for the authenticated user or guest session' })
+    @ApiOkResponse({ type: Object, description: 'Wishlist with items' })
     getWish(
         @Req() request: Request,
         @GetLanguageId() langId: number,
@@ -37,7 +45,9 @@ export class WishlistController {
     }
 
     @Post('items')
-    @ApiOkResponse()
+    @ApiOperation({ summary: 'Add a book variant to the wishlist' })
+    @ApiBody({ type: AddWishItemRequestDto })
+    @ApiCreatedResponse({ type: Object, description: 'Result indicating whether the item was newly created or already existed' })
     addWish(
         @Req() request: Request,
         @Body() body: AddWishItemRequestDto,
@@ -54,7 +64,9 @@ export class WishlistController {
     }
 
     @Delete('items/:itemKey')
-    @ApiOkResponse()
+    @ApiOperation({ summary: 'Remove a specific item from the wishlist by its item key' })
+    @ApiParam({ name: 'itemKey', type: String, description: 'The unique key of the wishlist item to remove' })
+    @ApiOkResponse({ type: Object, description: 'Deletion result' })
     deleteWishItem(
         @Req() request: Request,
         @Param('itemKey') itemKey: string,
@@ -72,7 +84,8 @@ export class WishlistController {
     }
 
     @Delete()
-    @ApiOkResponse()
+    @ApiOperation({ summary: 'Clear the entire wishlist for the authenticated user or guest session' })
+    @ApiOkResponse({ type: Object, description: 'Deletion result' })
     deleteWish(
         @Req() request: Request,
         @GetLanguageId() langId: number,

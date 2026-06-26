@@ -14,7 +14,10 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
+  ApiCreatedResponse,
   ApiOkResponse,
+  ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
@@ -31,6 +34,8 @@ export class BookAssetController {
   constructor(private readonly bookAssetService: BookAssetService) { }
 
   @Post('upload')
+  @ApiOperation({ summary: 'Upload a book asset image to temporary storage' })
+  @ApiCreatedResponse({ type: Object, description: 'Uploaded asset metadata returned by the storage provider' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadBookAssetRequestDto })
   @UseInterceptors(
@@ -48,6 +53,9 @@ export class BookAssetController {
   }
 
   @Post([':bookId/confirm'])
+  @ApiOperation({ summary: 'Confirm and persist a previously uploaded book asset for a given book' })
+  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book to attach the asset to' })
+  @ApiBody({ type: ConfirmBookAssetRequestDto })
   @ApiOkResponse({ type: ConfirmBookAssetResponseDto })
   confirmBookAsset(
     @Param('bookId') bookId: string,

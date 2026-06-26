@@ -20,9 +20,16 @@ import {
     Post,
     UseGuards,
 } from '@nestjs/common';
-import { ApiOkResponse } from '@nestjs/swagger';
+import {
+    ApiCreatedResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiParam,
+    ApiTags,
+} from '@nestjs/swagger';
 import { CartService } from '../service/cart.service';
 
+@ApiTags('Cart')
 @Public()
 @UseGuards(ShopperSessionGuard)
 @Controller('cart')
@@ -30,6 +37,7 @@ export class CartController {
     constructor(private readonly cartService: CartService) { }
 
     @Get()
+    @ApiOperation({ summary: 'Get the current cart for authenticated user or guest session' })
     @ApiOkResponse({ type: CartResponseDto })
     getCart(
         @GetGuestSessionId() guestSessionId: string | null,
@@ -48,6 +56,8 @@ export class CartController {
     }
 
     @Post('items')
+    @ApiOperation({ summary: 'Add an item to the cart' })
+    @ApiCreatedResponse({ type: CartResponseDto })
     addCartItem(
         @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
@@ -58,6 +68,9 @@ export class CartController {
     }
 
     @Patch('items/:itemKey/delta')
+    @ApiOperation({ summary: 'Update the quantity delta of a cart item' })
+    @ApiParam({ name: 'itemKey', type: Number, description: 'Cart item ID' })
+    @ApiOkResponse({ type: CartResponseDto })
     updateCartItemDelta(
         @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
@@ -75,6 +88,9 @@ export class CartController {
     }
 
     @Delete('items/:itemKey')
+    @ApiOperation({ summary: 'Remove an item from the cart' })
+    @ApiParam({ name: 'itemKey', type: Number, description: 'Cart item ID' })
+    @ApiOkResponse({ type: CartResponseDto })
     removeCartItem(
         @GetGuestSessionId() guestSessionId: string | null,
         @GetUser() user: JwtPayload | null,
@@ -86,6 +102,8 @@ export class CartController {
     }
 
     @Delete()
+    @ApiOperation({ summary: 'Clear all items from the cart' })
+    @ApiOkResponse({ description: 'Cart cleared successfully' })
     clearCart(
         @GetUser() user: JwtPayload | null,
         @GetGuestSessionId() guestSessionId: string | null
@@ -97,7 +115,8 @@ export class CartController {
     }
 
     @Post('merge')
-    @ApiOkResponse({ type: MergeCartResponseDto })
+    @ApiOperation({ summary: 'Merge guest cart into the authenticated user cart' })
+    @ApiCreatedResponse({ type: MergeCartResponseDto })
     mergeCart(
         @GetUser() user: JwtPayload | null,
         @GetGuestSessionId() guestSessionId: string | null

@@ -3,7 +3,7 @@ import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreatePublisherRequestDto } from '../dto/request/create-publisher.request.dto';
 import { GetPublisherBooksQueryDto } from '../dto/request/get-publisher-books.query.dto';
 import { GetPublishersQueryDto } from '../dto/request/get-publishers.query.dto';
@@ -20,13 +20,15 @@ export class PublisherController {
     @Post()
     @RequirePermissions(PermissionCode.PUBLISHER_CREATE)
     @ApiBearerAuth('access-token')
-    @ApiOkResponse({ type: PublisherItemResponseDto })
+    @ApiOperation({ summary: 'Create a new publisher' })
+    @ApiCreatedResponse({ type: PublisherItemResponseDto })
     createPublisher(@Body() body: CreatePublisherRequestDto) {
         return this.publisherService.createPublisher(body);
     }
 
     @Public()
     @Get()
+    @ApiOperation({ summary: 'Get a paginated list of publishers' })
     @ApiOkResponse({ type: PublisherListResponseDto })
     getPublishers(@Query() query: GetPublishersQueryDto) {
         return this.publisherService.getPublishers(query);
@@ -34,6 +36,8 @@ export class PublisherController {
 
     @Public()
     @Get(':publisherId/books')
+    @ApiOperation({ summary: 'Get a paginated list of books for a publisher' })
+    @ApiParam({ name: 'publisherId', type: Number, description: 'Publisher ID' })
     @ApiOkResponse({ type: PublisherBookListResponseDto })
     getPublisherBooks(
         @Param('publisherId') publisherId: string,

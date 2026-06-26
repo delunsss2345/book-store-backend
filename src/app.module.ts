@@ -1,7 +1,13 @@
 import { SecurityModule } from '@/common/security/security.module';
 import { CONFIGURATION, TConfiguration } from '@/config';
 import { RateLimitProvider } from '@/config/ratelimit.config';
-import { AdminModule } from '@/modules/admin/admin.module';
+import { AdminBookVariantModule } from '@/modules/admin/book-variant/admin-book-variant.module';
+import { AdminBookModule } from '@/modules/admin/book/admin-book.module';
+import { AdminCategoryModule } from '@/modules/admin/category/admin-category.module';
+import { AdminOrderModule } from '@/modules/admin/order/admin-order.module';
+import { AdminPurchaseOrderModule } from '@/modules/admin/purchase-order/admin-purchase-order.module';
+import { AdminStockImportModule } from '@/modules/admin/stock-import/admin-stock-import.module';
+import { AdminUserModule } from '@/modules/admin/user/admin-user.module';
 import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { BookAssetModule } from '@/modules/book/asset/book-asset.module';
@@ -14,7 +20,6 @@ import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
-import { PurchaseOrderModule } from '@/modules/purchase-order/purchase-order.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
@@ -56,7 +61,13 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     PermissionModule,
     RoleModule,
     AuditLogModule,
-    AdminModule,
+    AdminBookModule,
+    AdminBookVariantModule,
+    AdminCategoryModule,
+    AdminOrderModule,
+    AdminStockImportModule,
+    AdminUserModule,
+    AdminPurchaseOrderModule,
     BookAssetModule,
     HealthModule,
     UserModule,
@@ -75,7 +86,6 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     LanguageModule,
     UploadsModule,
     R2ServiceModule,
-    PurchaseOrderModule,
     BookVariantModule,
   ],
 })

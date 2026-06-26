@@ -1,8 +1,8 @@
 import {
   AdminUserItemResponseDto,
   AdminUserRoleItemResponseDto,
-} from '@/modules/admin/dto/response';
-import { AdminUserRepository } from '../admin-user.repository';
+} from '@/modules/admin/user/dto/response';
+import { AdminUserRepository } from '../repository/admin-user.repository';
 
 type UserRow = Awaited<ReturnType<AdminUserRepository['findUsers']>>[number];
 type NonCustomerUserRow = Awaited<

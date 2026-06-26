@@ -3,11 +3,11 @@ import {
   AdminBookSnapshotItemResponseDto,
   AdminBookTranslationResponseDto,
   AdminBookVariantItemResponseDto,
-} from '@/modules/admin/dto/response';
-import { AdminBookDetailResponseDto } from '@/modules/admin/dto/response/admin-book-detail.response.dto';
-import { AdminBookItemUpdateResponseDto } from '@/modules/admin/dto/response/admin-book-update.response.dto';
+} from '@/modules/admin/book/dto/response';
+import { AdminBookDetailResponseDto } from '@/modules/admin/book/dto/response/admin-book-detail.response.dto';
+import { AdminBookItemUpdateResponseDto } from '@/modules/admin/book/dto/response/admin-book-update.response.dto';
 import { Prisma } from '@prisma/client';
-import { AdminBookRepository } from '../admin-book.repository';
+import { AdminBookRepository } from '../repository/admin-book.repository';
 
 type BookRow = NonNullable<
   Awaited<ReturnType<AdminBookRepository['findBookById']>>

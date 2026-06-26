@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import {
   AdminStockImportDetailResponseDto,
   AdminStockImportItemResponseDto,
-} from '../../dto/response';
+} from '../dto/response';
 import { AdminStockImportDetailRow, AdminStockImportListRow } from '../select';
 
 function toDecimalNumber(value: Prisma.Decimal | number): number {

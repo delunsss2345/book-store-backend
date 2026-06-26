@@ -1,7 +1,7 @@
 import { PurchaseOrderMessage } from '@/common';
 import { PrismaService } from '@/database';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, PurchaseOrderStatus } from '@prisma/client';
+import { Prisma, PurchaseOrderStatus, PurchaseOrderType } from '@prisma/client';
 import {
   GetPurchaseOrdersQueryDto,
 } from '../dto';
@@ -86,6 +86,7 @@ export class PurchaseOrderRepository {
 
   findPurchaseOrders(query: GetPurchaseOrdersQueryDto) {
     return this.prisma.purchaseOrder.findMany({
+      where: query.status ? { status: query.status } : undefined,
       take: query.limit ?? 20,
       skip: ((query.page ?? 1) - 1) * (query.limit ?? 0),
       select: purchaseOrderListSelect,
@@ -93,8 +94,10 @@ export class PurchaseOrderRepository {
     });
   }
 
-  findCountPurchaseOrders() {
-    return this.prisma.purchaseOrder.count();
+  findCountPurchaseOrders(query?: GetPurchaseOrdersQueryDto) {
+    return this.prisma.purchaseOrder.count({
+      where: query?.status ? { status: query.status } : undefined,
+    });
   }
 
   findCountPurchaseOrderItems(purchaseOrderId: string) {
@@ -146,6 +149,20 @@ export class PurchaseOrderRepository {
         status,
         approvedById,
         approvedAt: new Date(),
+      },
+    });
+  }
+  updateTransferStatus(
+    purchaseOrderId: string,
+    updateTransferId: number,
+    status: PurchaseOrderType,
+    tx: DbClient = this.prisma,
+  ) {
+    return tx.purchaseOrder.update({
+      where: { id: purchaseOrderId },
+      data: {
+        statusTransfer: status,
+        updateTransferId
       },
     });
   }

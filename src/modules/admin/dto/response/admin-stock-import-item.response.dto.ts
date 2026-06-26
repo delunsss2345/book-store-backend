@@ -15,9 +15,6 @@ export class AdminStockImportItemResponseDto {
   @ApiPropertyOptional({ example: 'cm7xpo123', nullable: true })
   purchaseOrderId: string | null;
 
-  @ApiProperty({ example: '1' })
-  supplierId: string;
-
   @ApiPropertyOptional({ example: 'Nha cung cap A', nullable: true })
   supplierName: string | null;
 
@@ -26,9 +23,6 @@ export class AdminStockImportItemResponseDto {
 
   @ApiProperty({ example: 120000 })
   totalAmount: number;
-
-  @ApiProperty({ example: 10000 })
-  taxAmount: number;
 
   @ApiPropertyOptional({
     type: () => AdminStockImportCreatorResponseDto,

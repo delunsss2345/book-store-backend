@@ -15,16 +15,14 @@ export function toAdminStockImportItem(
   return {
     id: row.id,
     purchaseOrderId: row.purchaseOrderId ?? null,
-    supplierId: row.supplierId.toString(),
-    supplierName: row.supplier?.name ?? null,
+    supplierName: row.purchaseOrder?.supplier?.name ?? null,
     note: row.note ?? null,
     totalAmount: toDecimalNumber(row.totalAmount),
-    taxAmount: toDecimalNumber(row.taxAmount),
     creator: row.creator
       ? {
-          firstName: row.creator.firstName ?? null,
-          lastName: row.creator.lastName ?? null,
-        }
+        firstName: row.creator.firstName ?? null,
+        lastName: row.creator.lastName ?? null,
+      }
       : null,
     createdAt: row.createdAt,
   };
@@ -37,9 +35,10 @@ export function toAdminStockImportDetail(
     ...toAdminStockImportItem(row),
     items: row.items.map((item) => ({
       id: item.id,
-      bookVariantId: item.bookVariantId.toString(),
-      quantity: item.quantity,
-      importPrice: toDecimalNumber(item.importPrice),
+      purchaseOrderItemId: item.purchaseOrderItemId,
+      realQuantity: item.realQuantity,
+      lackQuantity: item.lackQuantity,
+      totalPrice: toDecimalNumber(item.totalPrice),
     })),
   };
 }

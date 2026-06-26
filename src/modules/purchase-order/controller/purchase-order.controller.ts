@@ -58,6 +58,18 @@ export class PurchaseOrderController {
       actorUserId,
       body,
     );
+  }
 
+  @Post(':purchaseOrderId/transfer-processing')
+  @ApiBearerAuth('access-token')
+  updateStatusTransfer(
+    @Param('purchaseOrderId') purchaseOrderId: string,
+    @GetUser() user: JwtPayload,
+  ) {
+    const actorUserId = Number(user?.sub);
+    return this.purchaseOrderService.updateStatusTransfer(
+      purchaseOrderId,
+      actorUserId,
+    );
   }
 }

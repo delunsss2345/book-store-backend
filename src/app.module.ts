@@ -9,8 +9,6 @@ import { CatalogModule } from '@/modules/book/catalog/catalog.module';
 import { BookVariantModule } from '@/modules/book/variant';
 import { CartModule } from '@/modules/cart/cart.module';
 import { CategoryModule } from '@/modules/category/category.module';
-import { CheckoutModule } from '@/queue/checkout/checkout.module';
-import { EmailModule } from '@/queue/email/email.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
@@ -18,11 +16,12 @@ import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { PurchaseOrderModule } from '@/modules/purchase-order/purchase-order.module';
 import { SearchModule } from '@/modules/search/search.module';
-import { StockImportModule } from '@/modules/stock-import/stock-import.module';
 import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
 import { UserModule } from '@/modules/user/user.module';
 import { WishlistModule } from '@/modules/wishlist/wishlist.module';
+import { CheckoutModule } from '@/queue/checkout/checkout.module';
+import { EmailModule } from '@/queue/email/email.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -77,7 +76,6 @@ import { VerificationCodeModule } from './modules/verification-code/verification
     UploadsModule,
     R2ServiceModule,
     PurchaseOrderModule,
-    StockImportModule,
     BookVariantModule,
   ],
 })

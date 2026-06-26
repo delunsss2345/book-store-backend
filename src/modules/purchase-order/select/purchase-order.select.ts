@@ -18,6 +18,7 @@ export const purchaseOrderSummarySelect = {
   supplierId: true,
   code: true,
   status: true,
+  statusTransfer: true,
   note: true,
   totalAmount: true,
   taxAmount: true,

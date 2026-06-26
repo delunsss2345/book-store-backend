@@ -6,4 +6,5 @@ export * from './admin-stock-import-list.query.dto';
 export * from './admin-user-list.query.dto';
 export * from './create-admin-book-translation.request.dto';
 export * from './create-admin-book.request.dto';
+export * from './create-admin-stock-import.request.dto';
 export * from './update-admin-book.request.dto';

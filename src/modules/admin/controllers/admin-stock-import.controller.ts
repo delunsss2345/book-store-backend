@@ -1,8 +1,13 @@
+import type { JwtPayload } from '@/common';
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
+import { GetUser } from '@/common/decorators/getUser.decorator';
 import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { AdminStockImportListQueryDto } from '../dto/request';
+import {
+  AdminStockImportListQueryDto,
+  CreateAdminStockImportRequestDto,
+} from '../dto/request';
 import {
   AdminStockImportDetailResponseDto,
   AdminStockImportListResponseDto,
@@ -14,7 +19,21 @@ import { AdminStockImportService } from '../stock-import/admin-stock-import.serv
 export class AdminStockImportController {
   constructor(
     private readonly adminStockImportService: AdminStockImportService,
-  ) {}
+  ) { }
+
+  @Post("/create")
+  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: AdminStockImportDetailResponseDto })
+  createStockImport(
+    @Body() body: CreateAdminStockImportRequestDto,
+    @GetUser() user: JwtPayload,
+  ) {
+    return this.adminStockImportService.createStockImport(
+      Number(user.sub),
+      body,
+    );
+  }
 
   @Get()
   @RequirePermissions(PermissionCode.ADMIN_READ)

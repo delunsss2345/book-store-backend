@@ -123,6 +123,13 @@ enum PaymentStatus {
   NOT_FOUND_ORDER_CODE
 }
 
+enum PurchaseOrderType {
+  PENDING
+  PROCESSING
+  PURCHASE
+  RETURN
+}
+
 enum PurchaseOrderStatus {
   PENDING
   APPROVED
@@ -202,6 +209,7 @@ model User {
   categoryUpdater    Category[]         @relation("CategoryUpdater")
 
   purchaseOder       PurchaseOrder[] @relation("PurchaseOrderCreator")
+  updatePurchaseOder PurchaseOrder[] @relation("PurchaseOrderUpdater")
   stockImportCreator StockImport[]   @relation("StockImportCreator")
   bookCreator        Book[]          @relation("BookCreator")
   bookUpdater        Book[]          @relation("BookUpdater")
@@ -627,7 +635,6 @@ model BookVariant {
   wishlistItems        WishlistItem[]
   cartItems            CartItem[]
   bookVariantSnapshots BookVariantSnapshot[]
-  stockImportItem      StockImportItem[]     @relation("BookVariantToStockImportItem")
   purchaseOrderItem    PurchaseOrderItem[]
   supplier             Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
@@ -880,7 +887,6 @@ model Supplier {
   updatedAt DateTime @updatedAt @map("updated_at")
   isActive  Boolean  @default(true) @map("is_active")
 
-  stockImports  StockImport[]
   bookVariants  BookVariant[]
   purchaseOrder PurchaseOrder[]
 
@@ -893,7 +899,7 @@ model StockImport {
   createdBy       Int   @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   note            String?
-  
+
   totalAmount     Decimal  @db.Decimal(18, 2)
 
   purchaseOrder PurchaseOrder    @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
@@ -910,10 +916,9 @@ model StockImportItem {
   purchaseOrderItemId String  @map("purchase_order_item_id")
   realQuantity          Int     @map("real_quantity")
   lackQuantity          Int     @default(0) @map("lack_quantity")
+  totalPrice             Decimal @db.Decimal(18, 2) @map("total_price")
   
   stockImport StockImport @relation(fields: [stockImportId], references: [id], onDelete: Cascade)
-  variant     BookVariant @relation("BookVariantToStockImportItem", fields: [bookVariantId], references: [id])
-
   @@map("stock_import_item")
 }
 
@@ -923,19 +928,21 @@ model PurchaseOrder {
   supplierId   Int
   createdById  Int
   approvedById Int?
-  status       PurchaseOrderStatus @default(PENDING)
+  status         PurchaseOrderStatus @default(PENDING)
+  statusTransfer PurchaseOrderType   @default(PENDING) @map("status_transfer")
   note         String?
   totalAmount  Decimal             @db.Decimal(18, 2)
   taxAmount    Decimal             @db.Decimal(18, 2)
   approvedAt   DateTime?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
-
+   
+  updateTransferId Int? @map("update_transfer_id")
   items       PurchaseOrderItem[]
   stockImport StockImport?
   supplier    Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   creator     User                @relation(name: "PurchaseOrderCreator", fields: [createdById], references: [id], onDelete: Restrict)
-
+  updatedBy   User?               @relation(name: "PurchaseOrderUpdater", fields: [updateTransferId], references: [id], onDelete: SetNull)
   @@map("purchase_orders")
 }
 

@@ -3,13 +3,15 @@ import { Prisma } from '@prisma/client';
 export const adminStockImportListSelect = {
   id: true,
   purchaseOrderId: true,
-  supplierId: true,
   note: true,
   totalAmount: true,
-  taxAmount: true,
   createdAt: true,
-  supplier: {
-    select: { name: true },
+  purchaseOrder: {
+    select: {
+      supplier: {
+        select: { name: true },
+      },
+    },
   },
   creator: {
     select: { firstName: true, lastName: true },
@@ -21,9 +23,10 @@ export const adminStockImportDetailSelect = {
   items: {
     select: {
       id: true,
-      bookVariantId: true,
-      quantity: true,
-      importPrice: true,
+      purchaseOrderItemId: true,
+      realQuantity: true,
+      lackQuantity: true,
+      totalPrice: true,
     },
     orderBy: [{ id: 'asc' as const }],
   },

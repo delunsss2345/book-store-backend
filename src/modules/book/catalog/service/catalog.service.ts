@@ -140,53 +140,62 @@ export class CatalogService {
   ): Promise<CatalogBookListResponseDto> {
     const { page, limit } = getPaginationParams(query.page, query.limit);
     const slugCategory = query.slugCategory?.trim();
-    const keyword = query.keyword?.trim();
-    const key = cacheKey.catalog.bookList(langId, page, limit);
+    const keyword = query.keyword?.trim() || undefined;
 
     if (slugCategory) {
       return this.cache.withCache(
         cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory),
         LIST_CACHE_TTL,
         async () => {
-          const category = await this.repo.findCategoryBySlug(
-            slugCategory,
-            langId,
-          );
+          const category = await this.repo.findCategoryBySlug(slugCategory, langId);
           if (!category) {
             throw new NotFoundException(CatalogMessage.CATEGORY_NOT_FOUND);
           }
 
-          const [total, rows] = await Promise.all([
+          if (keyword) {
+            const [ids, total] = await Promise.all([
+              this.repo.findBookIncludeCategory(category.id, langId, keyword, page, limit),
+              this.repo.countBookIncludeCategory(category.id, langId, keyword),
+            ]);
+            const rows = await this.repo.findBooksByIds(ids, langId);
+            return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+          }
+
+          const [rows, total] = await Promise.all([
+            this.repo.findBooksForListByCategory(category.id, langId, page, limit),
             this.repo.countBooksForListByCategory(category.id, langId),
-            this.repo.findBooksForListByCategory(
-              category.id,
-              langId,
-              page,
-              limit,
-            ),
           ]);
-
-          const items: CatalogBookCardDto[] = rows.map((book) =>
-            toCatalogListBookCard(book),
-          );
-
-          return buildPaginatedResult(items, total, page, limit);
+          return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
         },
       );
     }
 
-    return this.cache.withCache(key, LIST_CACHE_TTL, async () => {
-      const [total, rows] = await Promise.all([
-        this.repo.countBooksForList(langId),
-        this.repo.findBooksForList(langId, page, limit),
-      ]);
-
-      const items: CatalogBookCardDto[] = rows.map((book) =>
-        toCatalogListBookCard(book),
+    if (keyword) {
+      return this.cache.withCache(
+        cacheKey.catalog.bookList(langId, page, limit),
+        LIST_CACHE_TTL,
+        async () => {
+          const [ids, total] = await Promise.all([
+            this.repo.findBookNeIncludeCategory(langId, keyword, page, limit),
+            this.repo.countBookNeIncludeCategory(langId, keyword),
+          ]);
+          const rows = await this.repo.findBooksByIds(ids, langId);
+          return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+        },
       );
+    }
 
-      return buildPaginatedResult(items, total, page, limit);
-    });
+    return this.cache.withCache(
+      cacheKey.catalog.bookList(langId, page, limit),
+      LIST_CACHE_TTL,
+      async () => {
+        const [rows, total] = await Promise.all([
+          this.repo.findBooksQueryRaw(langId, page, limit),
+          this.repo.countBookQueryRaw(langId),
+        ]);
+        return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+      },
+    );
   }
 
   async queryListBook(

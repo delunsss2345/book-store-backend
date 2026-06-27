@@ -26,6 +26,7 @@ type FindBooksForListParams = {
     languageId: number;
     page: number;
     limit: number;
+    keyword?: string;
     categoryId?: number;
 };
 
@@ -199,7 +200,7 @@ export class CatalogRepository {
 
         return this.prisma.book.findMany({
             skip: (page - 1) * limit,
-            take: 20,
+            take: limit,
             where: {
                 id: { in: bookIds },
                 isActive: true,
@@ -687,7 +688,99 @@ export class CatalogRepository {
             soldQty: Number(r.soldQty) // tổng số lượng đã bán
         }));
     }
+    async findBookIncludeCategory(
+        categoryId: number,
+        languageId: number,
+        keyword: string,
+        page: number,
+        limit: number,
+    ): Promise<number[]> {
+        const offset = (page - 1) * limit;
+        const rows = await this.prisma.$queryRaw<{ id: number | bigint }[]>(Prisma.sql`
+            SELECT DISTINCT b.id
+            FROM books b
+            JOIN book_translations bt
+                ON bt.book_id = b.id
+                AND bt.language_id = ${languageId}
+            JOIN book_categories bc
+                ON bc.book_id = b.id
+                AND bc.category_id = ${categoryId}
+            WHERE b.is_active = 1
+                AND b.deleted_at IS NULL
+                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+            LIMIT ${Prisma.sql`${limit}`}
+            OFFSET ${Prisma.sql`${offset}`}
+        `);
+        return rows.map((r) => Number(r.id));
+    }
 
+    async countBookIncludeCategory(
+        categoryId: number,
+        languageId: number,
+        keyword: string,
+    ): Promise<number> {
+        const rows = await this.prisma.$queryRaw<{ total: number | bigint }[]>(Prisma.sql`
+            SELECT COUNT(DISTINCT b.id) AS total
+            FROM books b
+            JOIN book_translations bt
+                ON bt.book_id = b.id
+                AND bt.language_id = ${languageId}
+            JOIN book_categories bc
+                ON bc.book_id = b.id
+                AND bc.category_id = ${categoryId}
+            WHERE b.is_active = 1
+                AND b.deleted_at IS NULL
+                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+        `);
+        return Number(rows[0]?.total ?? 0);
+    }
+
+    async findBookNeIncludeCategory(
+        languageId: number,
+        keyword: string,
+        page: number,
+        limit: number,
+    ): Promise<number[]> {
+        const offset = (page - 1) * limit;
+        const rows = await this.prisma.$queryRaw<{ id: number | bigint }[]>(Prisma.sql`
+            SELECT DISTINCT b.id
+            FROM books b
+            JOIN book_translations bt
+                ON bt.book_id = b.id
+                AND bt.language_id = ${languageId}
+            WHERE b.is_active = 1
+                AND b.deleted_at IS NULL
+                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+            LIMIT ${Prisma.sql`${limit}`}
+            OFFSET ${Prisma.sql`${offset}`}
+        `);
+        return rows.map((r) => Number(r.id));
+    }
+
+    async countBookNeIncludeCategory(
+        languageId: number,
+        keyword: string,
+    ): Promise<number> {
+        const rows = await this.prisma.$queryRaw<{ total: number | bigint }[]>(Prisma.sql`
+            SELECT COUNT(DISTINCT b.id) AS total
+            FROM books b
+            JOIN book_translations bt
+                ON bt.book_id = b.id
+                AND bt.language_id = ${languageId}
+            WHERE b.is_active = 1
+                AND b.deleted_at IS NULL
+                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+        `);
+        return Number(rows[0]?.total ?? 0);
+    }
+
+    findBooksQueryRaw(languageId: number, page: number, limit: number) {
+        return this.findBooksForListByFilter({ languageId, page, limit });
+    }
+
+    countBookQueryRaw(languageId: number) {
+        return this.countBooksForList(languageId);
+    }
     private findBooksForListByFilter(params: FindBooksForListParams) {
         const { languageId, categoryId, page, limit } = params;
 

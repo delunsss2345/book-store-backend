@@ -9,6 +9,7 @@ import {
 import { AdminBookListItemResponseDto } from '../dto/response';
 import {
   adminBookDetailSelect,
+  adminBookPriceViewSelect,
   adminBookSelect,
   adminBookSnapshotSelect,
   adminBookTranslationCreateSelect
@@ -193,6 +194,14 @@ export class AdminBookRepository {
     return db.book.findFirst({
       where: { id: bookId },
       select: adminBookDetailSelect,
+    });
+  }
+
+  findBookPriceViewById(bookId: number, tx?: Prisma.TransactionClient) {
+    const db: DbClient = tx ?? this.prisma;
+    return db.book.findFirst({
+      where: { id: bookId },
+      select: adminBookPriceViewSelect,
     });
   }
 

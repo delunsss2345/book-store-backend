@@ -23,12 +23,15 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { AdminBookService } from '../service/admin-book.service';
 import { AdminBookListQueryDto, UpdateAdminBookRequestDto } from '../dto/request';
+import { AdminBookDetailQueryDto } from '../dto/request/admin-book-detail.query.dto';
 import { CreateAdminBookRequestDto } from '../dto/request/create-admin-book.request.dto';
 import { AdminBookDetailResponseDto } from '../dto/response/admin-book-detail.response.dto';
+import { AdminBookPriceViewResponseDto } from '../dto/response/admin-book-price-view.response.dto';
 import {
   AdminBookItemResponseDto,
   AdminBookListDetailResponseDto,
@@ -63,9 +66,14 @@ export class AdminBookController {
   @Get(":bookId")
   @ApiOperation({ summary: 'Get book detail by ID' })
   @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book' })
-  @ApiOkResponse({ type: AdminBookDetailResponseDto })
-  getDetail(@Param('bookId', ParseIntPipe) bookId: number) {
-    return this.adminBookService.getDetail(bookId);
+  @ApiQuery({ name: 'type', required: false, enum: ['view_price'], description: 'view_price returns only active variants with purchaseOrderItem ids' })
+  @ApiOkResponse({ type: AdminBookDetailResponseDto, description: 'Full detail (default)' })
+  @ApiOkResponse({ type: AdminBookPriceViewResponseDto, description: 'Price view when type=view_price' })
+  getDetail(
+    @Param('bookId', ParseIntPipe) bookId: number,
+    @Query() query: AdminBookDetailQueryDto,
+  ) {
+    return this.adminBookService.getDetail(bookId, query.type);
   }
 
   @Post()

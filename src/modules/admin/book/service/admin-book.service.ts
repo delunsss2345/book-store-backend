@@ -24,6 +24,7 @@ import {
   CreateAdminBookTranslationRequestDto,
   UpdateAdminBookRequestDto,
 } from '../dto/request';
+import { AdminBookDetailType } from '../dto/request/admin-book-detail.query.dto';
 import {
   AdminBookItemResponseDto,
   AdminBookListDetailItemResponseDto,
@@ -38,6 +39,7 @@ import { AdminBookItemUpdateResponseDto } from '../dto/response/admin-book-updat
 import {
   toAdminBookItem,
   toBookDetail,
+  toBookPriceView,
   toMapperUpdateBook,
   toSnapshotItem
 } from '../mapper';
@@ -62,7 +64,14 @@ export class AdminBookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
-  async getDetail(bookId: number): Promise<AdminBookDetailResponseDto> {
+  async getDetail(bookId: number, type?: AdminBookDetailType) {
+    if (type === AdminBookDetailType.VIEW_PRICE) {
+      const book = await this.adminBookRepository.findBookPriceViewById(bookId);
+      if (!book || book.deletedAt) {
+        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
+      }
+      return toBookPriceView(book);
+    }
     const book = await this.adminBookRepository.findBookById(bookId);
     if (!book || book.deletedAt) {
       throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);

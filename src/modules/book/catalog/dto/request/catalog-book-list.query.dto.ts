@@ -17,4 +17,11 @@ export class CatalogBookListQueryDto extends BasePaginationDto {
     @IsString()
     @Type(() => String)
     slugCategory?: string;
+
+
+    @ApiPropertyOptional({ example: 'The book' })
+    @IsOptional()
+    @IsString()
+    @Type(() => String)
+    keyword?: string;
 }

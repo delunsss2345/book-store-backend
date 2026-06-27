@@ -40,7 +40,7 @@ export class CatalogService {
   constructor(
     private readonly repo: CatalogRepository,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-  ) {}
+  ) { }
 
   // Lấy giớ hạn không lấy phân trang
   async getCatalogHome(
@@ -142,6 +142,7 @@ export class CatalogService {
   ): Promise<CatalogBookListResponseDto> {
     const { page, limit } = getPaginationParams(query.page, query.limit);
     const slugCategory = query.slugCategory?.trim();
+    const keyword = query.keyword?.trim();
     const cacheKey = `catalog:books:langId=${langId}:p${page}:l${limit}`;
 
     if (slugCategory) {

@@ -6,7 +6,7 @@ import { CacheableMemory } from 'cacheable';
 import { IsNotEmpty, IsNumber, IsString, validateSync } from 'class-validator';
 import Redis from 'ioredis';
 
-export declare const CACHE_REDIS = "CACHE_REDIS";
+export const CACHE_REDIS = "CACHE_REDIS";
 export class RedisConfiguration {
   @IsNumber()
   @IsNotEmpty()
@@ -64,27 +64,27 @@ export const RedisProvider = BullModule.forRootAsync({
 });
 
 export const RedisIoredisProvider = {
-  imports: [ConfigModule],
+  provide: CACHE_REDIS,
+  useFactory: (config: ConfigService) => {
+    const host = config.get<string>('REDIS_HOST');
+    const port = Number(config.get<string>('REDIS_PORT'));
+
+    if (!host || !port) {
+      throw new Error('Invalid Redis config');
+    }
+
+    const username = config.get<string>('REDIS_USERNAME') || undefined;
+    const password = config.get<string>('REDIS_PASSWORD') || undefined;
+
+    return new Redis({
+      host,
+      port,
+      username,
+      password,
+    });
+  },
   inject: [ConfigService],
-  providers: [
-    {
-      provide: CACHE_REDIS,
-      useFactory: (config: ConfigService) => {
-        const host = config.get<string>('REDIS_HOST');
-        const port = Number(config.get<number | string>('REDIS_PORT'));
-        if (!host || !port) {
-          throw new Error('Invalid Redis config');
-        }
-        const username = config.get<string>('REDIS_USERNAME') || undefined;
-        const password = config.get<string>('REDIS_PASSWORD') || undefined;
-
-        return new Redis({ host, port, username, password })
-      },
-    },
-  ],
-  exports: [CACHE_REDIS],
-}
-
+};
 export const CacheProvider = CacheModule.registerAsync({
   imports: [ConfigModule],
   inject: [ConfigService],

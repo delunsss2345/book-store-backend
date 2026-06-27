@@ -171,18 +171,12 @@ export class CatalogService {
     }
 
     if (keyword) {
-      return this.cache.withCache(
-        cacheKey.catalog.bookList(langId, page, limit),
-        LIST_CACHE_TTL,
-        async () => {
-          const [ids, total] = await Promise.all([
-            this.repo.findBookNeIncludeCategory(langId, keyword, page, limit),
-            this.repo.countBookNeIncludeCategory(langId, keyword),
-          ]);
-          const rows = await this.repo.findBooksByIds(ids, langId);
-          return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
-        },
-      );
+      const [ids, total] = await Promise.all([
+        this.repo.findBookNeIncludeCategory(langId, keyword, page, limit),
+        this.repo.countBookNeIncludeCategory(langId, keyword),
+      ]);
+      const rows = await this.repo.findBooksByIds(ids, langId);
+      return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
     }
 
     return this.cache.withCache(

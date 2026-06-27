@@ -20,6 +20,7 @@ import { HealthModule } from '@/modules/health/health.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PermissionScanModule } from '@/modules/permission-scan/permission-scan.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
+import { RedisModule } from '@/modules/redis/redis.module';
 import { SearchModule } from '@/modules/search/search.module';
 import { SupplierModule } from '@/modules/supplier/supplier.module';
 import { UserEventModule } from '@/modules/user-event/user-event.module';
@@ -53,6 +54,7 @@ import { VerificationCodeModule } from './modules/verification-code/verification
       load: [() => CONFIGURATION],
     }),
     ScheduleModule.forRoot(),
+    RedisModule,
     RateLimitProvider,
     VerificationCodeModule,
     PermissionScanModule,

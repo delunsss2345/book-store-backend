@@ -52,8 +52,9 @@ export class PurchaseOrderItemRepository {
     return this.prisma.purchaseOrderItem.findFirst({
       where: {
         bookVariantId: variantId,
-        id: purchaseOrderItemId
-      }
-    })
+        id: purchaseOrderItemId,
+      },
+      select: { id: true, unitPrice: true },
+    });
   }
 }

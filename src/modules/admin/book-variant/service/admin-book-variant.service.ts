@@ -55,6 +55,13 @@ export class AdminBookVariantsService {
         );
     }
 
+    incrementStockById(
+        items: { bookVariantId: number; realQuantity: number }[],
+        tx?: Prisma.TransactionClient,
+    ) {
+        return this.adminBookVariantsRepository.incrementStockById(items, tx);
+    }
+
     async updatePriceVariant(variantId: number, payload: AdminUpdatePriceVariant) {
         const purchaseOrderId = await this.purchaseOrderItemService.findPurchaseOrderItem(variantId, payload.purchaseOrderItemId);
         return this.adminBookVariantsRepository.updatePriceVariant(variantId, Number(purchaseOrderId?.unitPrice));

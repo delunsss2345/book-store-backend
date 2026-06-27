@@ -37,7 +37,7 @@ export class AdminStockImportRepository {
     const db = tx ?? this.prisma;
     return db.purchaseOrderItem.findMany({
       where: { id: { in: ids } },
-      select: { id: true, quantity: true, price: true },
+      select: { id: true, bookVariantId: true, quantity: true, price: true },
     });
   }
 

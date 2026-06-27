@@ -3,6 +3,7 @@ import {
   buildPaginatedResult,
   getPaginationParams,
 } from '@/common/pagination/base-pagination.util';
+import { PrismaClientTransaction } from '@/database';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import {
   BadRequestException,
@@ -191,13 +192,15 @@ export class PurchaseOrderService {
     purchaseOrderId: string,
     approvedById: number,
     realPayPrice: number,
-    status: PurchaseOrderType = PurchaseOrderType.PROCESSING
+    status: PurchaseOrderType = PurchaseOrderType.PROCESSING,
+    tx?: PrismaClientTransaction
   ) {
     await this.purchaseOrderRepository.updateTransferStatus(
       purchaseOrderId,
       approvedById,
       status,
       realPayPrice,
+      tx
     );
   }
 

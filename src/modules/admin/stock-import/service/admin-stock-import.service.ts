@@ -4,6 +4,7 @@ import { PurchaseOrderService } from '@/modules/admin/purchase-order/service/pur
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PurchaseOrderType } from '@prisma/client';
+import { AdminBookVariantsService } from '../../book-variant/service/admin-book-variant.service';
 import { AdminStockImportListQueryDto, CreateAdminStockImportRequestDto } from '../dto/request';
 import {
   AdminStockImportDetailResponseDto,
@@ -21,6 +22,7 @@ export class AdminStockImportService {
   constructor(
     private readonly adminStockImportRepository: AdminStockImportRepository,
     private readonly adminPurchaseService: PurchaseOrderService,
+    private readonly adminBookVariantService: AdminBookVariantsService,
     private readonly transactionService: TransactionService,
   ) { }
 
@@ -82,6 +84,7 @@ export class AdminStockImportService {
       const totalPrice = item.realQuantity * price - lackQuantity * price;
       return {
         purchaseOrderItemId: item.purchaseOrderItemId,
+        bookVariantId: poItem.bookVariantId,
         realQuantity: item.realQuantity,
         lackQuantity,
         totalPrice,
@@ -112,14 +115,24 @@ export class AdminStockImportService {
           : purchase > total
             ? purchase - Math.abs(total)
             : purchase;
-      
+
+      const itemsPrice = itemsWithPrices.map(item => ({
+        purchaseOrderItemId: item.purchaseOrderItemId,
+        realQuantity: item.realQuantity,
+        lackQuantity: item.lackQuantity,
+        totalPrice: item.totalPrice,
+      }));
       await Promise.all([
         this.adminStockImportRepository.createStockImportItems(
           si.id,
-          itemsWithPrices,
+          itemsPrice,
           tx,
         ),
-        this.adminPurchaseService.updateStatusTransferWithChangeProcessing(body.purchaseOrderId, createdById, realPayPrice, PurchaseOrderType.PURCHASE)
+        this.adminBookVariantService.incrementStockById(
+          itemsWithPrices.map((i) => ({ bookVariantId: i.bookVariantId, realQuantity: i.realQuantity })),
+          tx,
+        ),
+        this.adminPurchaseService.updateStatusTransferWithChangeProcessing(body.purchaseOrderId, createdById, realPayPrice, PurchaseOrderType.PURCHASE, tx)
       ])
       return this.adminStockImportRepository.findStockImportById(si.id, tx);
     });

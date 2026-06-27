@@ -72,6 +72,21 @@ export class AdminBookVariantsRepository {
         : {}),
     };
   }
+  incrementStockById(
+    items: { bookVariantId: number; realQuantity: number }[],
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db: DbClient = tx ?? this.prisma;
+    return Promise.all(
+      items.map((item) =>
+        db.bookVariant.update({
+          where: { id: item.bookVariantId },
+          data: { stock: { increment: item.realQuantity } },
+        }),
+      ),
+    );
+  }
+
   updatePriceVariant(bookVariantId: number, price: number) {
     return this.prisma.bookVariant.update({
       where: {

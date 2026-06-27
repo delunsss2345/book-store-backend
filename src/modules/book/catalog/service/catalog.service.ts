@@ -1,4 +1,4 @@
-import { CatalogMessage } from '@/common';
+import { CatalogMessage, cacheKey } from '@/common';
 import {
   CATEGORY_CACHE_TTL,
   DETAIL_CACHE_TTL,
@@ -19,14 +19,12 @@ import {
   CatalogBookListResponseDto,
   CatalogCategoryTreeDto,
 } from '@/modules/book/catalog/dto/response';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { CacheVersionService } from '@/modules/cache-version/service/cache-version.service';
 import {
   BadRequestException,
-  Inject,
   Injectable,
-  NotFoundException,
+  NotFoundException
 } from '@nestjs/common';
-import type { Cache } from 'cache-manager';
 import {
   buildCatalogCategoryTree,
   toCatalogBookCard,
@@ -39,7 +37,7 @@ import { CatalogRepository } from '../repository/catalog.repository';
 export class CatalogService {
   constructor(
     private readonly repo: CatalogRepository,
-    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    private readonly cache: CacheVersionService
   ) { }
 
   // Lấy giớ hạn không lấy phân trang
@@ -48,9 +46,9 @@ export class CatalogService {
     langId: number,
   ): Promise<any> {
     const limit = query.limit ?? 12;
-    const cacheKey = `catalog:home:${langId}:${limit}`;
+    const key = cacheKey.catalog.home(langId, limit);
 
-    return this.withCache(cacheKey, HOME_CACHE_TTL, async () => {
+    return this.cache.withCache(key, HOME_CACHE_TTL, async () => {
       const [newestRows, saleTopLimit] = await Promise.all([
         this.repo.findNewestActiveBookIds(langId, limit),
         this.repo.groupBookSales(limit),
@@ -73,9 +71,9 @@ export class CatalogService {
   }
 
   async getCategories(langId: number): Promise<CatalogCategoryTreeDto[]> {
-    const cacheKey = `catalog:categories:${langId}`;
+    const key = cacheKey.catalog.categories(langId);
 
-    return this.withCache(cacheKey, CATEGORY_CACHE_TTL, async () => {
+    return this.cache.withCache(key, CATEGORY_CACHE_TTL, async () => {
       const rows = await this.repo.findActiveCategoriesByLanguage(langId);
       return buildCatalogCategoryTree(rows);
     });
@@ -143,11 +141,11 @@ export class CatalogService {
     const { page, limit } = getPaginationParams(query.page, query.limit);
     const slugCategory = query.slugCategory?.trim();
     const keyword = query.keyword?.trim();
-    const cacheKey = `catalog:books:langId=${langId}:p${page}:l${limit}`;
+    const key = cacheKey.catalog.bookList(langId, page, limit);
 
     if (slugCategory) {
-      return this.withCache(
-        `${cacheKey}:cat=${slugCategory}`,
+      return this.cache.withCache(
+        cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory),
         LIST_CACHE_TTL,
         async () => {
           const category = await this.repo.findCategoryBySlug(
@@ -177,7 +175,7 @@ export class CatalogService {
       );
     }
 
-    return this.withCache(cacheKey, LIST_CACHE_TTL, async () => {
+    return this.cache.withCache(key, LIST_CACHE_TTL, async () => {
       const [total, rows] = await Promise.all([
         this.repo.countBooksForList(langId),
         this.repo.findBooksForList(langId, page, limit),
@@ -214,9 +212,9 @@ export class CatalogService {
     bookId: number,
     langId: number,
   ): Promise<CatalogBookDetailDto> {
-    const cacheKey = `catalog:detail:${bookId.toString()}:${langId}`;
+    const key = cacheKey.catalog.bookDetail(bookId, langId);
 
-    return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
+    return this.cache.withCache(key, DETAIL_CACHE_TTL, async () => {
       const book = await this.repo.findBookDetailById(bookId, langId);
       if (!book) throw new NotFoundException(CatalogMessage.BOOK_NOT_FOUND);
       return toCatalogBookDetail(book);
@@ -232,9 +230,9 @@ export class CatalogService {
       throw new BadRequestException(CatalogMessage.SLUG_REQUIRED);
     }
 
-    const cacheKey = `catalog:detail:slug:${normalizedSlug}:${langId}`;
+    const key = cacheKey.catalog.bookDetailBySlug(normalizedSlug, langId);
 
-    return this.withCache(cacheKey, DETAIL_CACHE_TTL, async () => {
+    return this.cache.withCache(key, DETAIL_CACHE_TTL, async () => {
       const book = await this.repo.findBookDetailBySlug(normalizedSlug, langId);
       if (!book) throw new NotFoundException(CatalogMessage.BOOK_NOT_FOUND);
       const bookIds = new Set(book.categories.map((c) => c.category.id));

@@ -1,4 +1,5 @@
 import { AdminBookMessage } from '@/common';
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PrismaService } from '@/database';
 import { AdminBookVariantsService } from '@/modules/admin/book-variant/service/admin-book-variant.service';
@@ -47,7 +48,6 @@ import {
   CreateBookAuthorLinkInput,
 } from '../repository/admin-book.repository';
 
-const ADMIN_STATS_CACHE_KEY = 'admin:stats';
 const ADMIN_STATS_CACHE_TTL = 86_400_000;
 
 @Injectable()
@@ -432,7 +432,7 @@ export class AdminBookService {
 
   async getStats(): Promise<AdminBookStatsResponseDto> {
     const cached = await this.cacheManager.get<AdminBookStatsResponseDto>(
-      ADMIN_STATS_CACHE_KEY,
+      cacheKey.admin.bookStats(),
     );
     if (cached) {
       return cached;
@@ -454,7 +454,7 @@ export class AdminBookService {
     };
 
     await this.cacheManager.set(
-      ADMIN_STATS_CACHE_KEY,
+      cacheKey.admin.bookStats(),
       response,
       ADMIN_STATS_CACHE_TTL,
     );

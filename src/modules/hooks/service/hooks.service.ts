@@ -1,4 +1,5 @@
 import { HooksMessage } from '@/common';
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { OrderService } from '@/modules/order/service/order.service';
@@ -365,12 +366,12 @@ export class HooksService {
       body,
     );
 
-    const cacheKey = `order:status:${paidOrder.orderCode}`;
-    const cachedOrder = await this.cacheManager.get(cacheKey);
+    const orderStatusKey = cacheKey.order.status(paidOrder.orderCode);
+    const cachedOrder = await this.cacheManager.get(orderStatusKey);
 
     if (cachedOrder) {
       await this.cacheManager.set(
-        cacheKey,
+        orderStatusKey,
         {
           id: paidOrder.id.toString(),
           orderCode: paidOrder.orderCode,
@@ -395,8 +396,8 @@ export class HooksService {
   }
 
   async getOrderStatus(orderCode: string) {
-    const cacheKey = `order:status:${orderCode}`;
-    const cachedOrder = await this.cacheManager.get(cacheKey);
+    const orderStatusKey = cacheKey.order.status(orderCode);
+    const cachedOrder = await this.cacheManager.get(orderStatusKey);
 
     if (cachedOrder) return cachedOrder;
 
@@ -413,7 +414,7 @@ export class HooksService {
       updatedAt: order.updatedAt,
     };
 
-    await this.cacheManager.set(cacheKey, response, ORDER_STATUS_TTL);
+    await this.cacheManager.set(orderStatusKey, response, ORDER_STATUS_TTL);
 
     return response;
   }

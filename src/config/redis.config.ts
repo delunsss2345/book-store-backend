@@ -6,7 +6,7 @@ import { CacheableMemory } from 'cacheable';
 import { IsNotEmpty, IsNumber, IsString, validateSync } from 'class-validator';
 import Redis from 'ioredis';
 
-export const REDIS = Symbol('REDIS')
+export declare const CACHE_REDIS = "CACHE_REDIS";
 export class RedisConfiguration {
   @IsNumber()
   @IsNotEmpty()
@@ -68,7 +68,7 @@ export const RedisIoredisProvider = {
   inject: [ConfigService],
   providers: [
     {
-      provide: REDIS,
+      provide: CACHE_REDIS,
       useFactory: (config: ConfigService) => {
         const host = config.get<string>('REDIS_HOST');
         const port = Number(config.get<number | string>('REDIS_PORT'));
@@ -82,7 +82,7 @@ export const RedisIoredisProvider = {
       },
     },
   ],
-  exports: [REDIS],
+  exports: [CACHE_REDIS],
 }
 
 export const CacheProvider = CacheModule.registerAsync({

@@ -1,3 +1,4 @@
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
@@ -10,7 +11,6 @@ import {
 import { toUserItem } from '../mapper';
 import { AdminUserRepository } from '../repository/admin-user.repository';
 
-const ADMIN_USER_STATS_CACHE_KEY = 'admin:users:stats';
 const ADMIN_USER_STATS_CACHE_TTL = 86_400_000;
 
 @Injectable()
@@ -60,7 +60,7 @@ export class AdminUserService {
 
   async getStats(): Promise<AdminUserStatsResponseDto> {
     const cached = await this.cacheManager.get<AdminUserStatsResponseDto>(
-      ADMIN_USER_STATS_CACHE_KEY,
+      cacheKey.admin.userStats(),
     );
     if (cached) {
       return cached;
@@ -78,7 +78,7 @@ export class AdminUserService {
     };
 
     await this.cacheManager.set(
-      ADMIN_USER_STATS_CACHE_KEY,
+      cacheKey.admin.userStats(),
       response,
       ADMIN_USER_STATS_CACHE_TTL,
     );

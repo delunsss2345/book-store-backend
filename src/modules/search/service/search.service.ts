@@ -1,4 +1,5 @@
 import { SearchMessage } from '@/common';
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { CatalogService } from '@/modules/book/catalog/service/catalog.service';
 import { GroqService } from '@/modules/groq/service/groq.service';
 import { PineconeService } from '@/modules/pinecone/service/pinecone.service';
@@ -23,8 +24,8 @@ export class SearchService {
     if (!q) {
       throw new BadRequestException(SearchMessage.Q_REQUIRED);
     }
-    const cacheKey = `query:books-sematic:${q}:${langId}:${query.page ?? 1}:${query.limit ?? 10}`;
-    const cached = await this.cache.get<any>(cacheKey);
+    const key = cacheKey.search.semantic(q, langId, query.page ?? 1, query.limit ?? 10);
+    const cached = await this.cache.get<any>(key);
     if (cached) return cached;
 
     const limit = query.limit ?? 10;
@@ -81,7 +82,7 @@ export class SearchService {
         SearchMessage.INVALID_ISBN_FORMAT_INPUT_FAILED,
       );
     }
-    const key = `isbn:${isbn}:langId:${langId}`;
+    const key = cacheKey.search.isbn(isbn, langId);
     const cached = await this.cache.get<QuickBookFillResponseDto>(key);
     if (cached) return cached;
     const googleBooksKey = process.env.GOOGLE_API_KEY_BOOK;

@@ -1,4 +1,5 @@
 import { LanguageMessage } from '@/common';
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { CATEGORY_CACHE_TTL } from '@/common/constants/enum-ttl.constant';
 import { LanguageRepository } from '@/modules/language/repository/language.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -14,16 +15,16 @@ export class LanguageService {
   ) {}
   async resolveLanguage(lang?: string): Promise<{ id: number; code: string }> {
     const normalized = (lang ?? 'vi').trim().toLowerCase();
-    const cacheKey = `lang:${normalized}`;
+    const key = cacheKey.language.resolve(normalized);
 
     // GET cached xem ngôn ngữ đó đã cached chưa, tránh gọi db
-    const cached = await this.cache.get<{ id: number; code: string }>(cacheKey);
+    const cached = await this.cache.get<{ id: number; code: string }>(key);
     if (cached) return cached;
 
     // Tìm trong bảng có ngôn ngữ này chưa
     const found = await this.languageRepository.findLanguageByCode(normalized);
     if (found) {
-      await this.cache.set(cacheKey, found, CATEGORY_CACHE_TTL);
+      await this.cache.set(key, found, CATEGORY_CACHE_TTL);
       return found;
     }
 
@@ -32,7 +33,7 @@ export class LanguageService {
     if (!fallback)
       throw new NotFoundException(LanguageMessage.NO_ACTIVE_LANGUAGE_FOUND);
 
-    await this.cache.set(cacheKey, fallback, CATEGORY_CACHE_TTL);
+    await this.cache.set(key, fallback, CATEGORY_CACHE_TTL);
     return fallback;
   }
 

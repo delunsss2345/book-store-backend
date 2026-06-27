@@ -1,10 +1,10 @@
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { AdminCategoryStatsResponseDto } from '../dto/response/admin-category-stats.response.dto';
 import { AdminCategoryRepository } from '../repository/admin-category.repository';
 
-const ADMIN_CATEGORY_STATS_CACHE_KEY = 'admin:categories:stats';
 const ADMIN_CATEGORY_STATS_CACHE_TTL = 86_400_000;
 
 @Injectable()
@@ -16,7 +16,7 @@ export class AdminCategoryService {
 
   async getStats(): Promise<AdminCategoryStatsResponseDto> {
     const cached = await this.cacheManager.get<AdminCategoryStatsResponseDto>(
-      ADMIN_CATEGORY_STATS_CACHE_KEY,
+      cacheKey.admin.categoryStats(),
     );
     if (cached) {
       return cached;
@@ -33,7 +33,7 @@ export class AdminCategoryService {
     };
 
     await this.cacheManager.set(
-      ADMIN_CATEGORY_STATS_CACHE_KEY,
+      cacheKey.admin.categoryStats(),
       response,
       ADMIN_CATEGORY_STATS_CACHE_TTL,
     );

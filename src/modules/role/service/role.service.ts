@@ -1,3 +1,4 @@
+import { cacheKey } from '@/common/constants/cache-key.constant';
 import { RoleRepository } from '@/modules/role/repository/role.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
@@ -14,7 +15,7 @@ export class RoleService {
     ) { }
 
     async findAllRole(): Promise<RoleDTO[]> {
-        const key = 'roles:all';
+        const key = cacheKey.role.all();
 
         const cached = await this.cacheManager.get<RoleDTO[]>(key);
         if (cached) return cached;
@@ -28,7 +29,7 @@ export class RoleService {
     }
 
     async findRoleByName(name: string): Promise<RoleDTO | null> {
-        const key = `roles:name:${name}`;
+        const key = cacheKey.role.byName(name);
 
         const cached = await this.cacheManager.get<RoleDTO | null>(key);
         if (cached) return cached;
@@ -43,9 +44,9 @@ export class RoleService {
     }
 
     async invalidateRoleCache(name?: string) {
-        await this.cacheManager.del('roles:all');
+        await this.cacheManager.del(cacheKey.role.all());
         if (name) {
-            await this.cacheManager.del(`roles:name:${name}`);
+            await this.cacheManager.del(cacheKey.role.byName(name));
         }
     }
 }

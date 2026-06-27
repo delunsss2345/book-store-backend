@@ -34,7 +34,6 @@ import {
   AdminBookStatsResponseDto,
   AdminBookTranslationResponseDto,
 } from '../dto/response';
-import { AdminBookDetailResponseDto } from '../dto/response/admin-book-detail.response.dto';
 import { AdminBookItemUpdateResponseDto } from '../dto/response/admin-book-update.response.dto';
 import {
   toAdminBookItem,

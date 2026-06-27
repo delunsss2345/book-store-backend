@@ -178,11 +178,28 @@ export class PurchaseOrderService {
   async updateStatusTransfer(
     purchaseOrderId: string,
     approvedById: number,
+    status: PurchaseOrderType = PurchaseOrderType.PROCESSING
   ) {
     await this.purchaseOrderRepository.updateTransferStatus(
       purchaseOrderId,
       approvedById,
-      PurchaseOrderType.PROCESSING
+      status
     );
   }
+
+  async updateStatusTransferWithChangeProcessing(
+    purchaseOrderId: string,
+    approvedById: number,
+    realPayPrice: number,
+    status: PurchaseOrderType = PurchaseOrderType.PROCESSING
+  ) {
+    await this.purchaseOrderRepository.updateTransferStatus(
+      purchaseOrderId,
+      approvedById,
+      status,
+      realPayPrice,
+    );
+  }
+
+
 }

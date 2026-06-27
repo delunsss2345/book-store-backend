@@ -15,6 +15,12 @@ export class AdminBookPriceViewVariantDto {
   @ApiProperty({ example: true })
   isActive: boolean;
 
+  @ApiProperty({ example: 10 })
+  stock: number
+
+  @ApiProperty({ example: '9494949491' })
+  isbn: string
+
   @ApiProperty({ type: () => [AdminBookPriceViewPurchaseOrderItemDto] })
   purchaseOrderItem: AdminBookPriceViewPurchaseOrderItemDto[];
 }

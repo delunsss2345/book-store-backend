@@ -130,16 +130,14 @@ export function buildAdminBookListSelect(languageId: number) {
   } satisfies Prisma.BookSelect;
 }
 
-const adminBookVariantPurchaseOrderItemIdSelect = {
-  id: true,
-} satisfies Prisma.PurchaseOrderItemSelect;
-
 const adminBookVariantPriceViewItemSelect = {
   id: true,
   price: true,
   isActive: true,
+  stock: true,
+  isbn: true,
   purchaseOrderItem: {
-    select: adminBookVariantPurchaseOrderItemIdSelect,
+    select: adminBookVariantPurchaseOrderItemSelect,
     orderBy: [{ createdAt: 'desc' as const }],
   },
 } satisfies Prisma.BookVariantSelect;

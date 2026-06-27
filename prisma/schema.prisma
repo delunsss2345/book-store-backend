@@ -932,6 +932,7 @@ model PurchaseOrder {
   statusTransfer PurchaseOrderType   @default(PENDING) @map("status_transfer")
   note         String?
   totalAmount  Decimal             @db.Decimal(18, 2)
+  realPayPrice Decimal?            @db.Decimal(18, 2) @map("real_pay_price")
   taxAmount    Decimal             @db.Decimal(18, 2)
   approvedAt   DateTime?
   createdAt    DateTime            @default(now())
@@ -955,6 +956,7 @@ model PurchaseOrderItem {
   price           Decimal  @db.Decimal(18, 2) 
   discountPrice   Decimal  @map("discount_price") @db.Decimal(18, 2)
   totalPrice      Decimal  @db.Decimal(18, 2) @map("total_price")
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt 
 

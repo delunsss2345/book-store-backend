@@ -3,7 +3,7 @@ import { buildPaginatedResult } from '@/common/pagination/base-pagination.util';
 import { PurchaseOrderService } from '@/modules/admin/purchase-order/service/purchase-order.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, PurchaseOrderType } from '@prisma/client';
 import { AdminStockImportListQueryDto, CreateAdminStockImportRequestDto } from '../dto/request';
 import {
   AdminStockImportDetailResponseDto,
@@ -68,7 +68,7 @@ export class AdminStockImportService {
       );
 
     const poItemMap = new Map(poItems.map((i) => [i.id, i]));
-
+    let purchasePrice = 0;
     const itemsWithPrices = body.items.map((item) => {
       const poItem = poItemMap.get(item.purchaseOrderItemId);
       if (!poItem) {
@@ -77,6 +77,7 @@ export class AdminStockImportService {
         );
       }
       const price = toDecimalNumber(poItem.price);
+      purchasePrice += price;
       const lackQuantity = poItem.quantity - item.realQuantity;
       const totalPrice = item.realQuantity * price - lackQuantity * price;
       return {
@@ -102,11 +103,24 @@ export class AdminStockImportService {
         },
         tx,
       );
-      await this.adminStockImportRepository.createStockImportItems(
-        si.id,
-        itemsWithPrices,
-        tx,
-      );
+      const total = Number(totalAmount);
+      const purchase = Number(purchasePrice);
+
+      const realPayPrice =
+        total > purchase
+          ? total
+          : purchase > total
+            ? purchase - Math.abs(total)
+            : purchase;
+      
+      await Promise.all([
+        this.adminStockImportRepository.createStockImportItems(
+          si.id,
+          itemsWithPrices,
+          tx,
+        ),
+        this.adminPurchaseService.updateStatusTransferWithChangeProcessing(body.purchaseOrderId, createdById, realPayPrice, PurchaseOrderType.PURCHASE)
+      ])
       return this.adminStockImportRepository.findStockImportById(si.id, tx);
     });
 

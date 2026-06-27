@@ -4,7 +4,7 @@ import { RequirePermissions } from '@/common/security/decorators/requirePermissi
 import { AdminUpdatePriceVariant } from '@/modules/admin/book-variant/dto/resquest/update-price-variant.resquest';
 import { AdminBookListQueryDto } from '@/modules/admin/book/dto/request';
 import { AdminBookListResponseDto } from '@/modules/admin/book/dto/response';
-import { BookVariant } from '@prisma/client';
+import { AdminBookVariantItemResponseDto } from '@/modules/admin/book/dto/response/admin-book-variant-item.response.dto';
 import {
     Body,
     Controller,
@@ -13,8 +13,8 @@ import {
     Patch,
     Query
 } from '@nestjs/common';
-import { AdminBookVariantItemResponseDto } from '@/modules/admin/book/dto/response/admin-book-variant-item.response.dto';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { BookVariant } from '@prisma/client';
 import { AdminBookVariantsService } from '../service/admin-book-variant.service';
 
 @ApiTags('admin')
@@ -39,7 +39,7 @@ export class AdminBookVariantController {
     @ApiBody({ type: AdminUpdatePriceVariant })
     @ApiOkResponse({ type: AdminBookVariantItemResponseDto })
     updatePrice(@Param('variantId') variantId, @Body() body: AdminUpdatePriceVariant): Promise<BookVariant> {
-        return this.adminBookVariantService.updatePriceVariant(variantId, body);
+        return this.adminBookVariantService.updatePriceVariant(Number(variantId), body);
     }
 
 }

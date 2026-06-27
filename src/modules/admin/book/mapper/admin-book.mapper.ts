@@ -6,8 +6,8 @@ import {
   AdminBookVariantPurchaseOrderItemResponseDto,
 } from '@/modules/admin/book/dto/response';
 import { AdminBookDetailResponseDto } from '@/modules/admin/book/dto/response/admin-book-detail.response.dto';
-import { AdminBookItemUpdateResponseDto } from '@/modules/admin/book/dto/response/admin-book-update.response.dto';
 import { AdminBookPriceViewResponseDto } from '@/modules/admin/book/dto/response/admin-book-price-view.response.dto';
+import { AdminBookItemUpdateResponseDto } from '@/modules/admin/book/dto/response/admin-book-update.response.dto';
 import { AdminBookDetailRow, AdminBookPriceViewRow } from '@/modules/admin/book/select';
 import { Prisma } from '@prisma/client';
 import { AdminBookRepository } from '../repository/admin-book.repository';
@@ -187,7 +187,9 @@ export function toBookPriceView(book: AdminBookPriceViewRow): AdminBookPriceView
       id: String(item.id),
       price: String(item.price),
       isActive: Boolean(item.isActive),
-      purchaseOrderItem: item.purchaseOrderItem.map((poi) => ({ id: poi.id })),
+      stock: item.stock,
+      isbn: item.isbn,
+      purchaseOrderItem: item.purchaseOrderItem,
     })),
   };
 }

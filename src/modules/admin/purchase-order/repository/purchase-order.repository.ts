@@ -156,14 +156,17 @@ export class PurchaseOrderRepository {
     purchaseOrderId: string,
     updateTransferId: number,
     status: PurchaseOrderType,
+    realPayPrice?: number,
     tx: DbClient = this.prisma,
   ) {
     return tx.purchaseOrder.update({
       where: { id: purchaseOrderId },
       data: {
         statusTransfer: status,
-        updateTransferId
+        approvedById: updateTransferId,
+        realPayPrice: realPayPrice ?? undefined
       },
     });
   }
+
 }

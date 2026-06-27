@@ -25,6 +25,7 @@ export const purchaseOrderSummarySelect = {
   statusTransfer: true,
   note: true,
   totalAmount: true,
+  realPayPrice: true,
   taxAmount: true,
   createdAt: true,
   updatedAt: true,

@@ -17,6 +17,7 @@ export type PurchaseOrderCreateResponse = {
   status: string;
   note: string | null;
   totalAmount: number;
+  realPayPrice: number | null,
   taxAmount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -81,6 +82,7 @@ export function toPurchaseOrderCreateResponse(
     note: row.note ?? null,
     totalAmount: toDecimalNumber(row.totalAmount),
     taxAmount: toDecimalNumber(row.taxAmount),
+    realPayPrice: row.realPayPrice ? toDecimalNumber(row.realPayPrice) : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     items: row.items.map((item) => toPurchaseOrderItem(item)),

@@ -16,11 +16,11 @@ type CreateOrderItemSnapshotPayload = Omit<CreateOrderItemPayload, 'orderId'>;
 export class OrderItemService {
   constructor(private readonly orderItemRepository: OrderItemRepository) { }
 
-  create(data: CreateOrderItemPayload, tx: PrismaClientTransaction) {
+  create(data: CreateOrderItemPayload, tx?: PrismaClientTransaction) {
     return this.orderItemRepository.create(data, tx);
   }
 
-  createMany(orderId: number, snapshots: CreateOrderItemSnapshotPayload[], tx: PrismaClientTransaction) {
+  createMany(orderId: number, snapshots: CreateOrderItemSnapshotPayload[], tx?: PrismaClientTransaction) {
     return this.orderItemRepository.createMany(orderId, snapshots, tx);
   }
 }

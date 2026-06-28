@@ -1,4 +1,5 @@
 import { SHIPPING_FEE } from '@/common';
+import { CACHE_REDIS } from '@/config/redis.config';
 import { PrismaClientTransaction } from '@/database';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
@@ -16,7 +17,7 @@ import { UserAddressService } from '@/modules/user/service/user-address.service'
 import { CheckoutQueue } from '@/queue/checkout/checkout.queue';
 import { EmailQueue } from '@/queue/email/email.queue';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
   CurrencyCode,
@@ -25,6 +26,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import crypto from 'crypto';
+import Redis from 'ioredis';
 
 @Injectable()
 export class OrderService {
@@ -44,7 +46,8 @@ export class OrderService {
     private readonly bookVariantService: BookVariantService,
     private readonly orderAddressService: OrderAddressService,
     private readonly checkoutQueue: CheckoutQueue,
-  ) {}
+    @Inject(CACHE_REDIS) private readonly redis: Redis
+  ) { }
 
   /**
    * Generates a hash string for the given cart items and cartId.
@@ -140,6 +143,7 @@ export class OrderService {
 
     items.forEach((i) => {
       mapVariantIds[i.bookVariantId] = i.quantity;
+
     });
 
     const variants = await this.bookVariantService.findByVariantIds(
@@ -148,13 +152,31 @@ export class OrderService {
 
     if (variants.length !== items.length)
       throw new BadRequestException('Có sản phẩm đã bị xoá');
-    variants.forEach((v) => {
-      if (v.available <= 0) throw new BadRequestException('Hết hàng');
-    });
 
-    await this.transactionService.doInTransaction(async (tx) => {
-      await this.bookVariantService.updateReservedByIds(items, tx);
-    });
+    // variants.forEach((v) => {
+    //   if (v.stock - v.reserved <= 0) throw new BadRequestException('Hết hàng');
+    // }
+    // const values = await this.redis.mget(...keys)
+    const pipeline = this.redis.pipeline()
+    for (const variant of variants) {
+      pipeline.setnx(`available:${variant.id}`, variant.stock - variant.reserved)
+    }
+    await pipeline.exec()
+
+    // Query N + 1
+    for (const item of items) {
+      const remaining = await this.redis.decrby(
+        `available:${item.bookVariantId}`,
+        item.quantity
+      )
+      if (remaining < 0) {
+        await this.redis.incrby(`available:${item.bookVariantId}`,
+          item.quantity)
+        throw new BadRequestException('Hết hàng')
+      }
+    }
+
+    // await this.bookVariantService.updateReservedByIds(items);
     this.logger.log(
       `[createCheckout] Stock reserved for ${items.length} variant(s)`,
     );

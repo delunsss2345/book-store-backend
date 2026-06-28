@@ -7,6 +7,7 @@ import Redis from "ioredis";
 export class CacheVersionService {
     constructor(@Inject(CACHE_REDIS) private readonly redis: Redis) { }
 
+
     async withCache<T>(
         namespace: string,
         ttl: number,

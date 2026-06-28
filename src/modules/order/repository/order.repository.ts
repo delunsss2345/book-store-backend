@@ -44,7 +44,15 @@ export type OrderListRow = Prisma.OrderGetPayload<{
 
 @Injectable()
 export class OrderRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
+
+  async deleteById(orderId: number) {
+    return this.prisma.order.delete({
+      where: {
+        id: orderId
+      }
+    })
+  }
 
   async findOrderItemsByOrderId(
     orderIds: number[],
@@ -286,7 +294,7 @@ export class OrderRepository {
     });
   }
 
-  create(data: Prisma.OrderUncheckedCreateInput, tx: PrismaClientTransaction) {
+  create(data: Prisma.OrderUncheckedCreateInput, tx: PrismaClientTransaction = this.prisma) {
     return tx.order.create({ data });
   }
 

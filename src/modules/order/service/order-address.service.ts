@@ -8,7 +8,7 @@ import { OrderAddressRepository } from '../repository/order-address.repository';
 export class OrderAddressService {
   constructor(private readonly orderAddressRepository: OrderAddressRepository) { }
 
-  create(data: Prisma.OrderAddressUncheckedCreateInput, tx: PrismaClientTransaction) {
+  create(data: Prisma.OrderAddressUncheckedCreateInput, tx?: PrismaClientTransaction) {
     return this.orderAddressRepository.create(data, tx);
   }
 

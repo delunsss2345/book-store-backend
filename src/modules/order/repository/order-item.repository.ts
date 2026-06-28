@@ -93,7 +93,7 @@ export class OrderItemRepository {
 
     create(
         data: { orderId: number; bookVariantSnapshotId: number; quantity: number; unitPrice: number; lineTotal: number },
-        tx: PrismaClientTransaction,
+        tx: PrismaClientTransaction = this.prisma,
     ) {
         return tx.orderItem.create({ data });
     }
@@ -101,7 +101,7 @@ export class OrderItemRepository {
     createMany(
         orderId: number,
         snapshots: Array<{ bookVariantSnapshotId: number; quantity: number; unitPrice: number; lineTotal: number }>,
-        tx: PrismaClientTransaction,
+        tx: PrismaClientTransaction = this.prisma,
     ) {
         return tx.orderItem.createMany({
             data: snapshots.map(s => ({ ...s, orderId })),

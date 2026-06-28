@@ -639,6 +639,9 @@ model BookVariant {
   supplier             Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@unique([bookId, format, edition])
+  @@index([isbn])
+  @@index([bookId, format])
+  @@index([bookId])
   @@map("book_variants")
 }
 

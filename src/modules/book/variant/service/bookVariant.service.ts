@@ -51,7 +51,7 @@ export class BookVariantService {
     return this.bookVariantRepository.updateReservedById(id, quantity, tx);
   }
 
-  updateReservedByIds(payload: CheckoutItemDto[], tx: PrismaClientTransaction) {
+  updateReservedByIds(payload: CheckoutItemDto[], tx?: PrismaClientTransaction) {
     return this.bookVariantRepository.updateReservedByIds(payload, tx);
   }
 

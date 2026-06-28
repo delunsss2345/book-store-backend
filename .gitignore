@@ -62,3 +62,4 @@ docker
 .env.*
 terraform
 nginx
+*.txt

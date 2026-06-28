@@ -153,10 +153,7 @@ export class OrderService {
     if (variants.length !== items.length)
       throw new BadRequestException('Có sản phẩm đã bị xoá');
 
-    // variants.forEach((v) => {
-    //   if (v.stock - v.reserved <= 0) throw new BadRequestException('Hết hàng');
-    // }
-    // const values = await this.redis.mget(...keys)
+
     const pipeline = this.redis.pipeline()
     for (const variant of variants) {
       pipeline.setnx(`available:${variant.id}`, variant.stock - variant.reserved)

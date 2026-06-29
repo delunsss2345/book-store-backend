@@ -33,14 +33,12 @@ export class PaymentIntentService {
   ): Promise<PaymentIntentResponseDto> {
     const paymentIntent =
       await this.paymentIntentRepository.create({
-        orderId: dto.orderId,
         orderCode: dto.orderCode,
         content: dto.content,
         gateway: dto.gateway,
         paymentUrl: dto.paymentUrl,
-        status: dto.status ?? PaymentStatus.PENDING,
         tokenUrl: dto.tokenUrl,
-        expiredAt: dto.expiredAt ?? this.getDefaultExpiredAt(),
+        expiredAt: this.getDefaultExpiredAt(),
       }, tx);
 
     return toPaymentIntentResponse(paymentIntent);
@@ -61,16 +59,16 @@ export class PaymentIntentService {
     return new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS);
   }
 
-  async markPaymentIntentAsExpire(orderId: number) {
+  async markPaymentIntentAsExpire(orderCode: string) {
     await this.paymentIntentRepository.updateStatus(
-      orderId,
+      orderCode,
       PaymentStatus.EXPIRED,
     );
   }
 
-  async markPaymentIntentAsNotFound(orderId: number) {
+  async markPaymentIntentAsNotFound(orderCode: string) {
     await this.paymentIntentRepository.updateStatus(
-      orderId,
+      orderCode,
       PaymentStatus.NOT_FOUND_ORDER_CODE,
     );
   }

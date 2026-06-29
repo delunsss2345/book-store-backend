@@ -1,32 +1,29 @@
 import { SHIPPING_FEE } from '@/common';
 import { CACHE_REDIS } from '@/config/redis.config';
 import { PrismaClientTransaction } from '@/database';
-import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
-import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { CreateCheckOutDTO } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderMapper } from '@/modules/order/mapper';
 import { OrderItemRepository } from '@/modules/order/repository/order-item.repository';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
-import { OrderAddressService } from '@/modules/order/service/order-address.service';
-import { OrderItemService } from '@/modules/order/service/order-item.service';
 import { PaymentIntentService } from '@/modules/payment/service/payment-intent.service';
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { UserAddressService } from '@/modules/user/service/user-address.service';
 import { CheckoutQueue } from '@/queue/checkout/checkout.queue';
-import { EmailQueue } from '@/queue/email/email.queue';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   CartItem,
   CurrencyCode,
   OrderStatus,
+  PaymentGateway,
   PaymentStatus,
   Prisma,
 } from '@prisma/client';
 import crypto from 'crypto';
 import Redis from 'ioredis';
+import { CreateUrlPaymentResponseDTO } from '../../payment/dto/response/create-url-payment.dto';
 
 @Injectable()
 export class OrderService {
@@ -36,15 +33,10 @@ export class OrderService {
     private readonly paymentService: PaymentService,
     private readonly orderRepository: OrderRepository,
     private readonly orderItemRepository: OrderItemRepository,
-    private readonly emailQueue: EmailQueue,
-    private readonly emailOutbox: EmailOutboxService,
-    private readonly paymentIntent: PaymentIntentService,
+    private readonly paymentIntentService: PaymentIntentService,
     private readonly transactionService: TransactionService,
     private readonly userAddressService: UserAddressService,
-    private readonly bookVariantSnapshotService: BookVariantSnapshotService,
-    private readonly orderItemService: OrderItemService,
     private readonly bookVariantService: BookVariantService,
-    private readonly orderAddressService: OrderAddressService,
     private readonly checkoutQueue: CheckoutQueue,
     @Inject(CACHE_REDIS) private readonly redis: Redis
   ) { }
@@ -218,6 +210,17 @@ export class OrderService {
         edition,
       }),
     );
+    const payment = body.paymentGateway
+    let result: CreateUrlPaymentResponseDTO | undefined;
+    if (payment !== PaymentGateway.COD) {
+      result = this.paymentService.generateQrUrl(totalAmount, orderCode)
+
+      await this.paymentIntentService.createPaymentIntent({
+        gateway: PaymentGateway.SEPAY,
+        orderCode,
+        ...result,
+      });
+    }
 
     await this.checkoutQueue.enqueueCheckout({
       isGuest,
@@ -232,17 +235,23 @@ export class OrderService {
       addressId: !isGuest ? body.addressId : undefined,
       userId: !isGuest ? userId! : undefined,
       email,
-      isError
+      isError,
+      payment
     });
     this.logger.log(`[createCheckout] Job enqueued - orderCode=${orderCode}`);
 
     return {
+      isTransfer: payment !== PaymentGateway.COD,
       orderCode,
       totalAmount,
       orderVariants,
       shipFee: SHIPPING_FEE,
+      ...(result || {})
     };
   }
+
+
+
 
   async getOrderGuest(sessionGuestId: string, page: number, limit: number) {
     const orders = await this.orderRepository.findOrderBySessionGuestId(

@@ -4,7 +4,6 @@ import { OrderStatus, PaymentGateway, PaymentStatus, Prisma } from '@prisma/clie
 import { PrismaService } from '@/database';
 
 export type CreatePaymentIntentParams = {
-  orderId: number;
   gateway: PaymentGateway;
   orderCode: string;
   content?: string;
@@ -48,7 +47,6 @@ export class PaymentIntentRepository {
 
     return db.paymentIntent.create({
       data: {
-        orderId: params.orderId,
         gateway: params.gateway,
         paymentUrl: params.paymentUrl,
         orderCode: params.orderCode,
@@ -74,10 +72,10 @@ export class PaymentIntentRepository {
     });
   }
 
-  updateStatus(orderId: number, status: PaymentStatus) {
+  updateStatus(orderCode: string, status: PaymentStatus) {
     return this.prisma.paymentIntent.updateMany({
       where: {
-        orderId,
+        orderCode,
       },
       data: {
         status,

@@ -1,4 +1,3 @@
-import { OrderMessage } from '@/common';
 import { GetGuestSessionId } from '@/common/decorators/getGuestSessionId.decorator';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
@@ -48,6 +47,7 @@ export class OrderController {
     const userId = user?.id ? Number(user.id) : null;
     return this.orderService.createCheckout(body, guestSessionId, userId);
   }
+
 
   @Get('/')
   @Public()

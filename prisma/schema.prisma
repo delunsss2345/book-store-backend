@@ -829,10 +829,10 @@ model OrderAddress {
 model PaymentTransaction {
   id      Int  @id @default(autoincrement())
   orderId Int @map("order_id")
-  userId  Int @map("user_id")
+  userId  Int? @map("user_id")
 
   gateway PaymentGateway
-  status  PaymentStatus?
+  status  PaymentStatus? @default(PENDING)
 
   amount       Decimal @db.Decimal(12, 2)
   currencyCode CurrencyCode @default(VND) @map("currency_code")
@@ -842,22 +842,19 @@ model PaymentTransaction {
 
   // Relations
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user  User  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([orderId, createdAt])
-  @@index([gateway, providerTxnId])
   @@map("payment_transactions")
 }
 
 model PaymentIntent {
   id         String         @id @default(cuid())
-  orderId    Int            @map("order_id")
-  orderCode  String         @map("order_code") @db.VarChar(50)
-
+  orderCode  String         @map("order_code") @db.VarChar(50) @unique
   content    String?        @unique @map("content") @db.VarChar(100)
 
   gateway    PaymentGateway
-  status     PaymentStatus?
+  status     PaymentStatus?  @default(PENDING)
 
   tokenUrl   String         @unique @map("token_url") @db.VarChar(200) // Dùng để lưu URL trả về token thanh toán từ cổng thanh toán
   paymentUrl String?        @map("payment_url") @db.VarChar(200) // URL để redirect người dùng đến trang thanh toán của cổng thanh toán
@@ -867,10 +864,10 @@ model PaymentIntent {
   updatedAt  DateTime       @updatedAt @map("updated_at")
 
   // Relations
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  order Order @relation(fields: [orderCode], references: [orderCode], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([orderId, createdAt])
-  @@index([orderId, gateway])
+  @@index([orderCode, createdAt])
+  @@index([orderCode, gateway])
   @@map("payment_intents")
 }
 
@@ -1040,6 +1037,7 @@ model WebhookInbox {
   gateway PaymentGateway
 
   idempotencyKey Int   @map("webhook_id") 
+
   receivedAt      DateTime @map("received_at")
   payload         Json
 

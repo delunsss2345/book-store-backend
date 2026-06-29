@@ -1,12 +1,8 @@
 import { AppModule } from '@/app.module';
-import { PaymentMessage } from '@/common';
-import { CreatePaymentTransactionDto } from '@/modules/payment/dto/request/create-payment.dto';
-import { CreateTransactionDto } from '@/modules/payment/dto/response/create-transaction.dto';
 import { CreateUrlPaymentResponseDTO } from '@/modules/payment/dto/response/create-url-payment.dto';
 import { PaymentIntentWithUrlResponseDto } from '@/modules/payment/dto/response/payment-intent-url.response.dto';
 import { PaymentRepository } from '@/modules/payment/repository/payment.repository';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { PaymentGateway } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PaymentIntentService } from './payment-intent.service';
 @Injectable()
@@ -41,40 +37,40 @@ export class PaymentService {
     return `taschen ${random}`;
   }
 
-  createTransactionUrl(dto: CreatePaymentTransactionDto): CreateTransactionDto {
-    const { orderId, gateway, amount } = dto;
+  // createTransactionUrl(dto: CreatePaymentTransactionDto): CreateTransactionDto {
+  //   const { orderId, gateway, amount } = dto;
 
-    try {
-      this.logger.log(
-        PaymentMessage.CREATE_TRANSACTION_START(
-          orderId.toString(),
-          gateway.toString(),
-        ),
-      );
-      let result = {} as CreateUrlPaymentResponseDTO;
-      switch (gateway) {
-        case PaymentGateway.SEPAY:
-          result = this.generateQrUrl(amount);
-          break;
-        default:
-          throw new BadRequestException(
-            PaymentMessage.UNSUPPORTED_PAYMENT_GATEWAY,
-          );
-      }
+  //   try {
+  //     this.logger.log(
+  //       PaymentMessage.CREATE_TRANSACTION_START(
+  //         orderId.toString(),
+  //         gateway.toString(),
+  //       ),
+  //     );
+  //     let result = {} as CreateUrlPaymentResponseDTO;
+  //     switch (gateway) {
+  //       case PaymentGateway.SEPAY:
+  //         result = this.generateQrUrl(amount);
+  //         break;
+  //       default:
+  //         throw new BadRequestException(
+  //           PaymentMessage.UNSUPPORTED_PAYMENT_GATEWAY,
+  //         );
+  //     }
 
-      return {
-        result,
-        orderId: orderId.toString(),
-        message: PaymentMessage.CREATE_TRANSACTION_SUCCESS,
-      };
-    } catch (error) {
-      this.logger.error(`${PaymentMessage.CREATE_TRANSACTION_ERROR}: ${error}`);
-      throw error;
-    }
-  }
+  //     return {
+  //       result,
+  //       orderId: orderId.toString(),
+  //       message: PaymentMessage.CREATE_TRANSACTION_SUCCESS,
+  //     };
+  //   } catch (error) {
+  //     this.logger.error(`${PaymentMessage.CREATE_TRANSACTION_ERROR}: ${error}`);
+  //     throw error;
+  //   }
+  // }
 
-  generateQrUrl(amount: number): CreateUrlPaymentResponseDTO {
-    const content = this.generateContentOrder();
+  generateQrUrl(amount: number, orderCode: string): CreateUrlPaymentResponseDTO {
+    const content = orderCode;
     const query = new URLSearchParams({
       bank: this.bank,
       acc: this.stk,
@@ -86,8 +82,8 @@ export class PaymentService {
     const token = crypto.randomBytes(32).toString('hex');
 
     return {
-      token,
-      url,
+      tokenUrl: token,
+      paymentUrl: url,
       content,
     }
   }

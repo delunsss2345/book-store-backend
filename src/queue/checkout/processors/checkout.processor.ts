@@ -10,7 +10,7 @@ import { OrderItemService } from '@/modules/order/service/order-item.service';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { BookFormat, CurrencyCode, OrderStatus, PaymentStatus } from '@prisma/client';
+import { BookFormat, CurrencyCode, OrderStatus, PaymentGateway, PaymentStatus } from '@prisma/client';
 import { Job } from 'bullmq';
 
 export type CheckoutJobPayload = {
@@ -35,6 +35,7 @@ export type CheckoutJobPayload = {
   userId?: number;
   email?: string;
   isError: boolean
+  payment: PaymentGateway
 };
 
 @Injectable()
@@ -60,6 +61,7 @@ export class CheckoutProcessor extends WorkerHost {
 
   private async processCheckout(job: Job) {
     const payload = job.data as CheckoutJobPayload;
+    const payment = payload.payment;
     const mapVariantIds = payload.mapVariantIds;
     const isError = payload.isError;
     const variants = payload.variants;
@@ -150,8 +152,11 @@ export class CheckoutProcessor extends WorkerHost {
           },
         );
         if (!isError) {
-          await this.bookVariantService.updateReservedByIds(reservedVariant)
+          if (payment === PaymentGateway.COD) {
+            await this.bookVariantService.updateReservedByIds(reservedVariant)
+          }
         }
+
       }
       catch (err) {
         await this.orderRepository.deleteById(order.id);

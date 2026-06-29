@@ -56,11 +56,11 @@ export class HooksService {
     content: string,
     webHookId: number,
     attempts: number,
-    orderId: number,
+    orderCode: string,
   ) => {
     Logger.debug('Payment intent is expired for transfer content', content);
     await Promise.all([
-      this.paymentIntent.markPaymentIntentAsExpire(orderId),
+      this.paymentIntent.markPaymentIntentAsExpire(orderCode),
       this.hooksRepository.updateWebhookStatus(
         webHookId,
         JobStatus.FAILED,
@@ -74,7 +74,7 @@ export class HooksService {
       providerEventId: null,
       content,
       webhookInboxId: webHookId.toString(),
-      orderId: orderId.toString(),
+      orderCode,
       message: HooksMessage.PAYMENT_INTENT_EXPIRED,
     };
   };
@@ -291,7 +291,7 @@ export class HooksService {
         transferContent,
         webhookInbox.id,
         attempts,
-        paymentIntent.orderId,
+        paymentIntent.orderCode,
       );
     }
 

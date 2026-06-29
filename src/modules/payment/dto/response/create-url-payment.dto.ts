@@ -4,12 +4,12 @@ export class CreateUrlPaymentResponseDTO {
     @ApiProperty({
         example: 'https://payment.com/redirect',
     })
-    url: string;
+    paymentUrl: string;
 
     @ApiProperty({
         example: 'abc123token',
     })
-    token: string;
+    tokenUrl: string;
 
     @ApiProperty({
         example: 'taschen A1b2C3d4',

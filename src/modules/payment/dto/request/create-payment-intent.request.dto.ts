@@ -1,17 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentGateway, PaymentStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePaymentIntentRequestDto {
-  @ApiProperty({
-    type: 'string',
-    description: 'ID cua don hang',
-    example: '123456789012345678',
-  })
-  @IsNotEmpty()
-  orderId: number;
-
   @ApiProperty({
     enum: PaymentGateway,
     example: PaymentGateway.SEPAY,
@@ -61,14 +52,4 @@ export class CreatePaymentIntentRequestDto {
   @IsOptional()
   @IsString()
   content?: string;
-
-  @ApiPropertyOptional({
-    type: Date,
-    description: 'Thoi gian het han cua payment intent',
-    example: '2026-04-17T12:00:00.000Z',
-  })
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  expiredAt?: Date;
 }

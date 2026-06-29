@@ -1,8 +1,9 @@
 import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { PrismaClientTransaction, PrismaService } from '@/database';
+import { PAYMENT_INTENT_EXPIRES_IN_MS } from '@/modules/payment/service/payment-intent.service';
 import { generateOrderCode } from '@/utils/generateOrderCode.util';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   CurrencyCode,
   OrderStatus,
@@ -179,14 +180,10 @@ export class OrderRepository {
     });
   }
 
-  findOrderIsExpire(orderSecondMinutes: number) {
-    Logger.debug(
-      `Tìm kiếm order đã hết hạn trước ${orderSecondMinutes} giây`,
-      'OrderRepository',
-    );
+  findOrderIsExpire() {
     return this.prisma.order.findMany({
       where: {
-        expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
+        expiredAt: { lt: new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS) },
         status: OrderStatus.PENDING_PAYMENT,
         paymentStatus: PaymentStatus.PENDING,
       },
@@ -205,7 +202,7 @@ export class OrderRepository {
     });
   }
 
-  clearOrder(variantMap: Map<string, number>, orderSecondMinutes: number) {
+  clearOrder(variantMap: Map<string, number>) {
     return this.prisma.$transaction(async (tx) => {
       for (const [key, value] of variantMap) {
         await tx.bookVariant.updateMany({
@@ -218,7 +215,8 @@ export class OrderRepository {
       }
       await tx.order.updateMany({
         where: {
-          expiredAt: { lt: new Date(Date.now() + orderSecondMinutes * 1000) },
+          expiredAt: { lt: new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS) },
+          status: OrderStatus.PENDING_PAYMENT,
         },
         data: {
           status: OrderStatus.CANCELLED,
@@ -228,36 +226,26 @@ export class OrderRepository {
     });
   }
 
-  updateOrderDone(
+  decrementVariantsStock(
+    variantKeys: string[],
     variantMap: Map<string, number>,
-    orderId: number,
-    tx?: PrismaClientTransaction,
+    tx: PrismaClientTransaction = this.prisma,
   ) {
-    const updateOrderAndVariant = async (db: PrismaClientTransaction) => {
-      for (const [key, value] of variantMap) {
-        await db.bookVariant.updateMany({
-          where: { id: Number(key) },
-          data: {
-            stock: { decrement: value },
-            reserved: { decrement: value },
-          },
-        });
-      }
-      await db.order.update({
-        where: { id: orderId },
-        data: {
-          status: OrderStatus.PAID,
-        },
-      });
-    };
-
-    if (tx) {
-      return updateOrderAndVariant(tx);
-    }
-
-    return this.prisma.$transaction(async (prismaTx) => {
-      return updateOrderAndVariant(prismaTx);
-    });
+    return tx.$executeRaw`
+      UPDATE book_variants
+      SET
+        stock = CASE id
+          ${Prisma.sql`${variantKeys.map(v =>
+      Prisma.sql`WHEN ${v} THEN stock - ${variantMap.get(v)}`
+    )}`}
+        END,
+        reserved = CASE id
+          ${Prisma.sql`${variantKeys.map(v =>
+      Prisma.sql`WHEN ${v} THEN reserved + ${variantMap.get(v)}`
+    )}`}
+        END
+      WHERE id IN (${Prisma.join(variantKeys)})
+    `;
   }
 
   findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
@@ -320,5 +308,16 @@ export class OrderRepository {
     tx: PrismaClientTransaction,
   ) {
     return tx.order.update({ where: { id }, data });
+  }
+
+  updateOrderStatusById(
+    orderId: number,
+    status: OrderStatus,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    return tx.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
   }
 }

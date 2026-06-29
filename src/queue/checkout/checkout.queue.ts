@@ -9,7 +9,7 @@ export class CheckoutQueue {
 
   async enqueueCheckout(data: unknown, jobId?: string) {
     return this.orderQueue.add(ORDER_JOBS.CHECKOUT, data, {
-      attempts: 3,
+      attempts: 1,
       backoff: { type: 'exponential', delay: 3000 },
       removeOnComplete: true,
       ...(jobId ? { jobId } : {}),

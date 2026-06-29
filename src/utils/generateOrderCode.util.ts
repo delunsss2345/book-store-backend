@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 
-export const generateOrderCode = () => `VLR${dayjs().format('YYMMDD')}${nanoid(6).toUpperCase()}`;
+const nanoidAlphanumeric = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 6);
+export const generateOrderCode = () => `VLR${dayjs().format('YYMMDD')}${nanoidAlphanumeric()}`

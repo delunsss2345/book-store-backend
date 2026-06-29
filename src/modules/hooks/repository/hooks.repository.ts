@@ -123,7 +123,6 @@ export class HooksRepository {
     // Đảm bảo nhất quán 
     markOrderAndPaymentSuccess(
         orderId: number,
-        payload: unknown,
         tx?: PrismaClientTransaction,
     ) {
         const updateOrderAndPayment = async (

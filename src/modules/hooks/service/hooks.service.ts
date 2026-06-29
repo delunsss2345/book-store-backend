@@ -34,7 +34,7 @@ export class HooksService {
     private readonly transactionService: TransactionService,
   ) { }
 
-  private async saveWebhookTransaction(
+  private async savePaymentTransaction(
     body: SePayHooksDto,
     status: PaymentStatus,
     order: WebhookOrderRef | null,
@@ -94,6 +94,7 @@ export class HooksService {
 
   private handleAlreadyProcessedPaymentIntent = async (
     content: string,
+    orderCode: string,
     webHookId: number,
     attempts: number,
     idempotencyKey: number,
@@ -103,7 +104,7 @@ export class HooksService {
       content,
     );
     await Promise.all([
-      this.paymentIntent.markPaymentIntent(content, PaymentStatus.SUCCESS),
+      this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
       this.hooksRepository.updateWebhookStatus(
         webHookId,
         JobStatus.DONE,
@@ -112,7 +113,6 @@ export class HooksService {
     ]);
     return {
       success: true,
-      duplicate: true,
       idempotencyKey,
       content,
       webhookInboxId: webHookId.toString(),
@@ -126,7 +126,7 @@ export class HooksService {
     attempts: number,
     idempotencyKey: number,
   ) => {
-    await this.saveWebhookTransaction(
+    await this.savePaymentTransaction(
       body,
       PaymentStatus.NOT_FOUND_ORDER_CODE,
       null,
@@ -150,20 +150,13 @@ export class HooksService {
     orderId: number,
     webHookId: number,
     attempts: number,
-    body: SePayHooksDto,
+    orderCode: string,
   ) => {
     return this.transactionService.doInTransaction(async (tx) => {
       const [paidOrder, doneWebhook] = await Promise.all([
-        this.hooksRepository.markOrderAndPaymentSuccess(
-          orderId,
-          tx,
-        ),
-        this.hooksRepository.updateWebhookStatus(
-          webHookId,
-          JobStatus.DONE,
-          attempts,
-          tx,
-        ),
+        this.hooksRepository.markOrderAndPaymentSuccess(orderId, tx),
+        this.hooksRepository.updateWebhookStatus(webHookId, JobStatus.DONE, attempts, tx),
+        this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
       ]);
 
       const orders =
@@ -204,7 +197,7 @@ export class HooksService {
     );
 
     Logger.debug('Received webhook event webhookInbox', webhookInbox);
-
+    // nếu cùng lúc đã thanh toán đủ nhưng bắn cùng 1 idempotencyKey quá nhiều , chỉ nhận 1
     if (webhookInbox.status === JobStatus.DONE) {
       return {
         success: true,
@@ -213,7 +206,7 @@ export class HooksService {
         message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
       };
     }
-
+    // Chưa đủ tiền nhưng gửi trùng, tăng số lần để đảm bảo không hụt tiền 
     const attempts = (webhookInbox.attempts ?? 0) + 1;
     const orderCodeContent = body.content?.trim();
 
@@ -228,7 +221,7 @@ export class HooksService {
 
     const paymentIntent = await this.paymentIntent.findByContent(orderCodeContent);
     if (!paymentIntent) {
-      await this.saveWebhookTransaction(
+      await this.savePaymentTransaction(
         body,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
@@ -243,7 +236,7 @@ export class HooksService {
 
     const order = paymentIntent.order;
     if (!order) {
-      await this.saveWebhookTransaction(
+      await this.savePaymentTransaction(
         body,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
@@ -264,7 +257,7 @@ export class HooksService {
     };
 
     if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
-      await this.saveWebhookTransaction(
+      await this.savePaymentTransaction(
         body,
         PaymentStatus.EXPIRED,
         orderRef,
@@ -277,9 +270,9 @@ export class HooksService {
         paymentIntent.orderCode,
       );
     }
-
+    // Thành công trước rồi thì update lại success cho chắc
     if (paymentIntent.status === PaymentStatus.SUCCESS) {
-      await this.saveWebhookTransaction(
+      await this.savePaymentTransaction(
         body,
         PaymentStatus.SUCCESS,
         orderRef,
@@ -287,19 +280,20 @@ export class HooksService {
 
       return this.handleAlreadyProcessedPaymentIntent(
         orderCodeContent,
+        paymentIntent.orderCode,
         webhookInbox.id,
         attempts,
         idempotencyKey,
       );
     }
-
+    // tính toán
     if (Number(body.transferAmount) !== Number(order.totalAmount)) {
       const mismatchStatus =
         Number(body.transferAmount) < Number(order.totalAmount)
           ? PaymentStatus.PAYMENT_SHORTFALL
           : PaymentStatus.PAYMENT_OVERAGE;
 
-      const result = await this.saveWebhookTransaction(
+      const result = await this.savePaymentTransaction(
         body,
         mismatchStatus,
         orderRef,
@@ -315,9 +309,11 @@ export class HooksService {
         JobStatus.FAILED,
         attempts,
       );
+      // trả quá tiền vẫn update thành công
       if (mismatchStatus === PaymentStatus.PAYMENT_OVERAGE) {
         return await this.handleAlreadyProcessedPaymentIntent(
           orderCodeContent,
+          paymentIntent.orderCode,
           webhookInbox.id,
           attempts,
           idempotencyKey,
@@ -334,7 +330,7 @@ export class HooksService {
       };
     }
 
-    await this.saveWebhookTransaction(
+    await this.savePaymentTransaction(
       body,
       PaymentStatus.SUCCESS,
       orderRef,
@@ -344,7 +340,7 @@ export class HooksService {
       order.id,
       webhookInbox.id,
       attempts,
-      body,
+      paymentIntent.orderCode,
     );
 
     return {

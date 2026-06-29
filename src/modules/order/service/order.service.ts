@@ -258,6 +258,7 @@ export class OrderService {
     const order = isGuest
       ? await this.createGuestOrder({ guestSessionId: guestSessionId!, orderCode, totalAmount, subtotal })
       : await this.createUserOrder({ userId: userId!, orderCode, totalAmount, subtotal, addressId: body.addressId! });
+
     const payment = body.paymentGateway
     let result: CreateUrlPaymentResponseDTO | undefined;
     if (payment !== PaymentGateway.COD) {
@@ -342,14 +343,8 @@ export class OrderService {
     );
   }
 
-  async cleanOrder(orderSecondMinutes: number) {
-    Logger.debug(
-      `Bắt đầu dọn dẹp order đã hết hạn trước ${orderSecondMinutes} giây`,
-      'OrderService',
-    );
-
-    const expiredOrders =
-      await this.orderRepository.findOrderIsExpire(orderSecondMinutes);
+  async cleanOrder() {
+    const expiredOrders = await this.orderRepository.findOrderIsExpire();
 
     Logger.debug(
       `Tìm thấy ${expiredOrders.length} order đã hết hạn`,
@@ -366,7 +361,7 @@ export class OrderService {
         variantMap.set(key, (variantMap.get(key) ?? 0) + item.quantity);
       }
     }
-    return this.orderRepository.clearOrder(variantMap, orderSecondMinutes);
+    return this.orderRepository.clearOrder(variantMap);
   }
 
   // Cho phép domain khác (vd HooksService) truy cập order qua service thay vì repository.
@@ -386,6 +381,10 @@ export class OrderService {
     orderId: number,
     tx?: PrismaClientTransaction,
   ) {
-    return this.orderRepository.updateOrderDone(variantMap, orderId, tx);
+    const variantKeys = [...variantMap.keys()];
+    return Promise.all([
+      this.orderRepository.decrementVariantsStock(variantKeys, variantMap, tx),
+      this.orderRepository.updateOrderStatusById(orderId, OrderStatus.PAID, tx),
+    ]);
   }
 }

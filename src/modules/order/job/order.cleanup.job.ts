@@ -1,4 +1,3 @@
-import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { OrderService } from '@/modules/order/service/order.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -13,7 +12,7 @@ export class OrderCleanupJob {
     @Cron(CronExpression.EVERY_10_HOURS)
     async cleanupOrderSessionsMinutes(): Promise<void> {
         try {
-            const result = await this.orderService.cleanOrder(ORDER_EXPIRED_SECONDS);
+            const result = await this.orderService.cleanOrder();
             this.logger.log(
                 `Order cleanup completed: ${JSON.stringify(result)} `,
             );

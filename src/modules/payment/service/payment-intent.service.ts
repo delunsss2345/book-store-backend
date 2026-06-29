@@ -58,25 +58,8 @@ export class PaymentIntentService {
     return new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS);
   }
 
-  async markPaymentIntentAsExpire(orderCode: string) {
-    await this.paymentIntentRepository.updateStatus(
-      orderCode,
-      PaymentStatus.EXPIRED,
-    );
-  }
-
-  async markPaymentIntentAsDone(orderCode: string) {
-    await this.paymentIntentRepository.updateStatus(
-      orderCode,
-      PaymentStatus.SUCCESS,
-    );
-  }
-
-  async markPaymentIntentAsNotFound(orderCode: string) {
-    await this.paymentIntentRepository.updateStatus(
-      orderCode,
-      PaymentStatus.NOT_FOUND_ORDER_CODE,
-    );
+  async markPaymentIntent(orderCode: string, status: PaymentStatus) {
+    await this.paymentIntentRepository.updateStatus(orderCode, status);
   }
 
   async findByTokenUrl(tokenUrl: string): Promise<PaymentIntentWithUrlResponseDto | null> {

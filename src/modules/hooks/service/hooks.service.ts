@@ -55,7 +55,7 @@ export class HooksService {
   ) => {
     Logger.debug('Payment intent is expired for transfer content', content);
     await Promise.all([
-      this.paymentIntent.markPaymentIntentAsExpire(orderCode),
+      this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.EXPIRED),
       this.hooksRepository.updateWebhookStatus(
         webHookId,
         JobStatus.FAILED,
@@ -103,7 +103,7 @@ export class HooksService {
       content,
     );
     await Promise.all([
-      this.paymentIntent.markPaymentIntentAsDone(content),
+      this.paymentIntent.markPaymentIntent(content, PaymentStatus.SUCCESS),
       this.hooksRepository.updateWebhookStatus(
         webHookId,
         JobStatus.DONE,

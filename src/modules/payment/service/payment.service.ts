@@ -28,19 +28,6 @@ export class PaymentService {
     return this.paymentRepository.createWebhookSepayTransaction(params);
   }
 
-  // private generateContentOrder(): string {
-  //   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  //   let random = '';
-
-  //   while (random.length < 8) {
-  //     const byte = crypto.randomBytes(1)[0];
-  //     random += chars[byte % chars.length];
-  //   }
-
-  //   return `taschen ${random}`;
-  // }
-
-
   generateQrUrl(amount: number, orderCode: string): CreateUrlPaymentResponseDTO {
     const content = orderCode;
     const query = new URLSearchParams({

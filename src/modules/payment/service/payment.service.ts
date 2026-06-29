@@ -23,7 +23,6 @@ export class PaymentService {
     private readonly paymentRepository: PaymentRepository,
   ) { }
 
-  // Cho phép domain khác (vd HooksService) ghi giao dịch webhook qua service thay vì repository
   createWebhookSepayTransaction(
     params: Parameters<PaymentRepository['createWebhookSepayTransaction']>[0],
   ) {

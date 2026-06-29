@@ -109,6 +109,7 @@ export class OrderService {
     guestSessionId: string | null,
     userId: number | null,
   ) {
+
     const isGuest = body.isGuest;
     this.logger.log(
       `[createCheckout] START - isGuest=${isGuest}, userId=${userId}, items=${body.items.length}`,
@@ -153,27 +154,47 @@ export class OrderService {
     if (variants.length !== items.length)
       throw new BadRequestException('Có sản phẩm đã bị xoá');
 
+    let isError = false;
+    try {
+      const pipeline = this.redis.pipeline()
+      for (const variant of variants) {
+        pipeline.set(`available:${variant.id}`, variant.stock - variant.reserved, 'EX', 3600, "NX")
+      }
+      await pipeline.exec()
 
-    const pipeline = this.redis.pipeline()
-    for (const variant of variants) {
-      pipeline.setnx(`available:${variant.id}`, variant.stock - variant.reserved)
-    }
-    await pipeline.exec()
+      // Query N + 1
+      const luaScript = `
+      local result = {}
+      for i = 1, #KEYS do
+        result[i] = redis.call('DECRBY', KEYS[i], ARGV[i])
+      end
+      return result
+    `
+      const keys = items.map(i => `available:${i.bookVariantId}`)
+      const quantity = items.map(i => i.quantity.toString())
 
-    // Query N + 1
-    for (const item of items) {
-      const remaining = await this.redis.decrby(
-        `available:${item.bookVariantId}`,
-        item.quantity
-      )
-      if (remaining < 0) {
-        await this.redis.incrby(`available:${item.bookVariantId}`,
-          item.quantity)
-        throw new BadRequestException('Hết hàng')
+      let count = 0;
+      const result = await this.redis.eval(luaScript, keys.length, ...keys, ...quantity) as number[]
+
+      for (const _ of items) {
+        const remaining = result[count++]
+        if (remaining < 0) {
+          await this.redis.incrby(keys[count], quantity[count])
+          throw new BadRequestException('Hết hàng')
+        }
       }
     }
+    catch {
+      isError = true;
+      variants.forEach((v) => {
+        if (v.stock - v.reserved <= 0) throw new BadRequestException('Hết hàng')
+      })
 
-    // await this.bookVariantService.updateReservedByIds(items);
+      await this.transactionService.doInTransaction(async (tx) => {
+        await this.bookVariantService.updateReservedByIds(items, tx);
+      });
+    }
+
     this.logger.log(
       `[createCheckout] Stock reserved for ${items.length} variant(s)`,
     );
@@ -211,6 +232,7 @@ export class OrderService {
       addressId: !isGuest ? body.addressId : undefined,
       userId: !isGuest ? userId! : undefined,
       email,
+      isError
     });
     this.logger.log(`[createCheckout] Job enqueued - orderCode=${orderCode}`);
 

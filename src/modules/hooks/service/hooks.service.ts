@@ -36,7 +36,7 @@ export class HooksService {
 
   private async saveWebhookTransaction(
     body: SePayHooksDto,
-    providerEventId: string,
+    providerEventId: number,
     status: PaymentStatus,
     order?: WebhookOrderRef | null,
   ) {
@@ -44,10 +44,9 @@ export class HooksService {
       amount: Number(body.transferAmount),
       orderId: order?.id ?? null,
       userId: order?.userId ?? null,
-      providerEventId,
       referenceNumber: body.referenceCode?.toString().slice(0, 200) ?? null,
       requestId: body.code?.toString().slice(0, 100) ?? null,
-      idempotencyKey: providerEventId.slice(0, 100),
+      idempotencyKey,
       status,
       payload: body,
     });
@@ -132,11 +131,11 @@ export class HooksService {
     body: SePayHooksDto,
     webHookId: number,
     attempts: number,
-    providerEventId: string,
+    idempotencyKey: number,
   ) => {
     await this.saveWebhookTransaction(
       body,
-      providerEventId,
+      idempotencyKey,
       PaymentStatus.NOT_FOUND_ORDER_CODE,
       null,
     );
@@ -151,7 +150,7 @@ export class HooksService {
     return {
       ok: true,
       ignored: true,
-      providerEventId,
+      idempotencyKey,
       webhookInboxId: doneWebhook.id.toString(),
       message: HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT,
     };
@@ -208,14 +207,13 @@ export class HooksService {
 
   async handleSepayWebhook(body: SePayHooksDto) {
     Logger.debug('Received webhook event', body);
-
-    const providerEventId = this.extractProviderEventId(body);
-    if (!providerEventId) {
+    const idempotencyKey = body.id;
+    if (!idempotencyKey) {
       throw new BadRequestException(HooksMessage.MISSING_WEBHOOK_EVENT_ID);
     }
 
     const webhookInbox = await this.hooksRepository.saveSepayWebhook(
-      providerEventId,
+      idempotencyKey,
       body,
     );
     Logger.debug('Received webhook event webhookInbox', webhookInbox);
@@ -223,7 +221,7 @@ export class HooksService {
     if (webhookInbox.status === JobStatus.DONE) {
       return {
         ok: true,
-        providerEventId,
+        idempotencyKey,
         webhookInboxId: webhookInbox.id.toString(),
         message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
       };
@@ -237,7 +235,7 @@ export class HooksService {
         body,
         webhookInbox.id,
         attempts,
-        providerEventId,
+        idempotencyKey,
       );
     }
 
@@ -245,7 +243,7 @@ export class HooksService {
     if (!paymentIntent) {
       await this.saveWebhookTransaction(
         body,
-        providerEventId,
+        idempotencyKey,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
       );
@@ -261,7 +259,7 @@ export class HooksService {
     if (!order) {
       await this.saveWebhookTransaction(
         body,
-        providerEventId,
+        idempotencyKey,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
       );
@@ -284,7 +282,7 @@ export class HooksService {
     if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
       await this.saveWebhookTransaction(
         body,
-        providerEventId,
+        idempotencyKey,
         PaymentStatus.EXPIRED,
         orderRef,
       );
@@ -300,7 +298,7 @@ export class HooksService {
     if (paymentIntent.status === PaymentStatus.SUCCESS) {
       await this.saveWebhookTransaction(
         body,
-        providerEventId,
+        idempotencyKey,
         PaymentStatus.SUCCESS,
         orderRef,
       );
@@ -309,7 +307,7 @@ export class HooksService {
         transferContent,
         webhookInbox.id,
         attempts,
-        providerEventId,
+        idempotencyKey,
       );
     }
 
@@ -321,14 +319,14 @@ export class HooksService {
 
       await this.saveWebhookTransaction(
         body,
-        providerEventId,
+        idempotencyKey,
         mismatchStatus,
         orderRef,
       );
 
       await this.hooksRepository.markPaymentNotSuccess(
         order.id,
-        providerEventId,
+        idempotencyKey,
         body,
         mismatchStatus,
       );
@@ -342,7 +340,7 @@ export class HooksService {
 
       return {
         ok: false,
-        providerEventId,
+        idempotencyKey,
         content: transferContent,
         webhookInboxId: webhookInbox.id.toString(),
         orderId: order.id.toString(),
@@ -362,7 +360,7 @@ export class HooksService {
       order.id,
       webhookInbox.id,
       attempts,
-      providerEventId,
+      idempotencyKey,
       body,
     );
 
@@ -419,9 +417,4 @@ export class HooksService {
     return response;
   }
 
-  private extractProviderEventId(body: SePayHooksDto): string | null {
-    const raw = body.id ?? body.referenceCode ?? body.code;
-    if (raw === undefined || raw === null) return null;
-    return raw.toString().trim();
-  }
 }

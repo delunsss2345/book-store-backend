@@ -1,16 +1,15 @@
 import { PrismaService } from "@/database";
 import { CreatePaymentTransactionDto } from "@/modules/payment/dto/request/create-payment.dto";
 import { Injectable } from "@nestjs/common";
-import { PaymentGateway, PaymentStatus, Prisma } from "@prisma/client";
+import { CurrencyCode, PaymentGateway, PaymentStatus, Prisma } from "@prisma/client";
 
 type CreateWebhookSepayTransactionParams = {
     amount: number;
     orderId?: number | null;
     userId?: number | null;
-    providerEventId: string;
     referenceNumber?: string | null;
     requestId?: string | null;
-    idempotencyKey?: string | null;
+    idempotencyKey: number;
     status: PaymentStatus;
     payload: unknown;
     paymentUrl?: string | null;
@@ -47,11 +46,9 @@ export class PaymentRepository {
                 gateway: PaymentGateway.SEPAY,
                 status: params.status,
                 amount: params.amount,
-                currencyCode: params.currencyCode ?? 'VND',
-                providerTxnId: params.providerEventId,
+                currencyCode: CurrencyCode.VND,
                 referenceNumber: params.referenceNumber ?? null,
-                requestId: params.requestId ?? null,
-                idempotencyKey: params.idempotencyKey ?? params.providerEventId,
+                idempotencyKey: params.idempotencyKey,
                 paymentUrl: params.paymentUrl ?? null,
                 requestPayload: params.payload as Prisma.InputJsonValue,
                 responsePayload: params.payload as Prisma.InputJsonValue,

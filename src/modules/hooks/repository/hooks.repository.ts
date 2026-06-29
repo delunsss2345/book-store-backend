@@ -24,7 +24,7 @@ type PaymentNotSuccess = typeof PaymentNotSuccessStatus[keyof typeof PaymentNotS
 export class HooksRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    saveSepayWebhook(providerEventId: string, payload: unknown) {
+    saveSepayWebhook(providerEventId: number, payload: unknown) {
         const receivedAt = new Date();
 
         return this.prisma.webhookInbox.upsert({

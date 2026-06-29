@@ -828,8 +828,8 @@ model OrderAddress {
 
 model PaymentTransaction {
   id      Int  @id @default(autoincrement())
-  orderId Int? @map("order_id")
-  userId  Int? @map("user_id")
+  orderId Int @map("order_id")
+  userId  Int @map("user_id")
 
   gateway PaymentGateway
   status  PaymentStatus?
@@ -837,20 +837,12 @@ model PaymentTransaction {
   amount       Decimal @db.Decimal(12, 2)
   currencyCode CurrencyCode @default(VND) @map("currency_code")
 
-  providerTxnId   String? @map("provider_txn_id") @db.VarChar(200)
-  referenceNumber String? @map("reference_number") @db.VarChar(200)
-  requestId       String? @map("request_id") @db.VarChar(100)
-  idempotencyKey  String? @map("idempotency_key") @db.VarChar(100)
-  paymentUrl      String? @map("payment_url") @db.VarChar(100)
-  requestPayload  Json?   @map("request_payload")
-  responsePayload Json?   @map("response_payload")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user  User  @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([orderId, createdAt])
   @@index([gateway, providerTxnId])
@@ -861,11 +853,15 @@ model PaymentIntent {
   id         String         @id @default(cuid())
   orderId    Int            @map("order_id")
   orderCode  String         @map("order_code") @db.VarChar(50)
+
   content    String?        @unique @map("content") @db.VarChar(100)
+
   gateway    PaymentGateway
   status     PaymentStatus?
+
   tokenUrl   String         @unique @map("token_url") @db.VarChar(200) // Dùng để lưu URL trả về token thanh toán từ cổng thanh toán
   paymentUrl String?        @map("payment_url") @db.VarChar(200) // URL để redirect người dùng đến trang thanh toán của cổng thanh toán
+  
   expiredAt  DateTime       @map("expires_at")
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
@@ -1043,15 +1039,14 @@ model WebhookInbox {
   id      Int         @id @default(autoincrement())
   gateway PaymentGateway
 
-  providerEventId String   @map("provider_event_id") @db.VarChar(200)
+  idempotencyKey Int   @map("webhook_id") 
   receivedAt      DateTime @map("received_at")
   payload         Json
 
   processedAt DateTime?  @map("processed_at")
   status      JobStatus?
   attempts    Int?
-  lastError   String?    @map("last_error") @db.Text
 
-  @@unique([gateway, providerEventId])
+  @@unique([gateway, idempotencyKey])
   @@map("webhook_inbox")
 }

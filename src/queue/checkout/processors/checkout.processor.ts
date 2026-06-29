@@ -2,11 +2,11 @@ import { SHIPPING_FEE } from '@/common';
 import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { ORDER_JOBS } from '@/common/constants/order-jobs.constant';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
+import { BookVariantService } from '@/modules/book/variant';
 import { GuestAddressDto } from '@/modules/order/dto/request/create-orders.dto';
 import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { OrderAddressService } from '@/modules/order/service/order-address.service';
 import { OrderItemService } from '@/modules/order/service/order-item.service';
-import { TransactionService } from '@/modules/transaction/service/transaction.service';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
@@ -34,6 +34,7 @@ export type CheckoutJobPayload = {
   addressId?: number;
   userId?: number;
   email?: string;
+  isError: boolean
 };
 
 @Injectable()
@@ -42,11 +43,11 @@ export class CheckoutProcessor extends WorkerHost {
   private readonly logger = new Logger(CheckoutProcessor.name);
 
   constructor(
-    private readonly transactionService: TransactionService,
     private readonly bookVariantSnapshotService: BookVariantSnapshotService,
     private readonly orderRepository: OrderRepository,
     private readonly orderItemService: OrderItemService,
     private readonly orderAddressService: OrderAddressService,
+    private readonly bookVariantService: BookVariantService
   ) {
     super();
   }
@@ -60,9 +61,8 @@ export class CheckoutProcessor extends WorkerHost {
   private async processCheckout(job: Job) {
     const payload = job.data as CheckoutJobPayload;
     const mapVariantIds = payload.mapVariantIds;
-    this.logger.debug(`[${payload.orderCode}] START processCheckout job=${job.id} isGuest=${payload.isGuest} variants=${payload.variants.length}`);
+    const isError = payload.isError;
     const variants = payload.variants;
-    this.logger.debug(`[${payload.orderCode}] Building upsertSnapshots for ${variants.length} variant(s)`);
 
     const upsertSnapshots: {
       contentHash: string,
@@ -88,31 +88,27 @@ export class CheckoutProcessor extends WorkerHost {
       });
     });
 
-    this.logger.debug(`[${payload.orderCode}] createMany snapshots count=${upsertSnapshots.length}`);
     await this.bookVariantSnapshotService.createMany(upsertSnapshots);
-    this.logger.debug(`[${payload.orderCode}] createMany done`);
 
     const foundSnapshots = await this.bookVariantSnapshotService.findAllByContentHashes(
       upsertSnapshots.map(s => s.contentHash),
     );
-    this.logger.debug(`[${payload.orderCode}] findAllByContentHashes returned ${foundSnapshots.length} snapshot(s) ${JSON.stringify(foundSnapshots)}`);
+
+    const reservedVariant: {
+      bookVariantId: number,
+      quantity: number
+    }[] = [];
+
     const snapshotIdMap = new Map(foundSnapshots.map(s => [s.contentHash, s.id]));
-    this.logger.debug(`[${payload.orderCode}] snapshotIdMap size=${snapshotIdMap.size} keys=${JSON.stringify([...snapshotIdMap.keys()])}`);
-    this.logger.debug(`[${payload.orderCode}] upsertSnapshots contentHashes=${JSON.stringify(upsertSnapshots.map(s => s.contentHash))}`);
-    this.logger.debug(`${JSON.stringify(upsertSnapshots)}`)
     const snapshotItems = upsertSnapshots.map(s => {
       const quantity = mapVariantIds[s.bookVariantId];
-      console.log(quantity);
       const bookVariantSnapshotId = snapshotIdMap.get(s.contentHash);
-      this.logger.debug(
-        `[${payload.orderCode}] mapping variantId=${s.bookVariantId} contentHash=${s.contentHash} -> snapshotId=${bookVariantSnapshotId} quantity=${quantity}`,
-      );
-      if (bookVariantSnapshotId === undefined) {
-        this.logger.error(`[${payload.orderCode}] MISSING snapshot for contentHash=${s.contentHash} variantId=${s.bookVariantId}`);
-      }
-      if (quantity === undefined) {
-        this.logger.error(`[${payload.orderCode}] MISSING quantity for variantId=${s.bookVariantId}`);
-      }
+
+      reservedVariant.push({
+        bookVariantId: s.bookVariantId,
+        quantity: quantity
+      })
+
       return {
         bookVariantSnapshotId: bookVariantSnapshotId!,
         quantity: quantity,
@@ -120,10 +116,8 @@ export class CheckoutProcessor extends WorkerHost {
         lineTotal: s.priceSnapshot * quantity,
       };
     });
-    this.logger.debug(`[${payload.orderCode}] snapshotItems built: ${JSON.stringify(snapshotItems)}`);
 
     if (payload.isGuest) {
-      this.logger.debug(`[${payload.orderCode}] Creating order (guest)`);
       const order = await this.orderRepository.create(
         {
           guestSessionId: payload.guestSessionId,
@@ -138,13 +132,10 @@ export class CheckoutProcessor extends WorkerHost {
         },
       );
       try {
-        this.logger.debug(`[${payload.orderCode}] Order created id=${order.id}`);
 
         await this.orderItemService.createMany(order.id, snapshotItems);
-
-        this.logger.debug(`[${payload.orderCode}] Order items created`);
-
         const guestAddress = payload.guestAddress!;
+
         await this.orderAddressService.create(
           {
             orderId: order.id,
@@ -158,8 +149,9 @@ export class CheckoutProcessor extends WorkerHost {
             note: guestAddress.note,
           },
         );
-        this.logger.debug(`[${payload.orderCode}] Guest address created`);
-
+        if (!isError) {
+          await this.bookVariantService.updateReservedByIds(reservedVariant)
+        }
       }
       catch (err) {
         await this.orderRepository.deleteById(order.id);
@@ -175,7 +167,6 @@ export class CheckoutProcessor extends WorkerHost {
       //   await this.emailQueue.enqueueOrderEmail(outbox.id);
       // }
     } else {
-      this.logger.debug(`[${payload.orderCode}] Creating order (user=${payload.userId})`);
       const order = await this.orderRepository.create(
         {
           userId: payload.userId,
@@ -189,12 +180,15 @@ export class CheckoutProcessor extends WorkerHost {
           subtotal: payload.subtotal,
           addressId: payload.addressId,
         },
-      );
-      try {
-        this.logger.debug(`[${payload.orderCode}] Order created id=${order.id}`);
 
+      );
+
+
+      try {
         await this.orderItemService.createMany(order.id, snapshotItems);
-        this.logger.debug(`[${payload.orderCode}] Order items created`);
+        if (!isError) {
+          await this.bookVariantService.updateReservedByIds(reservedVariant)
+        }
       }
       catch (err) {
         await this.orderRepository.deleteById(order.id);

@@ -241,7 +241,7 @@ export class OrderRepository {
         END,
         reserved = CASE id
           ${Prisma.sql`${variantKeys.map(v =>
-      Prisma.sql`WHEN ${v} THEN reserved + ${variantMap.get(v)}`
+      Prisma.sql`WHEN ${v} THEN reserved - ${variantMap.get(v)}`
     )}`}
         END
       WHERE id IN (${Prisma.join(variantKeys)})

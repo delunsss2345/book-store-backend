@@ -214,11 +214,12 @@ export class OrderService {
       const result = await this.redis.eval(luaScript, keys.length, ...keys, ...quantity) as number[]
 
       for (const _ of items) {
-        const remaining = result[count++]
+        const remaining = result[count]
         if (remaining < 0) {
           await this.redis.incrby(keys[count], quantity[count])
           throw new BadRequestException('Hết hàng')
         }
+        count++
       }
     }
     catch {

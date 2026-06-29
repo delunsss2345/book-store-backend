@@ -76,7 +76,6 @@ export class HooksRepository {
         webhookId: number,
         status: JobStatus,
         attempts: number,
-        lastError?: string,
         tx?: PrismaClientTransaction,
     ) {
         const db = tx ?? this.prisma;
@@ -86,14 +85,12 @@ export class HooksRepository {
                 status,
                 attempts,
                 processedAt: new Date(),
-                lastError: lastError ?? null,
             },
             select: {
                 id: true,
                 status: true,
                 attempts: true,
                 processedAt: true,
-                lastError: true,
             },
         });
     }
@@ -126,7 +123,6 @@ export class HooksRepository {
     // Đảm bảo nhất quán 
     markOrderAndPaymentSuccess(
         orderId: number,
-        idempotencyKey: number,
         payload: unknown,
         tx?: PrismaClientTransaction,
     ) {
@@ -152,8 +148,6 @@ export class HooksRepository {
                 where: { orderId },
                 data: {
                     status: PaymentStatus.SUCCESS,
-                    providerTxnId: idempotencyKey.toString(),
-                    responsePayload: payload as Prisma.InputJsonValue,
                 },
             });
 
@@ -168,15 +162,12 @@ export class HooksRepository {
             return updateOrderAndPayment(prismaTx);
         });
     }
-    // Đảm bảo nhất quán 
-    markPaymentNotSuccess(orderId: number, idempotencyKey: number, payload: unknown, status: PaymentNotSuccess) {
+    markPaymentNotSuccess(paymentId: number, status: PaymentNotSuccess) {
         return this.prisma.$transaction(async (tx) => {
-            await tx.paymentTransaction.updateMany({
-                where: { orderId },
+            await tx.paymentTransaction.update({
+                where: { id: paymentId },
                 data: {
-                    status,
-                    providerTxnId: idempotencyKey.toString(),
-                    responsePayload: payload as Prisma.InputJsonValue,
+                    status
                 },
             });
         });

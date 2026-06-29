@@ -36,19 +36,14 @@ export class HooksService {
 
   private async saveWebhookTransaction(
     body: SePayHooksDto,
-    idempotencyKey: number,
     status: PaymentStatus,
-    order?: WebhookOrderRef | null,
+    order: WebhookOrderRef | null,
   ) {
-    await this.paymentService.createWebhookSepayTransaction({
+    return await this.paymentService.createWebhookSepayTransaction({
       amount: Number(body.transferAmount),
       orderId: order?.id ?? null,
       userId: order?.userId ?? null,
-      referenceNumber: body.referenceCode?.toString().slice(0, 200) ?? null,
-      requestId: body.code?.toString().slice(0, 100) ?? null,
-      idempotencyKey,
       status,
-      payload: body,
     });
   }
 
@@ -65,12 +60,11 @@ export class HooksService {
         webHookId,
         JobStatus.FAILED,
         attempts,
-        HooksMessage.PAYMENT_INTENT_EXPIRED,
       ),
     ]);
 
     return {
-      ok: false,
+      success: false,
       content,
       webhookInboxId: webHookId.toString(),
       orderCode,
@@ -88,11 +82,10 @@ export class HooksService {
       webHookId,
       JobStatus.FAILED,
       attempts,
-      HooksMessage.PAYMENT_INTENT_NOT_FOUND,
     );
 
     return {
-      ok: false,
+      success: false,
       content,
       webhookInboxId: webHookId.toString(),
       message: HooksMessage.PAYMENT_INTENT_NOT_FOUND,
@@ -113,10 +106,9 @@ export class HooksService {
       webHookId,
       JobStatus.DONE,
       attempts,
-      HooksMessage.WEBHOOK_ALREADY_PROCESSED_FOR_SUCCESS_PAYMENT_INTENT,
     );
     return {
-      ok: true,
+      success: true,
       duplicate: true,
       idempotencyKey,
       content,
@@ -133,7 +125,6 @@ export class HooksService {
   ) => {
     await this.saveWebhookTransaction(
       body,
-      idempotencyKey,
       PaymentStatus.NOT_FOUND_ORDER_CODE,
       null,
     );
@@ -142,13 +133,11 @@ export class HooksService {
       webHookId,
       JobStatus.DONE,
       attempts,
-      HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT_RECORDED,
     );
 
     return {
-      ok: true,
+      success: true,
       ignored: true,
-      idempotencyKey,
       webhookInboxId: doneWebhook.id.toString(),
       message: HooksMessage.WEBHOOK_MISSING_TRANSFER_CONTENT,
     };
@@ -158,22 +147,18 @@ export class HooksService {
     orderId: number,
     webHookId: number,
     attempts: number,
-    idempotencyKey: number,
     body: SePayHooksDto,
   ) => {
     return this.transactionService.doInTransaction(async (tx) => {
       const [paidOrder, doneWebhook] = await Promise.all([
         this.hooksRepository.markOrderAndPaymentSuccess(
           orderId,
-          idempotencyKey,
-          body,
           tx,
         ),
         this.hooksRepository.updateWebhookStatus(
           webHookId,
           JobStatus.DONE,
           attempts,
-          undefined,
           tx,
         ),
       ]);
@@ -219,7 +204,7 @@ export class HooksService {
 
     if (webhookInbox.status === JobStatus.DONE) {
       return {
-        ok: true,
+        success: true,
         idempotencyKey,
         webhookInboxId: webhookInbox.id.toString(),
         message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
@@ -242,7 +227,6 @@ export class HooksService {
     if (!paymentIntent) {
       await this.saveWebhookTransaction(
         body,
-        idempotencyKey,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
       );
@@ -258,7 +242,6 @@ export class HooksService {
     if (!order) {
       await this.saveWebhookTransaction(
         body,
-        idempotencyKey,
         PaymentStatus.NOT_FOUND_ORDER_CODE,
         null,
       );
@@ -267,7 +250,6 @@ export class HooksService {
         webhookInbox.id,
         JobStatus.FAILED,
         attempts,
-        HooksMessage.ORDER_NOT_FOUND,
       );
 
       throw new BadRequestException(HooksMessage.ORDER_NOT_FOUND);
@@ -281,7 +263,6 @@ export class HooksService {
     if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
       await this.saveWebhookTransaction(
         body,
-        idempotencyKey,
         PaymentStatus.EXPIRED,
         orderRef,
       );
@@ -297,7 +278,6 @@ export class HooksService {
     if (paymentIntent.status === PaymentStatus.SUCCESS) {
       await this.saveWebhookTransaction(
         body,
-        idempotencyKey,
         PaymentStatus.SUCCESS,
         orderRef,
       );
@@ -316,17 +296,14 @@ export class HooksService {
           ? PaymentStatus.PAYMENT_SHORTFALL
           : PaymentStatus.PAYMENT_OVERAGE;
 
-      await this.saveWebhookTransaction(
+      const result = await this.saveWebhookTransaction(
         body,
-        idempotencyKey,
         mismatchStatus,
         orderRef,
       );
 
       await this.hooksRepository.markPaymentNotSuccess(
-        order.id,
-        idempotencyKey,
-        body,
+        result.id,
         mismatchStatus,
       );
 
@@ -334,11 +311,17 @@ export class HooksService {
         webhookInbox.id,
         JobStatus.FAILED,
         attempts,
-        HooksMessage.PAYMENT_AMOUNT_MISMATCH(order.orderCode),
       );
-
+      if (mismatchStatus === PaymentStatus.PAYMENT_OVERAGE) {
+        return await this.handleAlreadyProcessedPaymentIntent(
+          orderCodeContent,
+          webhookInbox.id,
+          attempts,
+          idempotencyKey,
+        );
+      }
       return {
-        ok: false,
+        success: false,
         idempotencyKey,
         content: orderCodeContent,
         webhookInboxId: webhookInbox.id.toString(),
@@ -350,7 +333,6 @@ export class HooksService {
 
     await this.saveWebhookTransaction(
       body,
-      idempotencyKey,
       PaymentStatus.SUCCESS,
       orderRef,
     );
@@ -359,12 +341,11 @@ export class HooksService {
       order.id,
       webhookInbox.id,
       attempts,
-      idempotencyKey,
       body,
     );
 
     return {
-      ok: true,
+      success: true,
       idempotencyKey,
       content: orderCodeContent,
       webhookInboxId: doneWebhook.id.toString(),

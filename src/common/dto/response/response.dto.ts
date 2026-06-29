@@ -2,7 +2,7 @@ import { Status } from '@common/constants/enum.constant';
 import { HttpStatus } from '@nestjs/common';
 
 export class ResponseDto<T> {
-    success: Status = Status.OK;
+    success: boolean;
     statusCode: number = HttpStatus.OK;
     message?: string;
     data?: T;
@@ -22,7 +22,7 @@ export class ResponseDto<T> {
         path: string;
     }) {
         return new ResponseDto({
-            success: Status.NO,
+            success: Boolean(Status.NO),
             statusCode,
             message,
             path,
@@ -39,7 +39,7 @@ export class ResponseDto<T> {
         message?: string;
     }) {
         return new ResponseDto<T>({
-            success: Status.OK,
+            success: Boolean(Status.OK),
             statusCode,
             message,
             data,

@@ -41,11 +41,10 @@ export class PaymentIntentRepository {
 
   create(
     params: CreatePaymentIntentParams,
-    tx?: Prisma.TransactionClient,
+    tx: Prisma.TransactionClient = this.prisma,
   ) {
-    const db = tx ?? this.prisma;
 
-    return db.paymentIntent.create({
+    return tx.paymentIntent.create({
       data: {
         gateway: params.gateway,
         paymentUrl: params.paymentUrl,

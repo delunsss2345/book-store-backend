@@ -1,23 +1,26 @@
-import { AppModule } from '@/app.module';
 import { CreateUrlPaymentResponseDTO } from '@/modules/payment/dto/response/create-url-payment.dto';
 import { PaymentIntentWithUrlResponseDto } from '@/modules/payment/dto/response/payment-intent-url.response.dto';
 import { PaymentRepository } from '@/modules/payment/repository/payment.repository';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { PaymentIntentService } from './payment-intent.service';
 @Injectable()
 export class PaymentService {
-
   private readonly logger = new Logger(PaymentService.name);
-  private readonly bank = AppModule.CONFIGURATION.PAYMENT_CONFIG.BANK_ID;
-  private readonly stk = AppModule.CONFIGURATION.PAYMENT_CONFIG.ACCOUNT_NO;
-  private readonly template =
-    AppModule.CONFIGURATION.PAYMENT_CONFIG.TEMPLATE_OR;
+  private bank: string;
+  private stk: string;
+  private template: string;
 
   constructor(
+    private readonly configService: ConfigService,
     private readonly paymentIntentService: PaymentIntentService,
     private readonly paymentRepository: PaymentRepository,
-  ) { }
+  ) {
+    this.bank = this.configService.get<string>('BANK_ID')!;
+    this.stk = this.configService.get<string>('ACCOUNT_NO')!;
+    this.template = this.configService.get<string>('TEMPLATE_OR')!;
+  }
 
   createWebhookSepayTransaction(
     params: Parameters<PaymentRepository['createWebhookSepayTransaction']>[0],

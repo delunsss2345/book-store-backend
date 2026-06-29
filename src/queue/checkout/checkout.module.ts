@@ -7,4 +7,4 @@ import { CheckoutQueue } from './checkout.queue';
   providers: [CheckoutQueue],
   exports: [CheckoutQueue],
 })
-export class CheckoutModule {}
+export class CheckoutModule { }

@@ -1,19 +1,18 @@
-import { SHIPPING_FEE } from '@/common';
-import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { ORDER_JOBS } from '@/common/constants/order-jobs.constant';
 import { BookVariantSnapshotService } from '@/modules/book/snapshot/service/book-snapshot.service';
 import { BookVariantService } from '@/modules/book/variant';
 import { GuestAddressDto } from '@/modules/order/dto/request/create-orders.dto';
-import { OrderRepository } from '@/modules/order/repository/order.repository';
 import { OrderAddressService } from '@/modules/order/service/order-address.service';
 import { OrderItemService } from '@/modules/order/service/order-item.service';
+import { OrderService } from '@/modules/order/service/order.service';
 import { generateContentHash } from '@/utils/generateContentHash.util';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { BookFormat, CurrencyCode, OrderStatus, PaymentGateway, PaymentStatus } from '@prisma/client';
+import { BookFormat, PaymentGateway } from '@prisma/client';
 import { Job } from 'bullmq';
 
 export type CheckoutJobPayload = {
+  orderId: number;
   isGuest: boolean;
   orderCode: string;
   totalAmount: number;
@@ -45,7 +44,7 @@ export class CheckoutProcessor extends WorkerHost {
 
   constructor(
     private readonly bookVariantSnapshotService: BookVariantSnapshotService,
-    private readonly orderRepository: OrderRepository,
+    private readonly orderService: OrderService,
     private readonly orderItemService: OrderItemService,
     private readonly orderAddressService: OrderAddressService,
     private readonly bookVariantService: BookVariantService
@@ -119,28 +118,16 @@ export class CheckoutProcessor extends WorkerHost {
       };
     });
 
-    if (payload.isGuest) {
-      const order = await this.orderRepository.create(
-        {
-          guestSessionId: payload.guestSessionId,
-          status: OrderStatus.PENDING_PAYMENT,
-          paymentStatus: PaymentStatus.PENDING,
-          currencyCode: CurrencyCode.VND,
-          orderCode: payload.orderCode,
-          shippingFee: SHIPPING_FEE,
-          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-          totalAmount: payload.totalAmount,
-          subtotal: payload.subtotal,
-        },
-      );
-      try {
+    const orderId = payload.orderId;
 
-        await this.orderItemService.createMany(order.id, snapshotItems);
+    if (payload.isGuest) {
+      try {
+        await this.orderItemService.createMany(orderId, snapshotItems);
         const guestAddress = payload.guestAddress!;
 
         await this.orderAddressService.create(
           {
-            orderId: order.id,
+            orderId,
             recipientName: guestAddress.name,
             phoneNumber: guestAddress.phoneNumber,
             addressLine: guestAddress.addressLine,
@@ -156,59 +143,22 @@ export class CheckoutProcessor extends WorkerHost {
             await this.bookVariantService.updateReservedByIds(reservedVariant)
           }
         }
-
       }
       catch (err) {
-        await this.orderRepository.deleteById(order.id);
+        await this.orderService.deleteOrder(orderId);
         throw err;
       }
-      // if (payload.guestEmail) {
-      //   const outbox = await this.emailOutbox.createOutboxOrderEmail({
-      //     orderId: order.id,
-      //     orderCode: order.orderCode,
-      //     orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-      //     toEmail: payload.guestEmail,
-      //   });
-      //   await this.emailQueue.enqueueOrderEmail(outbox.id);
-      // }
     } else {
-      const order = await this.orderRepository.create(
-        {
-          userId: payload.userId,
-          status: OrderStatus.PENDING_PAYMENT,
-          paymentStatus: PaymentStatus.PENDING,
-          currencyCode: CurrencyCode.VND,
-          orderCode: payload.orderCode,
-          shippingFee: SHIPPING_FEE,
-          expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
-          totalAmount: payload.totalAmount,
-          subtotal: payload.subtotal,
-          addressId: payload.addressId,
-        },
-
-      );
-
-
       try {
-        await this.orderItemService.createMany(order.id, snapshotItems);
+        await this.orderItemService.createMany(orderId, snapshotItems);
         if (!isError) {
           await this.bookVariantService.updateReservedByIds(reservedVariant)
         }
       }
       catch (err) {
-        await this.orderRepository.deleteById(order.id);
+        await this.orderService.deleteOrder(orderId);
         throw err;
       }
-
-      // if (payload.email) {
-      //   const outbox = await this.emailOutbox.createOutboxOrderEmail({
-      //     orderId: order.id,
-      //     orderCode: order.orderCode,
-      //     orderStatus: order.status ?? OrderStatus.PENDING_PAYMENT,
-      //     toEmail: payload.email,
-      //   });
-      //   await this.emailQueue.enqueueOrderEmail(outbox.id);
-      // }
     }
 
     this.logger.debug(`[${payload.orderCode}] DONE processCheckout job=${job.id}`);

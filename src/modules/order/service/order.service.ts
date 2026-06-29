@@ -1,4 +1,5 @@
 import { SHIPPING_FEE } from '@/common';
+import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
 import { CACHE_REDIS } from '@/config/redis.config';
 import { PrismaClientTransaction } from '@/database';
 import { BookVariantService } from '@/modules/book/variant/service/bookVariant.service';
@@ -94,6 +95,50 @@ export class OrderService {
     tx: PrismaClientTransaction,
   ) {
     return this.orderRepository.updateById(id, data, tx);
+  }
+
+  createGuestOrder(data: {
+    guestSessionId: string;
+    orderCode: string;
+    totalAmount: number;
+    subtotal: number;
+  }) {
+    return this.orderRepository.create({
+      guestSessionId: data.guestSessionId,
+      orderCode: data.orderCode,
+      status: OrderStatus.PENDING_PAYMENT,
+      paymentStatus: PaymentStatus.PENDING,
+      currencyCode: CurrencyCode.VND,
+      shippingFee: SHIPPING_FEE,
+      expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+      totalAmount: data.totalAmount,
+      subtotal: data.subtotal,
+    });
+  }
+
+  createUserOrder(data: {
+    userId: number;
+    orderCode: string;
+    totalAmount: number;
+    subtotal: number;
+    addressId: number;
+  }) {
+    return this.orderRepository.create({
+      userId: data.userId,
+      orderCode: data.orderCode,
+      status: OrderStatus.PENDING_PAYMENT,
+      paymentStatus: PaymentStatus.PENDING,
+      currencyCode: CurrencyCode.VND,
+      shippingFee: SHIPPING_FEE,
+      expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+      totalAmount: data.totalAmount,
+      subtotal: data.subtotal,
+      addressId: data.addressId,
+    });
+  }
+
+  deleteOrder(orderId: number) {
+    return this.orderRepository.deleteById(orderId);
   }
 
   async createCheckout(
@@ -210,6 +255,9 @@ export class OrderService {
         edition,
       }),
     );
+    const order = isGuest
+      ? await this.createGuestOrder({ guestSessionId: guestSessionId!, orderCode, totalAmount, subtotal })
+      : await this.createUserOrder({ userId: userId!, orderCode, totalAmount, subtotal, addressId: body.addressId! });
     const payment = body.paymentGateway
     let result: CreateUrlPaymentResponseDTO | undefined;
     if (payment !== PaymentGateway.COD) {
@@ -223,6 +271,7 @@ export class OrderService {
     }
 
     await this.checkoutQueue.enqueueCheckout({
+      orderId: order.id,
       isGuest,
       orderCode,
       totalAmount,

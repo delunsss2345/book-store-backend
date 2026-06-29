@@ -9,7 +9,7 @@ export function toPaymentIntentResponse(
 ): PaymentIntentResponseDto {
   return {
     id: paymentIntent.id,
-    orderId: paymentIntent.orderId.toString(),
+    orderId: paymentIntent.orderId,
     gateway: paymentIntent.gateway,
     status: paymentIntent.status,
     tokenUrl: paymentIntent.tokenUrl,

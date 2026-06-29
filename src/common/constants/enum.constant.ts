@@ -1,6 +1,6 @@
 export enum Status {
-  OK = 'true',
-  NO = 'false',
+  OK = 1,
+  NO = 0,
 }
 
 export enum VerifyCodePath {

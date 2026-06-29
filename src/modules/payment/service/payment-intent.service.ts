@@ -1,47 +1,46 @@
-import { AppModule } from '@/app.module';
 import { PaymentIntentWithUrlResponseDto } from '@/modules/payment/dto/response/payment-intent-url.response.dto';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PaymentStatus, Prisma } from '@prisma/client';
 import { CreatePaymentIntentRequestDto } from '../dto/request/create-payment-intent.request.dto';
 import {
-  DeleteExpiredPaymentIntentResponseDto,
-  PaymentIntentResponseDto,
+  DeleteExpiredPaymentIntentResponseDto
 } from '../dto/response';
 import {
   toDeleteExpiredPaymentIntentResponse,
-  toPaymentIntentAccountBankResponse,
-  toPaymentIntentResponse,
+  toPaymentIntentAccountBankResponse
 } from '../mapper';
 import { PaymentIntentRepository } from '../repository/payment-intent.repository';
 
-const PAYMENT_INTENT_EXPIRES_IN_MS = 0.5 * 60 * 1000;
+const PAYMENT_INTENT_EXPIRES_IN_MS = 60 * 1000;
 
 @Injectable()
 export class PaymentIntentService {
-  private readonly bank = AppModule.CONFIGURATION.PAYMENT_CONFIG.BANK_ID;
-  private readonly stk = AppModule.CONFIGURATION.PAYMENT_CONFIG.ACCOUNT_NO;
-  private readonly nameAccount =
-    AppModule.CONFIGURATION.PAYMENT_CONFIG.NAME_RECEIVER;
+  private readonly bank: string;
+  private readonly stk: string;
+  private readonly nameAccount: string;
+
   constructor(
     private readonly paymentIntentRepository: PaymentIntentRepository,
-
-  ) { }
+    private readonly configService: ConfigService,
+  ) {
+    this.bank = this.configService.get<string>('BANK_ID')!;
+    this.stk = this.configService.get<string>('ACCOUNT_NO')!;
+    this.nameAccount = this.configService.get<string>('NAME_RECEIVER')!;
+  }
 
   async createPaymentIntent(
     dto: CreatePaymentIntentRequestDto,
     tx?: Prisma.TransactionClient,
-  ): Promise<PaymentIntentResponseDto> {
-    const paymentIntent =
-      await this.paymentIntentRepository.create({
-        orderCode: dto.orderCode,
-        content: dto.content,
-        gateway: dto.gateway,
-        paymentUrl: dto.paymentUrl,
-        tokenUrl: dto.tokenUrl,
-        expiredAt: this.getDefaultExpiredAt(),
-      }, tx);
-
-    return toPaymentIntentResponse(paymentIntent);
+  ) {
+    return this.paymentIntentRepository.create({
+      orderCode: dto.orderCode,
+      content: dto.content,
+      gateway: dto.gateway,
+      paymentUrl: dto.paymentUrl,
+      tokenUrl: dto.tokenUrl,
+      expiredAt: this.getDefaultExpiredAt(),
+    }, tx);
   }
 
   async deleteExpiredPaymentIntents(

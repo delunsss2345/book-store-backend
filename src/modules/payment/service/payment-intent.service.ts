@@ -65,6 +65,13 @@ export class PaymentIntentService {
     );
   }
 
+  async markPaymentIntentAsDone(orderCode: string) {
+    await this.paymentIntentRepository.updateStatus(
+      orderCode,
+      PaymentStatus.SUCCESS,
+    );
+  }
+
   async markPaymentIntentAsNotFound(orderCode: string) {
     await this.paymentIntentRepository.updateStatus(
       orderCode,

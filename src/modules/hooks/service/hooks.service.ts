@@ -102,11 +102,14 @@ export class HooksService {
       'Payment intent already marked as success, skipping',
       content,
     );
-    await this.hooksRepository.updateWebhookStatus(
-      webHookId,
-      JobStatus.DONE,
-      attempts,
-    );
+    await Promise.all([
+      this.paymentIntent.markPaymentIntentAsDone(content),
+      this.hooksRepository.updateWebhookStatus(
+        webHookId,
+        JobStatus.DONE,
+        attempts,
+      ),
+    ]);
     return {
       success: true,
       duplicate: true,

@@ -36,7 +36,7 @@ export class HooksService {
 
   private async saveWebhookTransaction(
     body: SePayHooksDto,
-    providerEventId: number,
+    idempotencyKey: number,
     status: PaymentStatus,
     order?: WebhookOrderRef | null,
   ) {
@@ -71,7 +71,6 @@ export class HooksService {
 
     return {
       ok: false,
-      providerEventId: null,
       content,
       webhookInboxId: webHookId.toString(),
       orderCode,
@@ -94,7 +93,6 @@ export class HooksService {
 
     return {
       ok: false,
-      providerEventId: null,
       content,
       webhookInboxId: webHookId.toString(),
       message: HooksMessage.PAYMENT_INTENT_NOT_FOUND,
@@ -105,7 +103,7 @@ export class HooksService {
     content: string,
     webHookId: number,
     attempts: number,
-    providerEventId: string,
+    idempotencyKey: number,
   ) => {
     Logger.debug(
       'Payment intent already marked as success, skipping',
@@ -120,7 +118,7 @@ export class HooksService {
     return {
       ok: true,
       duplicate: true,
-      providerEventId,
+      idempotencyKey,
       content,
       webhookInboxId: webHookId.toString(),
       message: HooksMessage.PAYMENT_INTENT_ALREADY_SUCCESS,
@@ -160,14 +158,14 @@ export class HooksService {
     orderId: number,
     webHookId: number,
     attempts: number,
-    providerEventId: string,
+    idempotencyKey: number,
     body: SePayHooksDto,
   ) => {
     return this.transactionService.doInTransaction(async (tx) => {
       const [paidOrder, doneWebhook] = await Promise.all([
         this.hooksRepository.markOrderAndPaymentSuccess(
           orderId,
-          providerEventId,
+          idempotencyKey,
           body,
           tx,
         ),
@@ -216,6 +214,7 @@ export class HooksService {
       idempotencyKey,
       body,
     );
+
     Logger.debug('Received webhook event webhookInbox', webhookInbox);
 
     if (webhookInbox.status === JobStatus.DONE) {
@@ -228,9 +227,9 @@ export class HooksService {
     }
 
     const attempts = (webhookInbox.attempts ?? 0) + 1;
-    const transferContent = body.content?.trim();
+    const orderCodeContent = body.content?.trim();
 
-    if (!transferContent) {
+    if (!orderCodeContent) {
       return this.handleSepayWebhookWithoutContent(
         body,
         webhookInbox.id,
@@ -239,7 +238,7 @@ export class HooksService {
       );
     }
 
-    const paymentIntent = await this.paymentIntent.findByContent(transferContent);
+    const paymentIntent = await this.paymentIntent.findByContent(orderCodeContent);
     if (!paymentIntent) {
       await this.saveWebhookTransaction(
         body,
@@ -249,7 +248,7 @@ export class HooksService {
       );
 
       return this.handlePaymentIntentNotFoundByContent(
-        transferContent,
+        orderCodeContent,
         webhookInbox.id,
         attempts,
       );
@@ -288,7 +287,7 @@ export class HooksService {
       );
 
       return this.handlePaymentIntentExpired(
-        transferContent,
+        orderCodeContent,
         webhookInbox.id,
         attempts,
         paymentIntent.orderCode,
@@ -304,7 +303,7 @@ export class HooksService {
       );
 
       return this.handleAlreadyProcessedPaymentIntent(
-        transferContent,
+        orderCodeContent,
         webhookInbox.id,
         attempts,
         idempotencyKey,
@@ -341,7 +340,7 @@ export class HooksService {
       return {
         ok: false,
         idempotencyKey,
-        content: transferContent,
+        content: orderCodeContent,
         webhookInboxId: webhookInbox.id.toString(),
         orderId: order.id.toString(),
         orderCode: order.orderCode,
@@ -351,7 +350,7 @@ export class HooksService {
 
     await this.saveWebhookTransaction(
       body,
-      providerEventId,
+      idempotencyKey,
       PaymentStatus.SUCCESS,
       orderRef,
     );
@@ -364,27 +363,10 @@ export class HooksService {
       body,
     );
 
-    const orderStatusKey = cacheKey.order.status(paidOrder.orderCode);
-    const cachedOrder = await this.cacheManager.get(orderStatusKey);
-
-    if (cachedOrder) {
-      await this.cacheManager.set(
-        orderStatusKey,
-        {
-          id: paidOrder.id.toString(),
-          orderCode: paidOrder.orderCode,
-          status: paidOrder.status,
-          paymentStatus: paidOrder.paymentStatus,
-          updatedAt: paidOrder.updatedAt,
-        },
-        ORDER_STATUS_TTL,
-      );
-    }
-
     return {
       ok: true,
-      providerEventId,
-      content: transferContent,
+      idempotencyKey,
+      content: orderCodeContent,
       webhookInboxId: doneWebhook.id.toString(),
       orderId: paidOrder.id.toString(),
       orderCode: paidOrder.orderCode,

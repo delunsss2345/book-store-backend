@@ -10,7 +10,7 @@ import {
 
 export type FindWebhookInboxParams = {
     gateway?: PaymentGateway;
-    providerEventId?: string;
+    idempotencyKey: number;
     status?: JobStatus;
 };
 
@@ -24,19 +24,19 @@ type PaymentNotSuccess = typeof PaymentNotSuccessStatus[keyof typeof PaymentNotS
 export class HooksRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    saveSepayWebhook(providerEventId: number, payload: unknown) {
+    saveSepayWebhook(idempotencyKey: number, payload: unknown) {
         const receivedAt = new Date();
 
         return this.prisma.webhookInbox.upsert({
             where: {
-                gateway_providerEventId: {
+                gateway_idempotencyKey: {
                     gateway: PaymentGateway.SEPAY,
-                    providerEventId,
+                    idempotencyKey,
                 },
             },
             create: {
                 gateway: PaymentGateway.SEPAY,
-                providerEventId,
+                idempotencyKey,
                 receivedAt,
                 payload: payload as Prisma.InputJsonValue,
                 status: JobStatus.PENDING,
@@ -46,17 +46,16 @@ export class HooksRepository {
                 receivedAt,
                 payload: payload as Prisma.InputJsonValue,
                 status: JobStatus.PENDING,
-                lastError: null,
             },
         });
     }
 
-    findWebhookByProviderEventId(providerEventId: string, gateway: PaymentGateway = PaymentGateway.SEPAY) {
+    findWebhookByIdempotencyKey(idempotencyKey: number, gateway: PaymentGateway = PaymentGateway.SEPAY) {
         return this.prisma.webhookInbox.findUnique({
             where: {
-                gateway_providerEventId: {
+                gateway_idempotencyKey: {
                     gateway,
-                    providerEventId,
+                    idempotencyKey,
                 },
             },
         });
@@ -66,7 +65,7 @@ export class HooksRepository {
         return this.prisma.webhookInbox.findMany({
             where: {
                 gateway: params.gateway,
-                providerEventId: params.providerEventId,
+                idempotencyKey: params.idempotencyKey,
                 status: params.status,
             },
             orderBy: { receivedAt: 'desc' },
@@ -127,7 +126,7 @@ export class HooksRepository {
     // Đảm bảo nhất quán 
     markOrderAndPaymentSuccess(
         orderId: number,
-        providerEventId: string,
+        idempotencyKey: number,
         payload: unknown,
         tx?: PrismaClientTransaction,
     ) {
@@ -153,7 +152,7 @@ export class HooksRepository {
                 where: { orderId },
                 data: {
                     status: PaymentStatus.SUCCESS,
-                    providerTxnId: providerEventId,
+                    providerTxnId: idempotencyKey.toString(),
                     responsePayload: payload as Prisma.InputJsonValue,
                 },
             });
@@ -170,13 +169,13 @@ export class HooksRepository {
         });
     }
     // Đảm bảo nhất quán 
-    markPaymentNotSuccess(orderId: number, providerEventId: string, payload: unknown, status: PaymentNotSuccess) {
+    markPaymentNotSuccess(orderId: number, idempotencyKey: number, payload: unknown, status: PaymentNotSuccess) {
         return this.prisma.$transaction(async (tx) => {
             await tx.paymentTransaction.updateMany({
                 where: { orderId },
                 data: {
                     status,
-                    providerTxnId: providerEventId,
+                    providerTxnId: idempotencyKey.toString(),
                     responsePayload: payload as Prisma.InputJsonValue,
                 },
             });

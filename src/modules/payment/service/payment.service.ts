@@ -25,49 +25,18 @@ export class PaymentService {
     return this.paymentRepository.createWebhookSepayTransaction(params);
   }
 
-  private generateContentOrder(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let random = '';
+  // private generateContentOrder(): string {
+  //   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  //   let random = '';
 
-    while (random.length < 8) {
-      const byte = crypto.randomBytes(1)[0];
-      random += chars[byte % chars.length];
-    }
-
-    return `taschen ${random}`;
-  }
-
-  // createTransactionUrl(dto: CreatePaymentTransactionDto): CreateTransactionDto {
-  //   const { orderId, gateway, amount } = dto;
-
-  //   try {
-  //     this.logger.log(
-  //       PaymentMessage.CREATE_TRANSACTION_START(
-  //         orderId.toString(),
-  //         gateway.toString(),
-  //       ),
-  //     );
-  //     let result = {} as CreateUrlPaymentResponseDTO;
-  //     switch (gateway) {
-  //       case PaymentGateway.SEPAY:
-  //         result = this.generateQrUrl(amount);
-  //         break;
-  //       default:
-  //         throw new BadRequestException(
-  //           PaymentMessage.UNSUPPORTED_PAYMENT_GATEWAY,
-  //         );
-  //     }
-
-  //     return {
-  //       result,
-  //       orderId: orderId.toString(),
-  //       message: PaymentMessage.CREATE_TRANSACTION_SUCCESS,
-  //     };
-  //   } catch (error) {
-  //     this.logger.error(`${PaymentMessage.CREATE_TRANSACTION_ERROR}: ${error}`);
-  //     throw error;
+  //   while (random.length < 8) {
+  //     const byte = crypto.randomBytes(1)[0];
+  //     random += chars[byte % chars.length];
   //   }
+
+  //   return `taschen ${random}`;
   // }
+
 
   generateQrUrl(amount: number, orderCode: string): CreateUrlPaymentResponseDTO {
     const content = orderCode;

@@ -1,9 +1,11 @@
 name: Deploy Production
+
 on:
   workflow_dispatch:
   push:
     branches:
       - production
+
 concurrency:
   group: production-workflows-dev
   cancel-in-progress: false
@@ -12,11 +14,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+
     permissions:
       contents: read
+      packages: read
+
     if: github.ref == 'refs/heads/production'
+
     steps:
-      - name: Execute remote SSH commands using password
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v1
         env:
           GHCR_TOKEN: ${{ github.token }}
@@ -26,10 +32,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.PORT }}
+          port: 22
           envs: GHCR_TOKEN,GHCR_USER,IMAGE_NAME
           script: |
             cd threads-api
 
-            eco "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker pull "$IMAGE_NAME"

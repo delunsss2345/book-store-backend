@@ -27,7 +27,7 @@ jobs:
         env:
           GHCR_TOKEN: ${{ github.token }}
           GHCR_USER: ${{ github.actor }}
-          IMAGE_NAME: ghcr.io/${{ github.repository }}/book-store-backend:latest
+          IMAGE_NAME: ghcr.io/${{ github.repository }}:latest
         with:
           debug: true
           host: ${{ secrets.HOST }}

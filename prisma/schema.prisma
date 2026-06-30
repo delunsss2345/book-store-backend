@@ -765,7 +765,7 @@ model Order {
   currencyCode   CurrencyCode   @default(VND) @map("currency_code")
   idempotencyKey String?        @unique @map("idempotency_key") @db.VarChar(100)
   note           String?        @db.Text
-  placedAt       DateTime?      @map("placed_at")
+  placedAt       DateTime?      @default(now()) @map("placed_at")
 
   createdAt      DateTime       @default(now()) @map("created_at")
   expiredAt      DateTime       @map("expired_at")

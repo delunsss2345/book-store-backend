@@ -30,6 +30,13 @@ type FindBooksForListParams = {
     categoryId?: number;
 };
 
+export type CatalogKeywordSearchMode = 'fulltext' | 'like';
+
+export type CatalogKeywordSearch = {
+    keyword: string;
+    mode: CatalogKeywordSearchMode;
+};
+
 @Injectable()
 export class CatalogRepository {
     constructor(private readonly prisma: PrismaService) { }
@@ -691,13 +698,17 @@ export class CatalogRepository {
     async findBookIncludeCategory(
         categoryId: number,
         languageId: number,
-        keyword: string,
+        search: CatalogKeywordSearch,
         page: number,
         limit: number,
     ): Promise<number[]> {
         const offset = (page - 1) * limit;
+        const keywordCondition = this.buildBookTranslationKeywordCondition(search);
+        const scoreSelect = this.buildBookTranslationScoreSelect(search);
         const rows = await this.prisma.$queryRaw<{ id: number | bigint }[]>(Prisma.sql`
-            SELECT DISTINCT b.id
+            SELECT
+                b.id,
+                ${scoreSelect}
             FROM books b
             JOIN book_translations bt
                 ON bt.book_id = b.id
@@ -707,7 +718,8 @@ export class CatalogRepository {
                 AND bc.category_id = ${categoryId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
-                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+                AND ${keywordCondition}
+            ORDER BY score DESC, b.created_at DESC, b.id DESC
             LIMIT ${Prisma.sql`${limit}`}
             OFFSET ${Prisma.sql`${offset}`}
         `);
@@ -717,8 +729,9 @@ export class CatalogRepository {
     async countBookIncludeCategory(
         categoryId: number,
         languageId: number,
-        keyword: string,
+        search: CatalogKeywordSearch,
     ): Promise<number> {
+        const keywordCondition = this.buildBookTranslationKeywordCondition(search);
         const rows = await this.prisma.$queryRaw<{ total: number | bigint }[]>(Prisma.sql`
             SELECT COUNT(DISTINCT b.id) AS total
             FROM books b
@@ -730,27 +743,32 @@ export class CatalogRepository {
                 AND bc.category_id = ${categoryId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
-                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+                AND ${keywordCondition}
         `);
         return Number(rows[0]?.total ?? 0);
     }
 
     async findBookNeIncludeCategory(
         languageId: number,
-        keyword: string,
+        search: CatalogKeywordSearch,
         page: number,
         limit: number,
     ): Promise<number[]> {
         const offset = (page - 1) * limit;
+        const keywordCondition = this.buildBookTranslationKeywordCondition(search);
+        const scoreSelect = this.buildBookTranslationScoreSelect(search);
         const rows = await this.prisma.$queryRaw<{ id: number | bigint }[]>(Prisma.sql`
-            SELECT DISTINCT b.id
+            SELECT
+                b.id,
+                ${scoreSelect}
             FROM books b
             JOIN book_translations bt
                 ON bt.book_id = b.id
                 AND bt.language_id = ${languageId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
-                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+                AND ${keywordCondition}
+            ORDER BY score DESC, b.created_at DESC, b.id DESC
             LIMIT ${Prisma.sql`${limit}`}
             OFFSET ${Prisma.sql`${offset}`}
         `);
@@ -759,8 +777,9 @@ export class CatalogRepository {
 
     async countBookNeIncludeCategory(
         languageId: number,
-        keyword: string,
+        search: CatalogKeywordSearch,
     ): Promise<number> {
+        const keywordCondition = this.buildBookTranslationKeywordCondition(search);
         const rows = await this.prisma.$queryRaw<{ total: number | bigint }[]>(Prisma.sql`
             SELECT COUNT(DISTINCT b.id) AS total
             FROM books b
@@ -769,7 +788,7 @@ export class CatalogRepository {
                 AND bt.language_id = ${languageId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
-                AND MATCH(bt.title, bt.description) AGAINST (${keyword} IN BOOLEAN MODE)
+                AND ${keywordCondition}
         `);
         return Number(rows[0]?.total ?? 0);
     }
@@ -894,5 +913,34 @@ export class CatalogRepository {
                 }
                 : {}),
         };
+    }
+
+    private buildBookTranslationKeywordCondition(search: CatalogKeywordSearch): Prisma.Sql {
+        const likeKeyword = this.toLikePattern(search.keyword);
+
+        if (search.mode === 'like') {
+            return Prisma.sql`(
+                bt.title LIKE ${likeKeyword} ESCAPE '\\'
+                OR bt.description LIKE ${likeKeyword} ESCAPE '\\'
+            )`;
+        }
+
+        return Prisma.sql`(
+            MATCH(bt.title, bt.description) AGAINST (${search.keyword} IN BOOLEAN MODE)
+            OR bt.title LIKE ${likeKeyword} ESCAPE '\\'
+            OR bt.description LIKE ${likeKeyword} ESCAPE '\\'
+        )`;
+    }
+
+    private buildBookTranslationScoreSelect(search: CatalogKeywordSearch): Prisma.Sql {
+        if (search.mode === 'like') {
+            return Prisma.sql`0 AS score`;
+        }
+
+        return Prisma.sql`MATCH(bt.title, bt.description) AGAINST (${search.keyword} IN BOOLEAN MODE) AS score`;
+    }
+
+    private toLikePattern(keyword: string) {
+        return `%${keyword.replace(/[\\%_]/g, '\\$&')}%`;
     }
 }

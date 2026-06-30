@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { OrderListRow } from '../repository/order.repository';
 
 export type OrderListItemResponse = {
+  id: number;
   orderCode: string;
   status: string | null;
   placedAt: Date;
@@ -24,6 +25,7 @@ function toDecimalNumber(
 export const OrderMapper = {
   toListItem(row: OrderListRow): OrderListItemResponse {
     return {
+      id: row.id,
       orderCode: row.orderCode,
       status: row.status ? String(row.status) : null,
       placedAt: row.placedAt ?? row.createdAt,

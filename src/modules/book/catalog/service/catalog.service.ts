@@ -31,7 +31,10 @@ import {
   toCatalogBookDetail,
   toCatalogListBookCard,
 } from '../mapper/catalog.mapper';
-import { CatalogRepository } from '../repository/catalog.repository';
+import {
+  CatalogKeywordSearch,
+  CatalogRepository,
+} from '../repository/catalog.repository';
 
 @Injectable()
 export class CatalogService {
@@ -141,7 +144,10 @@ export class CatalogService {
     const { page, limit } = getPaginationParams(query.page, query.limit);
     const slugCategory = query.slugCategory?.trim();
     const keyword = query.keyword?.trim() || undefined;
-
+    const keywordSearch = keyword
+      ? this.buildKeywordSearch(keyword)
+      : undefined;
+    
     if (slugCategory) {
       return this.cache.withCache(
         cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory),
@@ -154,8 +160,8 @@ export class CatalogService {
 
           if (keyword) {
             const [ids, total] = await Promise.all([
-              this.repo.findBookIncludeCategory(category.id, langId, keyword, page, limit),
-              this.repo.countBookIncludeCategory(category.id, langId, keyword),
+              this.repo.findBookIncludeCategory(category.id, langId, keywordSearch!, page, limit),
+              this.repo.countBookIncludeCategory(category.id, langId, keywordSearch!),
             ]);
             const rows = await this.repo.findBooksByIds(ids, langId);
             return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
@@ -172,10 +178,11 @@ export class CatalogService {
 
     if (keyword) {
       const [ids, total] = await Promise.all([
-        this.repo.findBookNeIncludeCategory(langId, keyword, page, limit),
-        this.repo.countBookNeIncludeCategory(langId, keyword),
+        this.repo.findBookNeIncludeCategory(langId, keywordSearch!, page, limit),
+        this.repo.countBookNeIncludeCategory(langId, keywordSearch!),
       ]);
       const rows = await this.repo.findBooksByIds(ids, langId);
+
       return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
     }
 
@@ -303,5 +310,12 @@ export class CatalogService {
   // Build unique mục đính trùng lọc trùng id tối ưu query nhanh
   private uniqueBigIntIds(ids: number[]): number[] {
     return [...new Map(ids.map((id) => [id.toString(), id])).values()];
+  }
+
+  private buildKeywordSearch(keyword: string): CatalogKeywordSearch {
+    return {
+      keyword,
+      mode: keyword.length > 3 ? 'fulltext' : 'like',
+    };
   }
 }

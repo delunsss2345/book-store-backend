@@ -29,6 +29,7 @@ export type OrderWithItemsRow = {
 };
 
 const orderListSelect = Prisma.validator<Prisma.OrderSelect>()({
+  id: true,
   orderCode: true,
   status: true,
   subtotal: true,

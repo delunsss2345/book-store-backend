@@ -1,0 +1,13 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: shared-nginx
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/conf.d/cert.pem
+      - ./nginx/certs:/etc/nginx/conf.d/key.pem
+    restart: unless-stopped
+    networks:
+      - proxy-net

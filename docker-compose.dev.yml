@@ -33,18 +33,18 @@ services:
       - redis
     networks:
       - book-store-network
-  qdrant:
-    image: qdrant/qdrant:v1.9.2
-    container_name: qdrant
-    depends_on:
-      - mysql
-    ports:
-      - '6333:6333'
-    volumes:
-      - ./docker/qdrant_storage:/qdrant/storage
-    env_file:
-      - .env
-    restart: unless-stopped
+  # qdrant:
+  #   image: qdrant/qdrant:v1.9.2
+  #   container_name: qdrant
+  #   depends_on:
+  #     - mysql
+  #   ports:
+  #     - '6333:6333'
+  #   volumes:
+  #     - ./docker/qdrant_storage:/qdrant/storage
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
 
 volumes:
   mysql_data:

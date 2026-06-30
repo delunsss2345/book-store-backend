@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: shared-mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: --mysql-native-password=ON
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - app-net
+    volumes:
+      - ./docker/mysql-data:/var/lib/mysql
+  redis:
+    image: redis:alpine
+    container_name: shared-redis
+    restart: unless-stopped
+    volumes:
+      - ./docker/redis-data:/data
+networks:
+  app-net:
+    external: true

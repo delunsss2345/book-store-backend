@@ -16,7 +16,13 @@ export type CreatePaymentIntentParams = {
 @Injectable()
 export class PaymentIntentRepository {
   constructor(private readonly prisma: PrismaService) { }
-
+  findPaymentByOrderCode(orderCode: string) {
+    return this.prisma.paymentIntent.findFirst({
+      where: {
+        orderCode,
+      },
+    });
+  }
   findByOrderCode(orderCode: string) {
     return this.prisma.paymentIntent.findFirst({
       where: {

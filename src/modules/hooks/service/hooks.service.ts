@@ -1,21 +1,16 @@
 import { HooksMessage } from '@/common';
-import { cacheKey } from '@/common/constants/cache-key.constant';
-import { ORDER_STATUS_TTL } from '@/common/constants/enum-ttl.constant';
 import { SePayHooksDto } from '@/modules/hooks/dto/request/sepay-hooks.dto';
 import { OrderService } from '@/modules/order/service/order.service';
 import { PaymentIntentService } from '@/modules/payment/service/payment-intent.service';
 import { PaymentService } from '@/modules/payment/service/payment.service';
 import { TransactionService } from '@/modules/transaction/service/transaction.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, PaymentStatus } from '@prisma/client';
-import type { Cache } from 'cache-manager';
+import { JobStatus, OrderStatus, PaymentStatus } from '@prisma/client';
 import { HooksRepository } from '../repository/hooks.repository';
 
 type WebhookOrderRef = {
@@ -28,7 +23,6 @@ export class HooksService {
   constructor(
     private readonly hooksRepository: HooksRepository,
     private readonly paymentService: PaymentService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly orderService: OrderService,
     private readonly paymentIntent: PaymentIntentService,
     private readonly transactionService: TransactionService,
@@ -99,10 +93,7 @@ export class HooksService {
     attempts: number,
     idempotencyKey: number,
   ) => {
-    Logger.debug(
-      'Payment intent already marked as success, skipping',
-      content,
-    );
+    Logger.debug('Payment intent already marked as success, skipping', content);
     await Promise.all([
       this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
       this.hooksRepository.updateWebhookStatus(
@@ -146,19 +137,23 @@ export class HooksService {
     };
   };
 
-  private handleSepayWebhookMarkDone = (
+  private handleSepayWebhookMarkDone = async (
     orderId: number,
     webHookId: number,
     attempts: number,
     orderCode: string,
   ) => {
-    return this.transactionService.doInTransaction(async (tx) => {
-      const [paidOrder, doneWebhook] = await Promise.all([
-        this.hooksRepository.markOrderAndPaymentSuccess(orderId, tx),
-        this.hooksRepository.updateWebhookStatus(webHookId, JobStatus.DONE, attempts, tx),
-        this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
-      ]);
+    const [paidOrder, doneWebhook] = await Promise.all([
+      this.hooksRepository.markOrderAndPaymentSuccess(orderId),
+      this.hooksRepository.updateWebhookStatus(
+        webHookId,
+        JobStatus.DONE,
+        attempts,
+      ),
+      this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
+    ]);
 
+    return this.transactionService.doInTransaction(async (tx) => {
       const orders =
         await this.orderService.findOrderItemWWithParentVariantByOrderId(
           paidOrder.id,
@@ -179,7 +174,8 @@ export class HooksService {
       );
 
       return {
-        paidOrder, doneWebhook,
+        paidOrder,
+        doneWebhook,
       };
     });
   };
@@ -206,7 +202,7 @@ export class HooksService {
         message: HooksMessage.WEBHOOK_ALREADY_PROCESSED,
       };
     }
-    // Chưa đủ tiền nhưng gửi trùng, tăng số lần để đảm bảo không hụt tiền 
+    // Chưa đủ tiền nhưng gửi trùng, tăng số lần để đảm bảo không hụt tiền
     const attempts = (webhookInbox.attempts ?? 0) + 1;
     const orderCodeContent = body.content?.trim();
 
@@ -219,7 +215,8 @@ export class HooksService {
       );
     }
 
-    const paymentIntent = await this.paymentIntent.findByContent(orderCodeContent);
+    const paymentIntent =
+      await this.paymentIntent.findByContent(orderCodeContent);
     if (!paymentIntent) {
       await this.savePaymentTransaction(
         body,
@@ -257,11 +254,7 @@ export class HooksService {
     };
 
     if (paymentIntent.expiredAt && paymentIntent.expiredAt < new Date()) {
-      await this.savePaymentTransaction(
-        body,
-        PaymentStatus.EXPIRED,
-        orderRef,
-      );
+      await this.savePaymentTransaction(body, PaymentStatus.EXPIRED, orderRef);
 
       return this.handlePaymentIntentExpired(
         orderCodeContent,
@@ -272,11 +265,7 @@ export class HooksService {
     }
     // Thành công trước rồi thì update lại success cho chắc
     if (paymentIntent.status === PaymentStatus.SUCCESS) {
-      await this.savePaymentTransaction(
-        body,
-        PaymentStatus.SUCCESS,
-        orderRef,
-      );
+      await this.savePaymentTransaction(body, PaymentStatus.SUCCESS, orderRef);
 
       return this.handleAlreadyProcessedPaymentIntent(
         orderCodeContent,
@@ -330,11 +319,7 @@ export class HooksService {
       };
     }
 
-    await this.savePaymentTransaction(
-      body,
-      PaymentStatus.SUCCESS,
-      orderRef,
-    );
+    await this.savePaymentTransaction(body, PaymentStatus.SUCCESS, orderRef);
 
     const { paidOrder, doneWebhook } = await this.handleSepayWebhookMarkDone(
       order.id,
@@ -355,28 +340,34 @@ export class HooksService {
     };
   }
 
-  async getOrderStatus(orderCode: string) {
-    const orderStatusKey = cacheKey.order.status(orderCode);
-    const cachedOrder = await this.cacheManager.get(orderStatusKey);
-
-    if (cachedOrder) return cachedOrder;
-
-    const order = await this.hooksRepository.findOrderStatusByOrderCode(orderCode);
-    if (!order) {
+  async getPaymentStatus(orderCode: string) {
+    const payment =
+      await this.paymentIntent.findStatusPayByOrderCode(orderCode);
+    if (!payment) {
       throw new NotFoundException(HooksMessage.ORDER_NOT_FOUND);
     }
 
-    const response = {
-      id: order.id.toString(),
-      orderCode: order.orderCode,
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      updatedAt: order.updatedAt,
+    if (payment.status === PaymentStatus.SUCCESS) {
+      const order =
+        await this.hooksRepository.findOrderStatusByOrderCode(orderCode);
+      if (!order) {
+        throw new NotFoundException(HooksMessage.ORDER_NOT_FOUND);
+      }
+
+      if (
+        order.status !== OrderStatus.PAID ||
+        order.paymentStatus !== PaymentStatus.SUCCESS
+      ) {
+        await this.hooksRepository.markOrderAndPaymentSuccess(order.id);
+      }
+    }
+
+    return {
+      paymentStatus: payment.status,
     };
-
-    await this.cacheManager.set(orderStatusKey, response, ORDER_STATUS_TTL);
-
-    return response;
   }
 
+  getPaymentHistory(orderId: number) {
+    return this.paymentService.getPaymentHistoryByOrderId(orderId, 10);
+  }
 }

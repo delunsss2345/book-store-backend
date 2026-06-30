@@ -86,4 +86,7 @@ export class PaymentIntentService {
 
     return paymentIntent;
   }
-}
+  findStatusPayByOrderCode(orderCode: string) {
+    return this.paymentIntentRepository.findPaymentByOrderCode(orderCode);
+  }
+} 

@@ -1,4 +1,5 @@
 import { CreateUrlPaymentResponseDTO } from '@/modules/payment/dto/response/create-url-payment.dto';
+import { PaymentHistoryResponseDto } from '@/modules/payment/dto/response/payment-history.response.dto';
 import { PaymentIntentWithUrlResponseDto } from '@/modules/payment/dto/response/payment-intent-url.response.dto';
 import { PaymentRepository } from '@/modules/payment/repository/payment.repository';
 import { Injectable, Logger } from '@nestjs/common';
@@ -28,7 +29,32 @@ export class PaymentService {
     return this.paymentRepository.createWebhookSepayTransaction(params);
   }
 
-  generateQrUrl(amount: number, orderCode: string): CreateUrlPaymentResponseDTO {
+  async getPaymentHistoryByOrderId(
+    orderId: number,
+    limit = 10,
+  ): Promise<PaymentHistoryResponseDto[]> {
+    const rows = await this.paymentRepository.findPaymentTransactionsByOrderId(
+      orderId,
+      limit,
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      orderId: row.orderId,
+      userId: row.userId,
+      gateway: row.gateway,
+      status: row.status,
+      amount: row.amount.toString(),
+      currencyCode: row.currencyCode,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  generateQrUrl(
+    amount: number,
+    orderCode: string,
+  ): CreateUrlPaymentResponseDTO {
     const content = orderCode;
     const query = new URLSearchParams({
       bank: this.bank,
@@ -44,11 +70,15 @@ export class PaymentService {
       tokenUrl: token,
       paymentUrl: url,
       content,
-    }
+    };
   }
 
-
-  async getPaymentIntent(token: string): Promise<PaymentIntentWithUrlResponseDto | null> {
+  async getPaymentIntent(
+    token: string,
+  ): Promise<PaymentIntentWithUrlResponseDto | null> {
     return this.paymentIntentService.findByTokenUrl(token);
+  }
+  async findStatusPayByOrderCode(orderCode: string) {
+    return this.paymentIntentService.findByOrderCode(orderCode);
   }
 }

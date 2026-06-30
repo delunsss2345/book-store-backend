@@ -4,10 +4,6 @@ import { PaymentGateway, PaymentStatus } from '@prisma/client';
 export class PaymentIntentResponseDto {
   @ApiProperty()
   id: string;
-
-  @ApiProperty({ type: String })
-  orderId: string;
-
   @ApiProperty({ enum: PaymentGateway })
   gateway: PaymentGateway;
 

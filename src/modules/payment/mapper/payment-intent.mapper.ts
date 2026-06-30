@@ -9,7 +9,6 @@ export function toPaymentIntentResponse(
 ): PaymentIntentResponseDto {
   return {
     id: paymentIntent.id,
-    orderId: paymentIntent.orderId,
     gateway: paymentIntent.gateway,
     status: paymentIntent.status,
     tokenUrl: paymentIntent.tokenUrl,
@@ -35,7 +34,6 @@ export function toPaymentIntentAccountBankResponse(
 ): PaymentIntentWithUrlResponseDto {
   return {
     id: paymentIntent.id,
-    orderId: paymentIntent.orderId.toString(),
     gateway: paymentIntent.gateway,
     orderCode: paymentIntent.orderCode,
     status: paymentIntent.status,

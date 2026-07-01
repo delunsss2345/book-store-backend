@@ -52,7 +52,7 @@ export class BookVariantRepository {
         CASE WHEN (stock - reserved) >= ${p.quantity} 
           THEN ${p.quantity} 
           ELSE 0        
-        END`)
+        END`), ' '
     )}
      END
        WHERE id IN (${Prisma.join(payload.map(p => p.bookVariantId))})  

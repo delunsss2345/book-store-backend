@@ -29,6 +29,7 @@ import {
   buildCatalogCategoryTree,
   toCatalogBookCard,
   toCatalogBookDetail,
+  toCatalogHomeBookCard,
   toCatalogListBookCard,
 } from '../mapper/catalog.mapper';
 import {
@@ -47,29 +48,15 @@ export class CatalogService {
   async getCatalogHome(
     query: CatalogHomeQueryDto,
     langId: number,
-  ): Promise<any> {
+  ): Promise<CatalogBookCardDto[]> {
     const limit = query.limit ?? 12;
     const key = cacheKey.catalog.home(langId, limit);
 
     return this.cache.withCache(key, CATALOG_HOME_CACHE_TTL_SECONDS, async () => {
-      const [newestRows, saleTopLimit] = await Promise.all([
-        this.repo.findNewestActiveBookIds(langId, limit),
-        this.repo.groupBookSales(limit),
-      ]);
-
-      const newestIds = newestRows.map((r) => r.id);
-      const bestSellerBookIds = saleTopLimit.map((r) => Number(r.bookId));
-
-      const allUniqueIds = this.uniqueBigIntIds([
-        ...bestSellerBookIds,
-        ...newestIds,
-      ]);
-
-      const cardMap = await this.buildCardMap(allUniqueIds, langId);
-
-      return {
-        newAndTrending: this.pickCards(allUniqueIds, cardMap),
-      };
+      const books = await this.repo.findCatalogHomeBooks(langId, limit * 5);
+      return this.shuffle(books)
+        .slice(0, limit)
+        .map(toCatalogHomeBookCard);
     });
   }
 
@@ -285,18 +272,6 @@ export class CatalogService {
     return intersection.size / union.size;
   }
 
-  private async withCache<T>(
-    key: string,
-    ttl: number,
-    factory: () => Promise<T>,
-  ): Promise<T> {
-    const cached = await this.cache.get<T>(key);
-    if (cached) return cached;
-
-    const value = await factory();
-    await this.cache.set(key, value, ttl);
-    return value;
-  }
 
   private pickCards(
     ids: number[],
@@ -307,15 +282,19 @@ export class CatalogService {
       .filter((x) => x != undefined && x != null);
   }
 
-  // Build unique mục đính trùng lọc trùng id tối ưu query nhanh
-  private uniqueBigIntIds(ids: number[]): number[] {
-    return [...new Map(ids.map((id) => [id.toString(), id])).values()];
-  }
-
   private buildKeywordSearch(keyword: string): CatalogKeywordSearch {
     return {
       keyword,
       mode: keyword.length > 3 ? 'fulltext' : 'like',
     };
+  }
+
+  private shuffle<T>(items: T[]): T[] {
+    const shuffled = [...items];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }
 }

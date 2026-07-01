@@ -1,11 +1,42 @@
 // prisma/seed.ts
 //
-// Seed dữ liệu thật cho bookstore theo đúng nghiệp vụ nhập hàng:
-// - Admin tạo Book + BookVariant trước, variant có thể CHƯA có giá bán / CHƯA có tồn kho.
-// - Giá vốn, tồn kho, available được cập nhật sau Purchase Order -> Approve -> Stock Import.
-// - Giá bán chỉ được set ở giai đoạn cuối, khi admin đã quyết định bán variant đó.
-// - discountPrice trong PurchaseOrderItem là TỶ LỆ chiết khấu nhập hàng: 0.20, 0.30, 0.40...
-// - Chỉ tạo BookVariantSnapshot cho variant đã có price và đang bán được.
+// Seed dữ liệu thật cho bookstore theo ĐÚNG nghiệp vụ nhập hàng:
+//
+// 1) ADMIN TẠO SẢN PHẨM (draft):
+//    - Admin tạo Book trước.
+//    - Nếu Book có format thì tạo BookVariant tương ứng.
+//    - Variant khi tạo LUÔN chưa có giá (price = null),
+//      chưa có tồn kho (stock = available = reserved = 0) và isActive = false.
+//    - Nếu Book không có format/variant thì chỉ seed Book, KHÔNG seed BookVariant,
+//      và Book.isActive = false.
+//
+// 2) SALE/ADMIN TẠO ĐƠN MUA (PurchaseOrder + PurchaseOrderItem):
+//    - Mỗi PurchaseOrderItem có: quantity (số lượng đặt), unitPrice (giá niêm yết
+//      nhà cung cấp báo), discountPrice (TỶ LỆ CHIẾT KHẤU DẠNG SỐ NGUYÊN, ví dụ 50
+//      nghĩa là 50%, KHÔNG lưu dạng phân số 0.5), price (giá nhập sau chiết khấu =
+//      unitPrice * (1 - discountPrice/100)), totalPrice = price * quantity.
+//    - Giá nhập nằm ở PurchaseOrderItem.price, không lưu giá vốn trong BookVariant.
+//    - Khi vừa tạo: PurchaseOrder.status = PENDING, statusTransfer = PENDING.
+//
+// 3) ADMIN DUYỆT ĐƠN:
+//    - status: PENDING -> APPROVED (approvedById, approvedAt được set).
+//    - statusTransfer vẫn là PENDING (đơn đã duyệt nhưng kho chưa xử lý nhập).
+//
+// 4) SALE/KHO XỬ LÝ NHẬP KHO:
+//    - statusTransfer: PENDING -> PROCESSING (đang xử lý nhập hàng thực tế).
+//    - Khi nhập xong, tạo StockImport (1-1 với PurchaseOrder) gồm StockImportItem
+//      cho từng PurchaseOrderItem: nhận note, realQuantity (số lượng thực nhận để
+//      đối chiếu) và lackQuantity (thiếu hụt nếu có).
+//    - Nếu nhập thành công: BookVariant.stock/available CỘNG DỒN theo realQuantity.
+//    - statusTransfer: PROCESSING -> PURCHASE (đã hoàn tất nhập).
+//
+// 5) ADMIN QUYẾT ĐỊNH GIÁ BÁN:
+//    - Một variant có thể được nhập qua NHIỀU đợt (nhiều PurchaseOrder khác nhau,
+//      từ nhiều nhà cung cấp / chiết khấu khác nhau).
+//    - Hệ thống có thể xem các PurchaseOrderItem đã nhập kho của variant đó để tham
+//      chiếu giá nhập, nhưng BookVariant chỉ lưu price bán ra.
+//    - Nếu đã có tồn kho nhưng admin CHƯA chốt giá bán thì BookVariant.price = null
+//      và BookVariant.isActive = false (không bán được dù đã có hàng).
 //
 // Chạy:
 //   npx tsx prisma/seed.ts
@@ -102,6 +133,13 @@ function makeVariantIsbn(book: SeedBook, bookIndex: number, variantIndex: number
 function physicalStockForBook(seed: number) {
     const stocks = [10, 20, 35, 50, 75, 100, 120, 150, 180, 200];
     return stocks[Math.abs(seed) % stocks.length];
+}
+
+// Tỷ lệ chiết khấu nhập hàng, lưu dưới dạng SỐ NGUYÊN phần trăm (50 nghĩa là 50%),
+// KHÔNG lưu dạng phân số (0.5). netUnitPrice = unitPrice * (1 - discountPercent/100).
+function discountPercentForBatch(seed: number) {
+    const rates = [10, 15, 20, 25, 30, 35, 40, 45, 50];
+    return rates[Math.abs(seed) % rates.length];
 }
 
 const CURRENCY_CODE_VND = CurrencyCode.VND;
@@ -689,8 +727,11 @@ async function seedUsers(roleIdByCode: Map<RoleCode, number>) {
     }
 
     const admin = users.find((user) => user.email === 'admin.nguyen@bookstore.local') ?? users[0];
+    const staff = users.find((user) => user.email === 'staff.lan@bookstore.local') ?? admin;
+    const warehouse = users.find((user) => user.email === 'warehouse.khoa@bookstore.local') ?? admin;
+
     console.log(`Seeded users: ${users.length} (admin/staff/warehouse/customer), guest user = 0`);
-    return { users, admin };
+    return { users, admin, staff, warehouse };
 }
 
 // =============================================================================
@@ -848,6 +889,10 @@ function splitAuthors(authorText: string) {
 }
 
 function formatsForBook(bookIndex: number) {
+    // Sách inactive dùng để test trạng thái draft/ngừng bán:
+    // chỉ có record Book, không có BookVariant nào.
+    if (!isBookActive(bookIndex)) return [];
+
     if (bookIndex % 11 === 0) return [BookFormat.PAPERBACK];
     if (bookIndex % 7 === 0) return [BookFormat.HARDCOVER, BookFormat.AUDIOBOOK];
     if (bookIndex % 5 === 0) return [BookFormat.PAPERBACK, BookFormat.HARDCOVER, BookFormat.EBOOK];
@@ -866,7 +911,7 @@ function badgeForBook(bookIndex: number) {
 }
 
 function isBookActive(bookIndex: number) {
-    // Một số đầu sách inactive để test admin/catalog.
+    // Một số đầu sách vẫn ở trạng thái nháp/ngừng để test admin/catalog.
     return bookIndex % 13 !== 0;
 }
 
@@ -882,61 +927,116 @@ function priceForFormat(basePrice: number, format: BookFormat) {
     return toRoundedVnd(basePrice * multiplier);
 }
 
-type VariantSeedState =
-    | 'INACTIVE'
-    | 'DRAFT_VARIANT'
+// =============================================================================
+// Kế hoạch nghiệp vụ cho từng variant (mô phỏng vòng đời thật):
+//
+//  DRAFT                        : chỉ mới tạo, chưa có PO nào.
+//  PO_PENDING                   : đã tạo đơn mua, CHƯA duyệt.
+//  PO_APPROVED_WAITING_PROCESS  : đã duyệt, kho CHƯA bắt đầu xử lý nhập.
+//  PROCESSING_IMPORT            : kho đang xử lý nhập (statusTransfer = PROCESSING),
+//                                 chưa có StockImport hoàn tất.
+//  IMPORTED_WAITING_PRICE       : đã nhập kho xong (có tồn kho thật) nhưng admin
+//                                 CHƯA chốt giá bán -> isActive vẫn false.
+//  SELLABLE_SINGLE_BATCH        : đã nhập 1 đợt và admin đã chốt giá bán.
+//  SELLABLE_MULTI_BATCH         : đã nhập NHIỀU đợt (nhiều PO khác nhà cung cấp/
+//                                 chiết khấu khác nhau); admin chốt giá bán sau
+//                                 khi hàng đã nhập kho.
+//  DIGITAL_DRAFT                : variant số vừa tạo, admin chưa set giá.
+//  DIGITAL_SELLABLE              : variant số, admin đã set giá bán trực tiếp
+//                                 (không cần PO vì không có tồn kho vật lý).
+// =============================================================================
+type ProcurementPlan =
+    | 'DRAFT'
     | 'PO_PENDING'
-    | 'PO_APPROVED_WAITING_IMPORT'
+    | 'PO_APPROVED_WAITING_PROCESS'
+    | 'PROCESSING_IMPORT'
     | 'IMPORTED_WAITING_PRICE'
-    | 'SELLABLE'
+    | 'SELLABLE_SINGLE_BATCH'
+    | 'SELLABLE_MULTI_BATCH'
+    | 'DIGITAL_DRAFT'
     | 'DIGITAL_SELLABLE';
+
+function planForVariant(bookIndex: number, variantIndex: number, format: BookFormat): ProcurementPlan {
+    const isDigital = format === BookFormat.EBOOK || format === BookFormat.AUDIOBOOK;
+
+    if (isDigital) {
+        return bookIndex % 6 === 0 ? 'DIGITAL_DRAFT' : 'DIGITAL_SELLABLE';
+    }
+
+    if (!isBookActive(bookIndex)) return 'DRAFT';
+
+    const mod = (bookIndex + variantIndex) % 12;
+    if (mod === 0) return 'DRAFT';
+    if (mod === 1 || mod === 2) return 'PO_PENDING';
+    if (mod === 3) return 'PO_APPROVED_WAITING_PROCESS';
+    if (mod === 4) return 'PROCESSING_IMPORT';
+    if (mod === 5 || mod === 6) return 'IMPORTED_WAITING_PRICE';
+    if (mod === 7) return 'SELLABLE_MULTI_BATCH';
+    return 'SELLABLE_SINGLE_BATCH';
+}
 
 type SeededBookVariant = {
     id: number;
     bookId: number;
     format: BookFormat;
     isbn: string;
-    state: VariantSeedState;
     isDigital: boolean;
     plannedSellPrice: number;
+    plan: ProcurementPlan;
 };
 
-function variantSeedState(bookIndex: number, variantIndex: number, format: BookFormat): VariantSeedState {
-    if (!isBookActive(bookIndex)) return 'INACTIVE';
+async function removeSeedVariantsForBook(bookId: number) {
+    const variants = await prisma.bookVariant.findMany({
+        where: { bookId },
+        select: { id: true },
+    });
 
-    const isDigital = format === BookFormat.EBOOK || format === BookFormat.AUDIOBOOK;
-    if (isDigital) return bookIndex % 6 === 0 ? 'DRAFT_VARIANT' : 'DIGITAL_SELLABLE';
+    const variantIds = variants.map((variant) => variant.id);
+    if (variantIds.length === 0) return;
 
-    const mod = (bookIndex + variantIndex) % 10;
+    const seedPurchaseOrderItems = await prisma.purchaseOrderItem.findMany({
+        where: {
+            bookVariantId: { in: variantIds },
+            purchaseOrder: {
+                code: { startsWith: 'SEED-PO-' },
+            },
+        },
+        select: {
+            id: true,
+            purchaseOrderId: true,
+        },
+    });
 
-    if (mod === 0) return 'DRAFT_VARIANT';
-    if (mod === 1) return 'PO_PENDING';
-    if (mod === 2) return 'PO_APPROVED_WAITING_IMPORT';
-    if (mod === 3 || mod === 4) return 'IMPORTED_WAITING_PRICE';
+    const seedPurchaseOrderItemIds = seedPurchaseOrderItems.map((item) => item.id);
+    const seedPurchaseOrderIds = [...new Set(seedPurchaseOrderItems.map((item) => item.purchaseOrderId))];
 
-    return 'SELLABLE';
-}
+    if (seedPurchaseOrderItemIds.length > 0) {
+        await prisma.stockImportItem.deleteMany({
+            where: { purchaseOrderItemId: { in: seedPurchaseOrderItemIds } },
+        });
+    }
 
-function canCreateSnapshot(state: VariantSeedState) {
-    return state === 'SELLABLE' || state === 'DIGITAL_SELLABLE';
-}
+    if (seedPurchaseOrderIds.length > 0) {
+        await prisma.stockImport.deleteMany({
+            where: { purchaseOrderId: { in: seedPurchaseOrderIds } },
+        });
 
-function shouldCreatePurchaseOrder(state: VariantSeedState) {
-    return (
-        state === 'PO_PENDING' ||
-        state === 'PO_APPROVED_WAITING_IMPORT' ||
-        state === 'IMPORTED_WAITING_PRICE' ||
-        state === 'SELLABLE'
-    );
-}
+        await prisma.purchaseOrderItem.deleteMany({
+            where: { id: { in: seedPurchaseOrderItemIds } },
+        });
 
-function shouldCreateStockImport(state: VariantSeedState) {
-    return state === 'IMPORTED_WAITING_PRICE' || state === 'SELLABLE';
-}
+        await prisma.purchaseOrder.deleteMany({
+            where: { id: { in: seedPurchaseOrderIds } },
+        });
+    }
 
-function discountRateForVariant(variantId: number) {
-    const rates = [20, 25, 30, 45, 40];
-    return rates[variantId % rates.length];
+    await prisma.bookVariantSnapshot.deleteMany({
+        where: { bookVariantId: { in: variantIds } },
+    });
+
+    await prisma.bookVariant.deleteMany({
+        where: { id: { in: variantIds } },
+    });
 }
 
 async function upsertCatalogBooks(
@@ -954,7 +1054,10 @@ async function upsertCatalogBooks(
 
     for (let index = 0; index < books.length; index += 1) {
         const book = books[index];
-        const active = isBookActive(index);
+        const formats = formatsForBook(index);
+        // Rule seed: book có ít nhất 1 format thì mới active và mới có variant.
+        // Book không có format sẽ chỉ tồn tại ở bảng books, không có variants.
+        const active = formats.length > 0;
         const slug = `${slugify(book.title)}-${book.isbn13.slice(-6)}`;
         const coverImageUrl = coverImageUrlForBook(index, book.isbn13);
         const galleryImageUrl = coverImageUrlForBook(index + 37, book.isbn13);
@@ -977,6 +1080,8 @@ async function upsertCatalogBooks(
                     weightGrams,
                     pageCount: book.pageCount,
                     coverImageUrl,
+                    // isActive của Book phản ánh việc sản phẩm còn kinh doanh hay không
+                    // ở cấp đầu sách; việc BÁN ĐƯỢC hay không thực sự nằm ở BookVariant.isActive.
                     isActive: active,
                     deletedAt: null,
                     updatedBy: createdBy,
@@ -1088,6 +1193,12 @@ async function upsertCatalogBooks(
             await prisma.bookBadge.deleteMany({ where: { bookId } });
         }
 
+        if (formats.length === 0) {
+            await prisma.bookVariantAsset.deleteMany({ where: { bookId } });
+            await removeSeedVariantsForBook(bookId);
+            continue;
+        }
+
         await prisma.bookVariantAsset.deleteMany({ where: { bookId } });
         await prisma.bookVariantAsset.createMany({
             data: [
@@ -1096,38 +1207,28 @@ async function upsertCatalogBooks(
             ],
         });
 
-        const formats = formatsForBook(index);
         for (let variantIndex = 0; variantIndex < formats.length; variantIndex += 1) {
             const format = formats[variantIndex];
-            const state = variantSeedState(index, variantIndex, format);
             const isDigital = format === BookFormat.EBOOK || format === BookFormat.AUDIOBOOK;
             const plannedSellPrice = priceForFormat(book.priceVnd, format);
             const isbn = makeVariantIsbn(book, index, variantIndex);
+            const plan = planForVariant(index, variantIndex, format);
 
-            // Nghiệp vụ đúng:
-            // - Variant được tạo trước, nhưng physical variant KHÔNG có price/cost/stock ngay.
-            // - Physical variant chỉ có price khi đã nhập hàng và admin quyết định giá bán.
-            // - Digital variant có thể có price ngay vì không phụ thuộc stock import vật lý.
-            const price = state === 'DIGITAL_SELLABLE' ? plannedSellPrice : null;
-            const costPrice = null;
-            const stock = state === 'DIGITAL_SELLABLE' ? 999 : 0;
-            const available = stock;
-            const reserved = 0;
-            const supplierId = null;
-            const isActive = state === 'DIGITAL_SELLABLE';
-
+            // ĐÚNG NGHIỆP VỤ: admin tạo variant LUÔN ở trạng thái nháp -
+            // chưa giá, chưa tồn kho, isActive = false. Việc set giá/tồn kho
+            // được xử lý riêng ở bước procurement (đơn mua -> duyệt -> nhập kho
+            // -> chốt giá) hoặc set giá trực tiếp cho variant số.
             const variant = await prisma.bookVariant.upsert({
                 where: { bookId_format_edition: { bookId, format, edition: 1 } },
                 update: {
                     isbn,
-                    costPrice,
-                    price,
+                    price: null,
                     currencyCode: CURRENCY_CODE_VND,
-                    stock,
-                    available,
-                    reserved,
-                    isActive,
-                    supplierId,
+                    stock: 0,
+                    available: 0,
+                    reserved: 0,
+                    isActive: false,
+                    supplierId: null,
                     publicationYear: book.publicationYear,
                 },
                 create: {
@@ -1135,14 +1236,13 @@ async function upsertCatalogBooks(
                     format,
                     edition: 1,
                     isbn,
-                    costPrice,
-                    price,
+                    price: null,
                     currencyCode: CURRENCY_CODE_VND,
-                    stock,
-                    available,
-                    reserved,
-                    isActive,
-                    supplierId,
+                    stock: 0,
+                    available: 0,
+                    reserved: 0,
+                    isActive: false,
+                    supplierId: null,
                     publicationYear: book.publicationYear,
                 },
                 select: {
@@ -1158,9 +1258,9 @@ async function upsertCatalogBooks(
                 bookId: variant.bookId,
                 format: variant.format,
                 isbn: variant.isbn,
-                state,
                 isDigital,
                 plannedSellPrice,
+                plan,
             });
         }
     }
@@ -1172,96 +1272,99 @@ async function upsertCatalogBooks(
 }
 
 // =============================================================================
-// Procurement Flow: PurchaseOrder -> Approval -> StockImport -> Cost -> Price Activation
+// Procurement Flow: PurchaseOrder (PENDING) -> Approve (APPROVED) ->
+// Processing (statusTransfer PROCESSING) -> StockImport (statusTransfer PURCHASE,
+// cộng dồn tồn kho) -> Admin chốt giá bán bằng BookVariant.price.
 // =============================================================================
 
-async function seedProcurementForVariants(
-    variants: SeededBookVariant[],
-    supplierIdByCode: Map<string, number>,
-    createdBy: number,
+type ImportedBatch = {
+    purchaseOrderItemId: string;
+    netUnitPrice: number;
+    realQuantity: number;
+};
+
+async function runDigitalActivation(variant: SeededBookVariant) {
+    // Variant số không cần nhập kho vật lý: admin set giá bán trực tiếp.
+    await prisma.bookVariant.update({
+        where: { id: variant.id },
+        data: {
+            price: variant.plannedSellPrice,
+            currencyCode: CURRENCY_CODE_VND,
+            stock: 9999,
+            available: 9999,
+            reserved: 0,
+            isActive: true,
+        },
+    });
+}
+
+async function runPhysicalProcurement(
+    variant: SeededBookVariant,
+    supplierIds: number[],
+    staffUserId: number,
+    adminUserId: number,
+    warehouseUserId: number,
+    counters: {
+        purchaseOrderCount: number;
+        approvedCount: number;
+        processingCount: number;
+        stockImportCount: number;
+        importedWaitingPriceCount: number;
+        sellableCount: number;
+    },
 ) {
-    const supplierIds = [...supplierIdByCode.values()];
-    if (!supplierIds.length) throw new Error('Missing supplier seed');
+    const plan = variant.plan;
+    const batchCount = plan === 'SELLABLE_MULTI_BATCH' ? 2 : 1;
+    const importedBatches: ImportedBatch[] = [];
+    let totalRealQuantity = 0;
+    let lastSupplierId = supplierIds[variant.id % supplierIds.length];
 
-    let purchaseOrderCount = 0;
-    let stockImportCount = 0;
-    let sellableCount = 0;
-    let importedWaitingPriceCount = 0;
+    for (let batchIndex = 0; batchIndex < batchCount; batchIndex += 1) {
+        const supplierId = supplierIds[(variant.id + batchIndex * 5) % supplierIds.length];
+        lastSupplierId = supplierId;
+        const quantity = physicalStockForBook(variant.id + batchIndex * 7);
 
-    for (const variant of variants) {
-        if (!shouldCreatePurchaseOrder(variant.state)) continue;
-
-        const supplierId = supplierIds[variant.id % supplierIds.length];
-        const quantity = physicalStockForBook(variant.id);
-
-        // discountPrice là % chiết khấu nhập hàng, không phải số tiền.
-        // Ví dụ unitPrice 300k, discountPrice 0.30 => giá nhập/net unit = 210k.
+        // unitPrice: giá niêm yết nhà cung cấp báo cho đợt nhập này.
         const unitPrice = variant.plannedSellPrice;
-        const discountPrice = discountRateForVariant(variant.id);
-        const netImportUnitPrice = toRoundedVnd(unitPrice * (1 - (discountPrice / 100)));
-        const itemTotalPrice = toMoney(netImportUnitPrice * quantity);
+        // discountPrice: % chiết khấu, lưu dạng SỐ NGUYÊN (vd 30 = 30%), khác
+        // nhau theo từng đợt nhập để mô phỏng nhiều nhà cung cấp/thời điểm khác nhau.
+        const discountPercent = discountPercentForBatch(variant.id + batchIndex * 3);
+        // price: giá nhập THỰC (net) sau chiết khấu.
+        const netUnitPrice = toRoundedVnd(unitPrice * (1 - discountPercent / 100));
+        const totalPrice = toMoney(netUnitPrice * quantity);
 
-        const isApproved = variant.state !== 'PO_PENDING';
-        const hasStockImport = shouldCreateStockImport(variant.state);
-
-        const status = isApproved
-            ? PurchaseOrderStatus.APPROVED
-            : PurchaseOrderStatus.PENDING;
-
-        const statusTransfer =
-            variant.state === 'PO_PENDING'
-                ? PurchaseOrderType.PENDING
-                : variant.state === 'PO_APPROVED_WAITING_IMPORT'
-                    ? PurchaseOrderType.PROCESSING
-                    : PurchaseOrderType.PURCHASE;
-
-        const code = `SEED-PO-${String(variant.id).padStart(6, '0')}`;
+        const code = `SEED-PO-${String(variant.id).padStart(6, '0')}-${batchIndex + 1}`;
 
         const purchaseOrder = await prisma.purchaseOrder.upsert({
             where: { code },
             update: {
                 supplierId,
-                createdById: createdBy,
-                approvedById: isApproved ? createdBy : null,
-                status,
-                statusTransfer,
-                note: `Seed ${variant.state} for variant #${variant.id}`,
-                totalAmount: itemTotalPrice,
-                realPayPrice: hasStockImport ? itemTotalPrice : null,
+                createdById: staffUserId,
+                approvedById: null,
+                status: PurchaseOrderStatus.PENDING,
+                statusTransfer: PurchaseOrderType.PENDING,
+                note: `Đơn mua nhập hàng cho variant #${variant.id} (đợt ${batchIndex + 1}/${batchCount})`,
+                totalAmount: totalPrice,
+                realPayPrice: null,
                 taxAmount: 0,
-                approvedAt: isApproved ? new Date() : null,
-                updateTransferId: createdBy,
+                approvedAt: null,
+                updateTransferId: null,
             },
             create: {
                 code,
                 supplierId,
-                createdById: createdBy,
-                approvedById: isApproved ? createdBy : null,
-                status,
-                statusTransfer,
-                note: `Seed ${variant.state} for variant #${variant.id}`,
-                totalAmount: itemTotalPrice,
-                realPayPrice: hasStockImport ? itemTotalPrice : null,
+                createdById: staffUserId,
+                status: PurchaseOrderStatus.PENDING,
+                statusTransfer: PurchaseOrderType.PENDING,
+                note: `Đơn mua nhập hàng cho variant #${variant.id} (đợt ${batchIndex + 1}/${batchCount})`,
+                totalAmount: totalPrice,
                 taxAmount: 0,
-                approvedAt: isApproved ? new Date() : null,
-                updateTransferId: createdBy,
             },
             select: { id: true },
         });
 
-        // Idempotent: chạy lại seed không nhân stock import / purchase order item.
-        const existingStockImport = await prisma.stockImport.findUnique({
-            where: { purchaseOrderId: purchaseOrder.id },
-            select: { id: true },
-        });
-
-        if (existingStockImport) {
-            await prisma.stockImport.delete({ where: { id: existingStockImport.id } });
-        }
-
-        await prisma.purchaseOrderItem.deleteMany({
-            where: { purchaseOrderId: purchaseOrder.id },
-        });
+        // Idempotent: xoá item cũ trước khi tạo lại (tránh nhân đôi khi seed lại).
+        await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: purchaseOrder.id } });
 
         const purchaseOrderItem = await prisma.purchaseOrderItem.create({
             data: {
@@ -1269,45 +1372,73 @@ async function seedProcurementForVariants(
                 bookVariantId: variant.id,
                 quantity,
                 unitPrice,
-                // price là đơn giá nhập sau chiết khấu.
-                price: netImportUnitPrice,
-                // discountPrice là tỷ lệ: 0.20, 0.25, 0.30...
-                discountPrice,
-                totalPrice: itemTotalPrice,
+                price: netUnitPrice,
+                discountPrice: discountPercent,
+                totalPrice,
             },
             select: { id: true },
         });
 
-        purchaseOrderCount += 1;
+        counters.purchaseOrderCount += 1;
 
-        if (!hasStockImport) {
-            await prisma.bookVariant.update({
-                where: { id: variant.id },
-                data: {
-                    supplierId,
-                    costPrice: null,
-                    price: null,
-                    stock: 0,
-                    reserved: 0,
-                    available: 0,
-                    isActive: false,
-                },
-            });
-
+        // Dừng lại nếu kế hoạch chỉ yêu cầu tạo đơn (chưa duyệt).
+        if (plan === 'PO_PENDING' && batchIndex === batchCount - 1) {
             continue;
         }
 
-        const lackQuantity = variant.id % 9 === 0 ? 1 : 0;
+        // Admin duyệt đơn mua.
+        await prisma.purchaseOrder.update({
+            where: { id: purchaseOrder.id },
+            data: {
+                status: PurchaseOrderStatus.APPROVED,
+                approvedById: adminUserId,
+                approvedAt: new Date(),
+                statusTransfer: PurchaseOrderType.PENDING,
+                updateTransferId: adminUserId,
+            },
+        });
+        counters.approvedCount += 1;
+
+        if (plan === 'PO_APPROVED_WAITING_PROCESS' && batchIndex === batchCount - 1) {
+            continue;
+        }
+
+        // Kho bắt đầu xử lý nhập hàng.
+        await prisma.purchaseOrder.update({
+            where: { id: purchaseOrder.id },
+            data: {
+                statusTransfer: PurchaseOrderType.PROCESSING,
+                updateTransferId: warehouseUserId,
+            },
+        });
+        counters.processingCount += 1;
+
+        if (plan === 'PROCESSING_IMPORT' && batchIndex === batchCount - 1) {
+            continue;
+        }
+
+        // Hoàn tất nhập kho: ghi nhận số lượng thực nhận, có thể thiếu hụt.
+        const isShort = (variant.id + batchIndex) % 9 === 0;
+        const lackQuantity = isShort ? Math.max(1, Math.round(quantity * 0.05)) : 0;
         const realQuantity = Math.max(0, quantity - lackQuantity);
-        const realTotalPrice = toMoney(netImportUnitPrice * realQuantity);
-        const finalCostPrice = realQuantity > 0 ? toRoundedVnd(realTotalPrice / realQuantity) : null;
-        const finalSellPrice = variant.state === 'SELLABLE' ? variant.plannedSellPrice : null;
+        const realTotalPrice = toMoney(netUnitPrice * realQuantity);
+
+        // Idempotent: xoá StockImport cũ (nếu seed lại) trước khi tạo mới.
+        const existingStockImport = await prisma.stockImport.findUnique({
+            where: { purchaseOrderId: purchaseOrder.id },
+            select: { id: true },
+        });
+        if (existingStockImport) {
+            await prisma.stockImport.delete({ where: { id: existingStockImport.id } });
+        }
 
         await prisma.stockImport.create({
             data: {
                 purchaseOrderId: purchaseOrder.id,
-                createdBy,
-                note: `Seed stock import for ${variant.state}`,
+                createdBy: warehouseUserId,
+                note: lackQuantity > 0
+                    ? `Nhận thiếu ${lackQuantity} cuốn so với đơn mua (đặt ${quantity}, nhận ${realQuantity}). Đã ghi nhận thiếu hàng với nhà cung cấp.`
+                    : `Nhận đủ ${realQuantity} cuốn theo đúng số lượng đơn mua.`,
                 totalAmount: realTotalPrice,
                 items: {
                     create: {
@@ -1319,40 +1450,127 @@ async function seedProcurementForVariants(
                 },
             },
         });
+        counters.stockImportCount += 1;
 
-        stockImportCount += 1;
-
-        await prisma.bookVariant.update({
-            where: { id: variant.id },
+        await prisma.purchaseOrder.update({
+            where: { id: purchaseOrder.id },
             data: {
-                supplierId,
-                costPrice: finalCostPrice,
-                price: finalSellPrice,
-                stock: realQuantity,
-                reserved: 0,
-                available: realQuantity,
-                isActive: finalSellPrice !== null && realQuantity > 0,
+                statusTransfer: PurchaseOrderType.PURCHASE,
+                realPayPrice: realTotalPrice,
+                updateTransferId: warehouseUserId,
             },
         });
 
-        if (variant.state === 'SELLABLE') sellableCount += 1;
-        if (variant.state === 'IMPORTED_WAITING_PRICE') importedWaitingPriceCount += 1;
+        totalRealQuantity += realQuantity;
+        importedBatches.push({
+            purchaseOrderItemId: purchaseOrderItem.id,
+            netUnitPrice,
+            realQuantity,
+        });
     }
 
-    console.log(`Purchase orders seeded: ${purchaseOrderCount}`);
-    console.log(`Stock imports seeded: ${stockImportCount}`);
-    console.log(`Sellable physical variants: ${sellableCount}`);
-    console.log(`Imported but waiting price variants: ${importedWaitingPriceCount}`);
+    // Chưa có đợt nào nhập kho xong -> variant vẫn ở trạng thái nháp/không bán được.
+    if (importedBatches.length === 0) {
+        await prisma.bookVariant.update({
+            where: { id: variant.id },
+            data: {
+                supplierId: lastSupplierId,
+                price: null,
+                stock: 0,
+                reserved: 0,
+                available: 0,
+                isActive: false,
+            },
+        });
+        return;
+    }
+
+    // Đã nhập kho xong ít nhất 1 đợt nhưng admin chưa chốt giá bán:
+    // có tồn kho thật, nhưng price vẫn null và variant chưa bán được.
+    if (plan === 'IMPORTED_WAITING_PRICE') {
+        await prisma.bookVariant.update({
+            where: { id: variant.id },
+            data: {
+                supplierId: lastSupplierId,
+                price: null,
+                stock: totalRealQuantity,
+                reserved: 0,
+                available: totalRealQuantity,
+                isActive: false,
+            },
+        });
+        counters.importedWaitingPriceCount += 1;
+        return;
+    }
+
+    // SELLABLE_SINGLE_BATCH / SELLABLE_MULTI_BATCH: admin chốt giá bán.
+    await prisma.bookVariant.update({
+        where: { id: variant.id },
+        data: {
+            supplierId: lastSupplierId,
+            price: variant.plannedSellPrice,
+            stock: totalRealQuantity,
+            reserved: 0,
+            available: totalRealQuantity,
+            isActive: true,
+        },
+    });
+    counters.sellableCount += 1;
+}
+
+async function seedProcurementForVariants(
+    variants: SeededBookVariant[],
+    supplierIdByCode: Map<string, number>,
+    staffUserId: number,
+    adminUserId: number,
+    warehouseUserId: number,
+) {
+    const supplierIds = [...supplierIdByCode.values()];
+    if (!supplierIds.length) throw new Error('Missing supplier seed');
+
+    const counters = {
+        purchaseOrderCount: 0,
+        approvedCount: 0,
+        processingCount: 0,
+        stockImportCount: 0,
+        importedWaitingPriceCount: 0,
+        sellableCount: 0,
+    };
+    let digitalActivatedCount = 0;
+    let draftCount = 0;
+
+    for (const variant of variants) {
+        if (variant.plan === 'DRAFT' || variant.plan === 'DIGITAL_DRAFT') {
+            draftCount += 1;
+            continue;
+        }
+
+        if (variant.plan === 'DIGITAL_SELLABLE') {
+            await runDigitalActivation(variant);
+            digitalActivatedCount += 1;
+            continue;
+        }
+
+        await runPhysicalProcurement(variant, supplierIds, staffUserId, adminUserId, warehouseUserId, counters);
+    }
+
+    console.log(`Variants left as draft (no PO / no price yet): ${draftCount}`);
+    console.log(`Digital variants activated directly by admin: ${digitalActivatedCount}`);
+    console.log(`Purchase orders seeded: ${counters.purchaseOrderCount}`);
+    console.log(`Purchase orders approved: ${counters.approvedCount}`);
+    console.log(`Purchase orders moved to PROCESSING: ${counters.processingCount}`);
+    console.log(`Stock imports completed: ${counters.stockImportCount}`);
+    console.log(`Variants imported but waiting for price: ${counters.importedWaitingPriceCount}`);
+    console.log(`Physical variants made sellable (price set): ${counters.sellableCount}`);
 }
 
 async function upsertVariantSnapshots(variants: SeededBookVariant[]) {
     let snapshotCount = 0;
 
-    const variantIds = variants
-        .filter((variant) => canCreateSnapshot(variant.state))
-        .map((variant) => variant.id);
+    const variantIds = variants.map((variant) => variant.id);
 
-    const pricedVariants = await prisma.bookVariant.findMany({
+    // Chỉ tạo snapshot cho variant ĐANG BÁN ĐƯỢC thật sự: có giá và isActive.
+    const sellableVariants = await prisma.bookVariant.findMany({
         where: {
             id: { in: variantIds },
             price: { not: null },
@@ -1366,7 +1584,7 @@ async function upsertVariantSnapshots(variants: SeededBookVariant[]) {
         },
     });
 
-    for (const variant of pricedVariants) {
+    for (const variant of sellableVariants) {
         if (variant.price === null) continue;
 
         const price = Number(variant.price);
@@ -1414,35 +1632,37 @@ async function main() {
     console.log('--- Seeding suppliers/languages/users/categories ---');
     const supplierIdByCode = await upsertSuppliers();
     const languageIdByCode = await upsertLanguages();
-    const { admin } = await seedUsers(roleIdByCode);
+    const { admin, staff, warehouse } = await seedUsers(roleIdByCode);
     const categoryIdBySlug = await upsertCategories(languageIdByCode, admin?.id);
 
     if (!admin?.id) throw new Error('Missing admin user for seed');
+    if (!staff?.id) throw new Error('Missing staff user for seed');
+    if (!warehouse?.id) throw new Error('Missing warehouse user for seed');
 
-    console.log('--- Seeding catalog books and draft variants ---');
+    console.log('--- Seeding catalog books and draft variants (no price, isActive=false) ---');
     const { bookIds, variants } = await upsertCatalogBooks(
         languageIdByCode,
         categoryIdBySlug,
         admin.id,
     );
 
-    console.log('--- Seeding procurement flow ---');
-    await seedProcurementForVariants(variants, supplierIdByCode, admin.id);
+    console.log('--- Seeding procurement flow (PO -> Approve -> Process -> StockImport -> Set price) ---');
+    await seedProcurementForVariants(variants, supplierIdByCode, staff.id, admin.id, warehouse.id);
 
-    console.log('--- Seeding variant snapshots ---');
+    console.log('--- Seeding variant snapshots for sellable variants ---');
     const snapshotCount = await upsertVariantSnapshots(variants);
 
     const activeBooks = bookIds.filter((_, index) => isBookActive(index)).length;
     const inactiveBooks = bookIds.length - activeBooks;
 
-    const stateCount = variants.reduce<Record<string, number>>((acc, variant) => {
-        acc[variant.state] = (acc[variant.state] ?? 0) + 1;
+    const planCount = variants.reduce<Record<string, number>>((acc, variant) => {
+        acc[variant.plan] = (acc[variant.plan] ?? 0) + 1;
         return acc;
     }, {});
 
     console.log(`Books seeded: ${bookIds.length} (${activeBooks} active, ${inactiveBooks} inactive)`);
     console.log(`Variants seeded: ${variants.length}`);
-    console.log('Variant states:', stateCount);
+    console.log('Variant plans:', planCount);
     console.log(`Variant snapshots seeded: ${snapshotCount}`);
     console.log('--- Seed completed successfully ---');
 }

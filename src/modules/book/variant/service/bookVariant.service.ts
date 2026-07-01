@@ -18,7 +18,7 @@ export class BookVariantService {
     },
     tx?: Prisma.TransactionClient,
   ) {
-    // Chi xu ly tiep khi variant ton tai, neu khong thi bo qua theo nghiep vu.
+
     const bookVariant =
       await this.bookVariantRepository.findBookVariantInventoryById(
         params.bookVariantId,
@@ -30,18 +30,13 @@ export class BookVariantService {
     }
 
     const nextStock = (bookVariant.stock ?? 0) + params.quantity;
-    const nextCostPrice = params.costPrice;
     const currentPrice = this.toDecimalNumber(bookVariant.price);
 
-    // Tu dong nang gia ban neu gia hien tai nho hon gia von moi.
     await this.bookVariantRepository.updateBookVariantInventory(
       {
         bookVariantId: params.bookVariantId,
         stock: nextStock,
-        costPrice: nextCostPrice,
-        ...(currentPrice < nextCostPrice
-          ? { price: nextCostPrice + 50000 }
-          : {}),
+        price: currentPrice
       },
       tx,
     );

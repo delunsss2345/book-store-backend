@@ -1,15 +1,7 @@
 import { PrismaService } from '@/database';
 import { CatalogBookCardDto } from '@/modules/book/catalog/dto/response';
 import { Injectable } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
-
-export const VALID_SALES_ORDER_STATUSES: OrderStatus[] = [
-    OrderStatus.PAID,
-    OrderStatus.CONFIRMED,
-    OrderStatus.PACKING,
-    OrderStatus.SHIPPING,
-    OrderStatus.DELIVERED,
-];
+import { Prisma } from '@prisma/client';
 
 export type BookFilterParams = {
     languageId: number;
@@ -139,7 +131,8 @@ export class CatalogRepository {
                     isActive: true,
                     deletedAt: null,
                     variants: {
-                        every: {
+                        some: {
+                            isActive: true,
                             price: {
                                 gt: 0,
                             },
@@ -181,7 +174,8 @@ export class CatalogRepository {
                     isActive: true,
                     deletedAt: null,
                     variants: {
-                        every: {
+                        some: {
+                            isActive: true,
                             price: {
                                 gt: 0,
                             },
@@ -213,27 +207,57 @@ export class CatalogRepository {
         });
     }
 
-    findNewestActiveBookIds(languageId: number, limit: number) {
+    findCatalogHomeBooks(languageId: number, take: number) {
         return this.prisma.book.findMany({
             where: {
                 isActive: true,
                 deletedAt: null,
-                variants: {
-                    every: {
-                        price: {
-                            gt: 0,
-                        },
-                    },
-                },
                 translations: {
                     some: {
                         languageId,
                     },
                 },
+                variants: {
+                    some: {
+                        isActive: true,
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
             },
-            select: { id: true },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take: limit,
+            select: {
+                id: true,
+                coverImageUrl: true,
+                createdAt: true,
+                translations: {
+                    where: { languageId },
+                    select: {
+                        title: true,
+                        slug: true,
+                        description: true,
+                    },
+                },
+                bookBadge: {
+                    orderBy: [{ id: 'asc' }],
+                    select: {
+                        code: true,
+                    },
+                },
+                variants: {
+                    where: { isActive: true, price: { gt: 0 } },
+                    orderBy: [{ price: 'asc' }, { id: 'asc' }],
+                    take: 1,
+                    select: {
+                        id: true,
+                        price: true,
+                        currencyCode: true,
+                        stock: true,
+                        format: true,
+                    },
+                },
+            },
+            take,
         });
     }
 
@@ -250,7 +274,8 @@ export class CatalogRepository {
                 isActive: true,
                 deletedAt: null,
                 variants: {
-                    every: {
+                    some: {
+                        isActive: true,
                         price: {
                             gt: 0,
                         },
@@ -340,7 +365,8 @@ export class CatalogRepository {
                     isActive: true,
                     deletedAt: null,
                     variants: {
-                        every: {
+                        some: {
+                            isActive: true,
                             price: {
                                 gt: 0,
                             },
@@ -439,7 +465,8 @@ export class CatalogRepository {
                     isActive: true,
                     deletedAt: null,
                     variants: {
-                        every: {
+                        some: {
+                            isActive: true,
                             price: {
                                 gt: 0,
                             },
@@ -504,7 +531,8 @@ export class CatalogRepository {
                 isActive: true,
                 deletedAt: null,
                 variants: {
-                    every: {
+                    some: {
+                        isActive: true,
                         price: {
                             gt: 0,
                         },
@@ -563,7 +591,8 @@ export class CatalogRepository {
                     isActive: true,
                     deletedAt: null,
                     variants: {
-                        every: {
+                        some: {
+                            isActive: true,
                             price: {
                                 gt: 0,
                             },
@@ -643,7 +672,8 @@ export class CatalogRepository {
                 isActive: true,
                 deletedAt: null,
                 variants: {
-                    every: {
+                    some: {
+                        isActive: true,
                         price: {
                             gt: 0,
                         },
@@ -726,7 +756,8 @@ export class CatalogRepository {
                 isActive: true,
                 deletedAt: null,
                 variants: {
-                    every: {
+                    some: {
+                        isActive: true,
                         price: {
                             gt: 0,
                         },
@@ -755,44 +786,6 @@ export class CatalogRepository {
         })
     }
 
-    // Gom review lại sau đó tính trung bình rate của review là bao nhiêu sao 
-    // Điểm số lượng sách được review 
-    async groupBookRatings(limit = 10) {
-        const rows = await this.prisma.$queryRaw<{ bookId: number | string; bookVariantId: number | string; avgRating: number }[]>(Prisma.sql`
-        SELECT reviews.book_id as bookId, reviews.book_variant_id as bookVariantId , AVG(reviews.rating) as avgRating FROM reviews 
-        GROUP BY reviews.book_id , reviews.book_variant_id
-        ORDER BY AVG(reviews.rating) DESC LIMIT ${limit}
-        `);
-
-        return rows.map(r => ({
-            bookId: r.bookId,
-            bookVariantId: r.bookVariantId,
-            avgRating: r.avgRating
-        }))
-    }
-    // Gom lại số sản phẩm đã bán tìm varariant đã được bán và sách gốc là sách nào 
-    // biến thể được bán đó là có sách gốc là gì
-    async groupBookSales(limit = 10) {
-        const rows = await this.prisma.$queryRaw<
-            { bookId: number | string; bookVariantId: string | number, soldQty: number | string }[]
-        >(Prisma.sql`
-    SELECT bv.book_id AS bookId, bvs.book_variant_id as bookVariantId , SUM(oi.quantity) AS soldQty
-    FROM order_items oi
-    JOIN orders o ON o.id = oi.order_id
-    JOIN book_variant_snapshots bvs ON bvs.id = oi.book_variant_snapshot_id
-    JOIN book_variants bv ON bv.id = bvs.book_variant_id
-    WHERE o.status IN (${Prisma.join(VALID_SALES_ORDER_STATUSES)})
-    GROUP BY bv.book_id , bvs.book_variant_id
-    ORDER BY soldQty DESC
-    LIMIT ${limit}
-  `);
-
-        return rows.map(r => ({
-            bookId: Number(r.bookId),
-            bookVariantId: Number(r.bookVariantId),
-            soldQty: Number(r.soldQty) // tổng số lượng đã bán
-        }));
-    }
     async findBookIncludeCategory(
         categoryId: number,
         languageId: number,
@@ -967,7 +960,8 @@ export class CatalogRepository {
             isActive: true,
             deletedAt: null,
             variants: {
-                every: {
+                some: {
+                    isActive: true,
                     price: {
                         gt: 0,
                     },
@@ -1008,7 +1002,8 @@ export class CatalogRepository {
             isActive: true,
             deletedAt: null,
             variants: {
-                every: {
+                some: {
+                    isActive: true,
                     price: {
                         gt: 0,
                     },
@@ -1057,11 +1052,12 @@ export class CatalogRepository {
     }
 
     private buildPublicBookPriceVisibilitySql(): Prisma.Sql {
-        return Prisma.sql`NOT EXISTS (
+        return Prisma.sql`EXISTS (
             SELECT 1
             FROM book_variants bv_price_visibility
             WHERE bv_price_visibility.book_id = b.id
-                AND (bv_price_visibility.price IS NULL OR bv_price_visibility.price <= 0)
+                AND bv_price_visibility.is_active = 1
+                AND bv_price_visibility.price > 0
         )`;
     }
 

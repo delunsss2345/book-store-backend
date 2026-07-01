@@ -27,12 +27,14 @@ export class RedisConfiguration {
 
     const errors = validateSync(this);
     if (errors.length) {
-      console.log(errors);
+      console.log(errors)
+      throw new Error(JSON.stringify(errors));
+
     }
   }
 }
 
-export const RedisProvider = BullModule.forRootAsync({
+export const BullMqModule = BullModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => {

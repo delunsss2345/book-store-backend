@@ -1,9 +1,9 @@
-import { OrderQueueProvider, RedisProvider } from '@/config/redis.config';
+import { BullMqModule, OrderQueueProvider } from '@/config/redis.config';
 import { Module } from '@nestjs/common';
 import { CheckoutQueue } from './checkout.queue';
 
 @Module({
-  imports: [RedisProvider, OrderQueueProvider],
+  imports: [BullMqModule, OrderQueueProvider],
   providers: [CheckoutQueue],
   exports: [CheckoutQueue],
 })

@@ -25,6 +25,10 @@ type BookCardRow = Awaited<
   ReturnType<CatalogRepository['findBooksByIds']>
 >[number];
 
+type CatalogHomeBookRow = Awaited<
+  ReturnType<CatalogRepository['findCatalogHomeBooks']>
+>[number];
+
 type BookCategoryRow = BookListRow['categories'][number];
 type BookCardSource = BookListRow | BookCardRow;
 
@@ -67,7 +71,7 @@ export function toCatalogListBookCard(
   book: BookCardSource,
 ): CatalogBookCardDto {
   const [translation] = book.translations;
-  const cheapestVariant = book.variants[0];
+  const cheapestVariant = book.variants[0] ?? book.variants;
   const stock = cheapestVariant?.stock ?? 0;
 
   return {
@@ -118,7 +122,6 @@ export function toCatalogBookCard(
 ): CatalogBookCardDto {
   const [translation] = book.translations;
   const cheapestVariant = book.variants[0];
-
   return {
     id: book.id,
     title: translation?.title ?? `Book ${book.id}`,
@@ -133,6 +136,29 @@ export function toCatalogBookCard(
     currencyCode: cheapestVariant?.currencyCode ?? 'VND',
     format: cheapestVariant?.format ?? null,
     isOutOfStock: !cheapestVariant || (cheapestVariant.stock ?? 0) <= 0,
+  };
+}
+
+export function toCatalogHomeBookCard(
+  book: CatalogHomeBookRow,
+): CatalogBookCardDto {
+  const [translation] = book.translations;
+  const variant = book.variants[0];
+
+  return {
+    id: book.id,
+    title: translation?.title ?? `Book ${book.id}`,
+    slug: translation?.slug ?? null,
+    coverImageUrl: book.coverImageUrl,
+    soldCount: 0,
+    createdAt: book.createdAt,
+    badges: (book.bookBadge ?? []).map((badge) => badge.code),
+    bookVariantId: variant?.id,
+    price: toFixedPrice(variant?.price),
+    description: translation?.description ?? null,
+    currencyCode: variant?.currencyCode ?? 'VND',
+    format: variant?.format ?? null,
+    isOutOfStock: !variant || (variant.stock ?? 0) <= 0,
   };
 }
 

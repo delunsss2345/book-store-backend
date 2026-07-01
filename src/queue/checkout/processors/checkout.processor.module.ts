@@ -1,4 +1,4 @@
-import { OrderQueueProvider, RedisProvider } from '@/config/redis.config';
+import { BullMqModule, OrderQueueProvider } from '@/config/redis.config';
 import { BookSnapShotModule } from '@/modules/book/snapshot/book-snapshot.module';
 import { BookVariantModule } from '@/modules/book/variant/bookVariant.module';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
@@ -13,7 +13,7 @@ import { CheckoutProcessor } from './checkout.processor';
 
 @Module({
   imports: [
-    RedisProvider,
+    BullMqModule,
     OrderQueueProvider,
     BookVariantModule,
     BookSnapShotModule,

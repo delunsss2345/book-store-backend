@@ -2,17 +2,17 @@ import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CatalogService } from '../service/catalog.service';
 import {
     CatalogBookListQueryDto,
     CatalogHomeQueryDto
 } from '../dto/request';
 import {
+    CatalogBookCardDto,
     CatalogBookDetailDto,
     CatalogBookListResponseDto,
     CatalogCategoryTreeDto,
-    CatalogHomeResponseDto
 } from '../dto/response';
+import { CatalogService } from '../service/catalog.service';
 
 @ApiTags('catalog')
 @Controller('catalog')
@@ -21,8 +21,8 @@ export class CatalogController {
 
     @Public()
     @Get('home')
-    @ApiOperation({ summary: 'Get catalog home data (new arrivals, best sellers, top rated, recommendations)' })
-    @ApiOkResponse({ type: CatalogHomeResponseDto })
+    @ApiOperation({ summary: 'Get random catalog home books' })
+    @ApiOkResponse({ type: CatalogBookCardDto, isArray: true })
     getCatalogHome(@Query() query: CatalogHomeQueryDto, @GetLanguageId() langId: number) {
         return this.catalogService.getCatalogHome(query, langId);
     }

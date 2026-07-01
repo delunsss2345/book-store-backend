@@ -62,8 +62,7 @@ export class BookVariantRepository {
     params: {
       bookVariantId: number;
       stock: number;
-      costPrice: number;
-      price?: number;
+      price: number;
     },
     tx: DbClient = this.prisma,
   ) {
@@ -72,7 +71,6 @@ export class BookVariantRepository {
       where: { id: params.bookVariantId },
       data: {
         stock: params.stock,
-        costPrice: params.costPrice,
         ...(typeof params.price === 'number' ? { price: params.price } : {}),
       },
       select: bookVariantInventorySelect,

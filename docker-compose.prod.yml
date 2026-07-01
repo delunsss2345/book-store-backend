@@ -1,40 +1,14 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: threads-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: threads_db
-      MYSQL_USER: threads_user
-      MYSQL_PASSWORD: threadspassword
-    ports:
-      - '3306:3306'
-    volumes:
-      - ./docker/mysql-data:/var/lib/mysql
-
-  redis:
-    image: redis:alpine # Khuyên dùng bản alpine thường cho nhẹ và ổn định
-    container_name: threads-redis
+  bookstore-api:
+    image: ghcr.io/delusss2345/bookstore-api:latest
     restart: unless-stopped
-    networks:
-      - app-net
-  qdrant:
-    image: qdrant/qdrant:v1.9.2
-    container_name: qdrant
-    depends_on:
-      - mysql
-    ports:
-      - '6333:6333'
-    volumes:
-      - ./docker/qdrant_storage:/qdrant/storage
+    container_name: bookstore-api
     env_file:
       - .env
-    restart: unless-stopped
+    ports:
+      - '3301:3301'
 
 volumes:
-  mysql_data:
-  redis_data:
-  qdrant_storage:
 networks:
   book-store-network:
     driver: bridge

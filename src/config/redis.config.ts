@@ -18,19 +18,12 @@ export class RedisConfiguration {
 
   @IsString()
   @IsNotEmpty()
-  REDIS_USERNAME!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  REDIS_PASSWORD!: string;
+  REDIS_URL!: string
 
   constructor(data: Partial<RedisConfiguration> = {}) {
     this.REDIS_HOST = data.REDIS_HOST ?? process.env['REDIS_HOST'] ?? '';
     this.REDIS_PORT = data.REDIS_PORT ?? Number(process.env['REDIS_PORT'] ?? 0);
-    this.REDIS_USERNAME =
-      data.REDIS_USERNAME ?? process.env['REDIS_USERNAME'] ?? '';
-    this.REDIS_PASSWORD =
-      data.REDIS_PASSWORD ?? process.env['REDIS_PASSWORD'] ?? '';
+    this.REDIS_URL = data.REDIS_URL ?? String(process.env['REDIS_URL'] ?? "");
 
     const errors = validateSync(this);
     if (errors.length) {
@@ -45,9 +38,7 @@ export const RedisProvider = BullModule.forRootAsync({
   useFactory: (config: ConfigService) => {
     const host = config.get<string>('REDIS_HOST');
     const port = Number(config.get<number | string>('REDIS_PORT'));
-    const username = config.get<string>('REDIS_USERNAME') || undefined;
-    const password = config.get<string>('REDIS_PASSWORD') || undefined;
-
+    const url = config.get<string>('REDIS_URL') || undefined;
     if (!host || !Number.isFinite(port)) {
       throw new Error('Invalid Redis config (REDIS_HOST/REDIS_PORT)');
     }
@@ -56,8 +47,7 @@ export const RedisProvider = BullModule.forRootAsync({
       connection: {
         host,
         port,
-        username,
-        password,
+        url,
       },
     };
   },
@@ -72,15 +62,9 @@ export const RedisIoredisProvider = {
     if (!host || !port) {
       throw new Error('Invalid Redis config');
     }
-
-    const username = config.get<string>('REDIS_USERNAME') || undefined;
-    const password = config.get<string>('REDIS_PASSWORD') || undefined;
-
     return new Redis({
       host,
       port,
-      username,
-      password,
     });
   },
   inject: [ConfigService],
@@ -89,15 +73,13 @@ export const CacheProvider = CacheModule.registerAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => {
-    const host = config.get<string>('REDIS_HOST');
-    const port = Number(config.get<number | string>('REDIS_PORT'));
-    const password = config.get<string>('REDIS_PASSWORD') || undefined;
+    const url = config.get<string>('REDIS_URL') || undefined;
     return {
       stores: [
         new Keyv({
           store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
         }),
-        new KeyvRedis(`redis://default:${password}@${host}:${port}`),
+        new KeyvRedis(url),
       ],
     };
   },

@@ -1,9 +1,9 @@
 import { CatalogMessage, cacheKey } from '@/common';
 import {
-  CATEGORY_CACHE_TTL,
-  DETAIL_CACHE_TTL,
-  HOME_CACHE_TTL,
-  LIST_CACHE_TTL,
+  CATALOG_CATEGORY_CACHE_TTL_SECONDS,
+  CATALOG_DETAIL_CACHE_TTL_SECONDS,
+  CATALOG_HOME_CACHE_TTL_SECONDS,
+  CATALOG_LIST_CACHE_TTL_SECONDS,
 } from '@/common/constants/enum-ttl.constant';
 import {
   buildPaginatedResult,
@@ -51,7 +51,7 @@ export class CatalogService {
     const limit = query.limit ?? 12;
     const key = cacheKey.catalog.home(langId, limit);
 
-    return this.cache.withCache(key, HOME_CACHE_TTL, async () => {
+    return this.cache.withCache(key, CATALOG_HOME_CACHE_TTL_SECONDS, async () => {
       const [newestRows, saleTopLimit] = await Promise.all([
         this.repo.findNewestActiveBookIds(langId, limit),
         this.repo.groupBookSales(limit),
@@ -76,7 +76,7 @@ export class CatalogService {
   async getCategories(langId: number): Promise<CatalogCategoryTreeDto[]> {
     const key = cacheKey.catalog.categories(langId);
 
-    return this.cache.withCache(key, CATEGORY_CACHE_TTL, async () => {
+    return this.cache.withCache(key, CATALOG_CATEGORY_CACHE_TTL_SECONDS, async () => {
       const rows = await this.repo.findActiveCategoriesByLanguage(langId);
       return buildCatalogCategoryTree(rows);
     });
@@ -147,11 +147,11 @@ export class CatalogService {
     const keywordSearch = keyword
       ? this.buildKeywordSearch(keyword)
       : undefined;
-    
+
     if (slugCategory) {
       return this.cache.withCache(
         cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory),
-        LIST_CACHE_TTL,
+        CATALOG_LIST_CACHE_TTL_SECONDS,
         async () => {
           const category = await this.repo.findCategoryBySlug(slugCategory, langId);
           if (!category) {
@@ -188,7 +188,7 @@ export class CatalogService {
 
     return this.cache.withCache(
       cacheKey.catalog.bookList(langId, page, limit),
-      LIST_CACHE_TTL,
+      CATALOG_LIST_CACHE_TTL_SECONDS,
       async () => {
         const [rows, total] = await Promise.all([
           this.repo.findBooksQueryRaw(langId, page, limit),
@@ -224,7 +224,7 @@ export class CatalogService {
   ): Promise<CatalogBookDetailDto> {
     const key = cacheKey.catalog.bookDetail(bookId, langId);
 
-    return this.cache.withCache(key, DETAIL_CACHE_TTL, async () => {
+    return this.cache.withCache(key, CATALOG_DETAIL_CACHE_TTL_SECONDS, async () => {
       const book = await this.repo.findBookDetailById(bookId, langId);
       if (!book) throw new NotFoundException(CatalogMessage.BOOK_NOT_FOUND);
       return toCatalogBookDetail(book);
@@ -242,7 +242,7 @@ export class CatalogService {
 
     const key = cacheKey.catalog.bookDetailBySlug(normalizedSlug, langId);
 
-    return this.cache.withCache(key, DETAIL_CACHE_TTL, async () => {
+    return this.cache.withCache(key, CATALOG_DETAIL_CACHE_TTL_SECONDS, async () => {
       const book = await this.repo.findBookDetailBySlug(normalizedSlug, langId);
       if (!book) throw new NotFoundException(CatalogMessage.BOOK_NOT_FOUND);
       const bookIds = new Set(book.categories.map((c) => c.category.id));

@@ -49,6 +49,10 @@ export class CartService {
     const groups = new Map<string, CartItemDto[]>();
 
     for (const item of cart.items) {
+      console.log(item);
+      console.log(item.variant);
+      console.log(item.variant.book.translations)
+
       const date = (item.addedAt as Date).toISOString().slice(0, 10);
       const dto: CartItemDto = {
         id: item.id,
@@ -65,8 +69,8 @@ export class CartService {
         book: {
           id: item.variant.book.id,
           coverImageUrl: item.variant.book.coverImageUrl ?? null,
-          title: item.variant.book.translations.title ?? null,
-          slug: item.variant.book.translations.slug ?? null,
+          title: item.variant.book.translations[0].title ?? null,
+          slug: item.variant.book.translations[0].slug ?? null,
         },
       };
 

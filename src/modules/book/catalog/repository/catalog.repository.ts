@@ -131,7 +131,22 @@ export class CatalogRepository {
 
     findBookVariantById(bookVariantId: number, languageId: number) {
         return this.prisma.bookVariant.findFirst({
-            where: { id: bookVariantId },
+            where: {
+                id: bookVariantId,
+                isActive: true,
+                price: { gt: 0 },
+                book: {
+                    isActive: true,
+                    deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
+                },
+            },
             select: {
                 id: true,
                 price: true,
@@ -158,7 +173,22 @@ export class CatalogRepository {
 
     findBookVariantByIds(bookVariantId: number[]) {
         return this.prisma.bookVariant.findMany({
-            where: { id: { in: bookVariantId } },
+            where: {
+                id: { in: bookVariantId },
+                isActive: true,
+                price: { gt: 0 },
+                book: {
+                    isActive: true,
+                    deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
+                },
+            },
             select: {
                 id: true,
                 price: true,
@@ -188,6 +218,13 @@ export class CatalogRepository {
             where: {
                 isActive: true,
                 deletedAt: null,
+                variants: {
+                    every: {
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
                 translations: {
                     some: {
                         languageId,
@@ -212,6 +249,13 @@ export class CatalogRepository {
                 id: { in: bookIds },
                 isActive: true,
                 deletedAt: null,
+                variants: {
+                    every: {
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
             },
             select: {
                 id: true,
@@ -259,7 +303,7 @@ export class CatalogRepository {
                     },
                 },
                 variants: {
-                    where: { isActive: true },
+                    where: { isActive: true, price: { gt: 0 } },
                     orderBy: {
                         price: 'desc'
                     },
@@ -291,6 +335,18 @@ export class CatalogRepository {
             where: {
                 id: { in: bookVariantId },
                 isActive: true,
+                price: { gt: 0 },
+                book: {
+                    isActive: true,
+                    deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
+                },
             },
             select: {
                 book: {
@@ -378,9 +434,17 @@ export class CatalogRepository {
         return this.prisma.bookVariant.findMany({
             where: {
                 isActive: true,
+                price: { gt: 0 },
                 book: {
                     isActive: true,
                     deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
                 },
             },
             orderBy: [{ id: 'asc' }],
@@ -439,6 +503,13 @@ export class CatalogRepository {
             where: {
                 isActive: true,
                 deletedAt: null,
+                variants: {
+                    every: {
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
             },
             orderBy: { id: 'asc' },
             select: {
@@ -456,7 +527,7 @@ export class CatalogRepository {
                     },
                 },
                 variants: {
-                    where: { isActive: true },
+                    where: { isActive: true, price: { gt: 0 } },
                     orderBy: { price: 'asc' },
                     take: 1,
                     select: {
@@ -487,7 +558,18 @@ export class CatalogRepository {
     async findBookDetailById(bookId: number, languageId: number) {
         const [bookDetail,] = await Promise.all([
             this.prisma.book.findFirst({
-                where: { id: bookId, isActive: true, deletedAt: null },
+                where: {
+                    id: bookId,
+                    isActive: true,
+                    deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
+                },
                 select: {
                     id: true,
                     coverImageUrl: true,
@@ -530,7 +612,7 @@ export class CatalogRepository {
                         },
                     },
                     variants: {
-                        where: { isActive: true },
+                        where: { isActive: true, price: { gt: 0 } },
                         orderBy: [{ price: "asc" }, { id: "asc" }],
                         select: {
                             id: true,
@@ -549,6 +631,7 @@ export class CatalogRepository {
 
         if (!bookDetail) return null;
 
+
         return {
             ...bookDetail,
         };
@@ -559,6 +642,13 @@ export class CatalogRepository {
             where: {
                 isActive: true,
                 deletedAt: null,
+                variants: {
+                    every: {
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
                 translations: {
                     some: {
                         languageId,
@@ -608,7 +698,7 @@ export class CatalogRepository {
                     },
                 },
                 variants: {
-                    where: { isActive: true },
+                    where: { isActive: true, price: { gt: 0 } },
                     orderBy: [{ price: 'asc' }, { id: 'asc' }],
                     select: {
                         id: true,
@@ -625,7 +715,6 @@ export class CatalogRepository {
 
         if (!bookDetail) return null;
 
-
         return {
             ...bookDetail,
         };
@@ -634,6 +723,15 @@ export class CatalogRepository {
         return this.prisma.book.findMany({
             where: {
                 id: { not: bookId },
+                isActive: true,
+                deletedAt: null,
+                variants: {
+                    every: {
+                        price: {
+                            gt: 0,
+                        },
+                    },
+                },
                 categories: {
                     some: {
                         categoryId: {
@@ -718,6 +816,7 @@ export class CatalogRepository {
                 AND bc.category_id = ${categoryId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
+                AND ${this.buildPublicBookPriceVisibilitySql()}
                 AND ${keywordCondition}
             ORDER BY score DESC, b.created_at DESC, b.id DESC
             LIMIT ${Prisma.sql`${limit}`}
@@ -743,6 +842,7 @@ export class CatalogRepository {
                 AND bc.category_id = ${categoryId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
+                AND ${this.buildPublicBookPriceVisibilitySql()}
                 AND ${keywordCondition}
         `);
         return Number(rows[0]?.total ?? 0);
@@ -767,6 +867,7 @@ export class CatalogRepository {
                 AND bt.language_id = ${languageId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
+                AND ${this.buildPublicBookPriceVisibilitySql()}
                 AND ${keywordCondition}
             ORDER BY score DESC, b.created_at DESC, b.id DESC
             LIMIT ${Prisma.sql`${limit}`}
@@ -788,6 +889,7 @@ export class CatalogRepository {
                 AND bt.language_id = ${languageId}
             WHERE b.is_active = 1
                 AND b.deleted_at IS NULL
+                AND ${this.buildPublicBookPriceVisibilitySql()}
                 AND ${keywordCondition}
         `);
         return Number(rows[0]?.total ?? 0);
@@ -844,7 +946,7 @@ export class CatalogRepository {
                     },
                 },
                 variants: {
-                    where: { isActive: true },
+                    where: { isActive: true, price: { gt: 0 } },
                     orderBy: [{ price: 'asc' }, { id: 'asc' }],
                     take: 1,
                     select: {
@@ -864,6 +966,13 @@ export class CatalogRepository {
         return {
             isActive: true,
             deletedAt: null,
+            variants: {
+                every: {
+                    price: {
+                        gt: 0,
+                    },
+                },
+            },
             ...(filter.q
                 ? {
                     translations: {
@@ -898,6 +1007,13 @@ export class CatalogRepository {
         return {
             isActive: true,
             deletedAt: null,
+            variants: {
+                every: {
+                    price: {
+                        gt: 0,
+                    },
+                },
+            },
             translations: {
                 some: {
                     languageId: filter.languageId,
@@ -938,6 +1054,15 @@ export class CatalogRepository {
         }
 
         return Prisma.sql`MATCH(bt.title, bt.description) AGAINST (${search.keyword} IN BOOLEAN MODE) AS score`;
+    }
+
+    private buildPublicBookPriceVisibilitySql(): Prisma.Sql {
+        return Prisma.sql`NOT EXISTS (
+            SELECT 1
+            FROM book_variants bv_price_visibility
+            WHERE bv_price_visibility.book_id = b.id
+                AND (bv_price_visibility.price IS NULL OR bv_price_visibility.price <= 0)
+        )`;
     }
 
     private toLikePattern(keyword: string) {

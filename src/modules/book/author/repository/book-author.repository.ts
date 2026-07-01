@@ -12,6 +12,13 @@ export class BookAuthorRepository {
                 book: {
                     isActive: true,
                     deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
                     translations: {
                         some: { languageId },
                     },
@@ -27,6 +34,13 @@ export class BookAuthorRepository {
                 book: {
                     isActive: true,
                     deletedAt: null,
+                    variants: {
+                        every: {
+                            price: {
+                                gt: 0,
+                            },
+                        },
+                    },
                     translations: {
                         some: { languageId },
                     },
@@ -50,7 +64,7 @@ export class BookAuthorRepository {
                             take: 1,
                         },
                         variants: {
-                            where: { isActive: true },
+                            where: { isActive: true, price: { gt: 0 } },
                             orderBy: [{ price: 'asc' }, { id: 'asc' }],
                             take: 1,
                             select: {

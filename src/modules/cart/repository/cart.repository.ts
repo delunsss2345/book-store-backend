@@ -24,7 +24,6 @@ const buildCartWithItemsInclude = (languageId: number): Prisma.CartInclude => ({
                             translations: {
                                 where: { languageId },
                                 orderBy: { languageId: 'asc' },
-                                take: 1,
                                 select: {
                                     title: true,
                                     description: true,

@@ -3,6 +3,8 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma ./prisma/
+
 RUN npm ci
 ARG DATABASE_URL=mysql://username:password@localhost:3306/book_store?allowPublicKeyRetrieval=true
 ENV DATABASE_URL=$DATABASE_URL

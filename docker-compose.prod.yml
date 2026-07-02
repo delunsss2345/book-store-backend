@@ -9,10 +9,13 @@ services:
       - '3301:3301'
     networks:
       - proxy-net
+      - app-net
 
 volumes:
 networks:
   proxy-net:
+    external: true
+  app-net:
     external: true
   book-store-network:
     driver: bridge

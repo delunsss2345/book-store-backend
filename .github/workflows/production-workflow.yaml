@@ -36,7 +36,10 @@ jobs:
           port: 22
           envs: GHCR_TOKEN,GHCR_USER,IMAGE_NAME
           script: |
-            cd api/book_store
+            cd api/book_store 
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker pull "$IMAGE_NAME"
+            docker compose up -d --force-recreate
+            docker image prune -a -f
+            docker exec -it bookstore-api npx prisma migrate deploy

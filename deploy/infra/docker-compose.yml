@@ -7,7 +7,6 @@ services:
       - .env
     command: --mysql-native-password=ON
     environment:
-      MYSQL_DATABASE: ${DB_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     networks:
       - app-net
@@ -19,6 +18,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./docker/redis-data:/data
+    networks:
+      - app-net
 networks:
   app-net:
     external: true

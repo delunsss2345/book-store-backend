@@ -1,13 +1,30 @@
 services:
-  book-api:
+  bookstore-api:
     image: ghcr.io/delunsss2345/book-store-backend:latest
+    restart: unless-stopped
+    container_name: bookstore-api
+    env_file:
+      - .env
+    ports:
+      - '3301:3301'
     networks:
       - proxy-net
       - app-net
 
-volumes:
+  bookstore-workers:
+    image: ghcr.io/delunsss2345/book-store-backend:latest
+    restart: unless-stopped
+    container_name: bookstore-workers
+    command: ['node', 'dist/src/worker.js']
+    env_file:
+      - .env
+    networks:
+      - app-net
+
 networks:
   proxy-net:
     external: true
   app-net:
     external: true
+  book-store-network:
+    driver: bridge

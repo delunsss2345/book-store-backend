@@ -40,7 +40,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { RoleCode, UserSession } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { v4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
 const RESEND_BLOCK_WINDOW_IN_MS = 5 * 60 * 60 * 1000;
@@ -294,7 +294,7 @@ export class AuthService {
 
     const device = await this.userDeviceService.upsertDeviceOnLogin({
       userId: safeUser.id,
-      deviceFingerprint: body?.deviceFingerprint ?? v4(),
+      deviceFingerprint: body?.deviceFingerprint ?? randomUUID(),
       userAgent,
     });
 

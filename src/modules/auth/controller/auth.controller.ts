@@ -45,6 +45,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -56,7 +57,6 @@ import {
 } from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
 import type { CookieOptions, Request, Response } from 'express';
-import { v4 } from 'uuid';
 
 const DEVICE_FINGERPRINT_COOKIE = 'device_fingerprint';
 @ApiTags('auth')
@@ -95,7 +95,7 @@ export class AuthController {
   ) {
     // Check cookie
     const cookieFp = req.cookies?.[DEVICE_FINGERPRINT_COOKIE];
-    const deviceFingerprint = body.deviceFingerprint || cookieFp || v4();
+    const deviceFingerprint = body.deviceFingerprint || cookieFp || randomUUID();
 
     if (!cookieFp) {
       res.cookie(

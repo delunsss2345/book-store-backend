@@ -76,8 +76,9 @@ export class AuthController {
     @Ip() ip: string,
     @Req() req: Request,
   ) {
+    const originUrl = req['x-origin-url'] ?? '';
     const guestSessionId = req.cookies?.guestSessionId as string | undefined;
-    return this.authService.register(body, userAgent, ip, guestSessionId);
+    return this.authService.register(body, userAgent, ip, originUrl, guestSessionId);
   }
 
   @Public()

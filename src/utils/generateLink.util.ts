@@ -1,7 +1,7 @@
 import { VerifyCodePath } from "@/common";
 import { randomInt } from "node:crypto";
 type GenerateLinkArgs = {
-    url?: string;
+    originUrl?: string;
     path: VerifyCodePath;
     token: string;
 };
@@ -9,7 +9,7 @@ type GenerateLinkArgs = {
 const getTokenParamKey = (path: VerifyCodePath) => {
     switch (path) {
         case VerifyCodePath.VERIFY_EMAIL:
-            return "verify-email";
+            return "token";
         case VerifyCodePath.FORGOT_PASSWORD:
             return "forgot-password";
         case VerifyCodePath.RESET_PASSWORD:
@@ -21,13 +21,13 @@ const getTokenParamKey = (path: VerifyCodePath) => {
     }
 };
 export const generateLinkWithType = ({
-    url = "http://localhost:3000",
+    originUrl,
     path,
     token,
 }: GenerateLinkArgs) => {
     const key = getTokenParamKey(path);
 
-    const base = url.endsWith("/") ? url.slice(0, -1) : url;
+    const base = originUrl ? originUrl.endsWith("/") ? originUrl.slice(0, -1) : originUrl : 'http://localhost:3000/vi';
     return {
         link: `${base}/${path}?${key}=${encodeURIComponent(token)}`,
     };

@@ -80,6 +80,7 @@ export class AuthService {
     body: RegisterRequestDto,
     userAgent: string,
     ip: string,
+    originUrl: string,
     guestSessionId?: string,
   ) {
     if (body.password !== body.confirmPassword) {
@@ -130,7 +131,7 @@ export class AuthService {
     ]);
 
     const expiresAt = this.signVerifyCode();
-
+    console.log(user)
     const verificationBundle =
       await this.verificationCodeService.createRegisterVerification({
         email: user.email,
@@ -138,10 +139,11 @@ export class AuthService {
         expiresAt,
       });
     // Add queue
-    await this.emailQueue.enqueueOutboxEmail(
-      verificationBundle.outbox.id,
-      verificationBundle.verification.id,
-    );
+    await this.emailQueue.enqueueOutboxEmail({
+      outboxId: verificationBundle.outbox.id,
+      verificationCodeId: verificationBundle.verification.id,
+      originUrl,
+    });
 
     if (guestSessionId) {
       await this.guestSessionService.convertGuestSessionToUser(
@@ -247,10 +249,10 @@ export class AuthService {
       });
 
     // thêm ngăn xếp
-    await this.emailQueue.enqueueOutboxEmail(
-      verificationBundle.outbox.id,
-      verificationBundle.verification.id,
-    );
+    await this.emailQueue.enqueueOutboxEmail({
+      outboxId: verificationBundle.outbox.id,
+      verificationCodeId: verificationBundle.verification.id,
+    });
 
     return { success: true };
   }
@@ -402,10 +404,10 @@ export class AuthService {
         expiresAt: this.signVerifyCode(),
       });
 
-    await this.emailQueue.enqueueOutboxEmail(
-      verificationBundle.outbox.id,
-      verificationBundle.verification.id,
-    );
+    await this.emailQueue.enqueueOutboxEmail({
+      outboxId: verificationBundle.outbox.id,
+      verificationCodeId: verificationBundle.verification.id,
+    });
 
     return { success: true };
   }

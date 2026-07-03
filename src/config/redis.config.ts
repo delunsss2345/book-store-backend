@@ -1,3 +1,4 @@
+import { EMAIL_QUEUE } from '@/common/constants/email-jobs.constant';
 import KeyvRedis, { Keyv } from '@keyv/redis';
 import { BullModule } from '@nestjs/bullmq';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -6,7 +7,7 @@ import { CacheableMemory } from 'cacheable';
 import { IsNotEmpty, IsNumber, IsString, validateSync } from 'class-validator';
 import Redis from 'ioredis';
 
-export const CACHE_REDIS = "CACHE_REDIS";
+export const CACHE_REDIS = 'CACHE_REDIS';
 export class RedisConfiguration {
   @IsNumber()
   @IsNotEmpty()
@@ -18,18 +19,17 @@ export class RedisConfiguration {
 
   @IsString()
   @IsNotEmpty()
-  REDIS_URL!: string
+  REDIS_URL!: string;
 
   constructor(data: Partial<RedisConfiguration> = {}) {
     this.REDIS_HOST = data.REDIS_HOST ?? process.env['REDIS_HOST'] ?? '';
     this.REDIS_PORT = data.REDIS_PORT ?? Number(process.env['REDIS_PORT'] ?? 0);
-    this.REDIS_URL = data.REDIS_URL ?? String(process.env['REDIS_URL'] ?? "");
+    this.REDIS_URL = data.REDIS_URL ?? String(process.env['REDIS_URL'] ?? '');
 
     const errors = validateSync(this);
     if (errors.length) {
-      console.log(errors)
+      console.log(errors);
       throw new Error(JSON.stringify(errors));
-
     }
   }
 }
@@ -87,7 +87,7 @@ export const CacheProvider = CacheModule.registerAsync({
   },
 });
 export const EmailQueueProvider = BullModule.registerQueue({
-  name: 'email',
+  name: EMAIL_QUEUE.NAME,
 });
 
 export const OrderQueueProvider = BullModule.registerQueue({

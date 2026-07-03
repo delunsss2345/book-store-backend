@@ -1,4 +1,4 @@
-import { VerifyCodePath } from '@/common';
+import { EMAIL_JOBS, EMAIL_QUEUE, VerifyCodePath } from '@/common';
 import {
   ORDER_EMAIL,
   OTP_FORGOT_PASSWORD_TEMPLATE_KEY,
@@ -7,6 +7,10 @@ import {
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { OTP_EXPIRES_MINUTES } from '@/modules/verification-code/constants/verification-code.constants';
 import { VerificationCodeService } from '@/modules/verification-code/service/verification-code.service';
+import {
+  EnqueueOrderEmailPayloadDto,
+  EnqueueOutboxEmailPayloadDto,
+} from '@/queue/email/dto/payload';
 import { MailService } from '@/queue/email/mail.service';
 import {
   EMAIL_TEMPLATE,
@@ -26,7 +30,11 @@ type OrderEmailPayload = {
   orderStatus: OrderStatus;
 };
 
-@Processor('email')
+type EmailJobPayload =
+  | EnqueueOutboxEmailPayloadDto
+  | EnqueueOrderEmailPayloadDto;
+
+@Processor(EMAIL_QUEUE.NAME)
 export class EmailProcessor extends WorkerHost {
   constructor(
     private readonly emailOutbox: EmailOutboxService,
@@ -35,16 +43,19 @@ export class EmailProcessor extends WorkerHost {
   ) {
     super();
   }
-  public async process(
-    job: Job<{ outboxId: number; verificationCodeId?: number }>,
-  ) {
-    const { outboxId, verificationCodeId } = job.data;
+  public async process(job: Job<EmailJobPayload>) {
+    const { outboxId } = job.data;
     const outBox = await this.emailOutbox.findByIdEmailBox(outboxId);
     try {
       if (!outBox) return;
-      if (verificationCodeId) {
-        await this.handleVerifyEmail(outBox, verificationCodeId);
-      } else if (outBox.templateKey === ORDER_EMAIL) {
+      if (job.name === EMAIL_JOBS.SEND_EMAIL) {
+        const { originUrl, verificationCodeId } =
+          job.data as EnqueueOutboxEmailPayloadDto;
+        await this.handleVerifyEmail(outBox, originUrl, verificationCodeId);
+      } else if (
+        job.name === EMAIL_JOBS.SEND_ORDER_EMAIL &&
+        outBox.templateKey === ORDER_EMAIL
+      ) {
         await this.handleOrderEmail(outBox);
       } else throw new Error('Unsupported email template key');
       // đánh dấu đã gửi
@@ -58,6 +69,7 @@ export class EmailProcessor extends WorkerHost {
 
   private async handleVerifyEmail(
     outBox: EmailOutbox,
+    originUrl: string | undefined,
     verificationCodeId: number,
   ) {
     let path = VerifyCodePath.VERIFY_EMAIL;
@@ -69,7 +81,7 @@ export class EmailProcessor extends WorkerHost {
       throw new Error('Unsupported email template key');
     }
 
-    const { link } = generateLinkWithType({ path, token });
+    const { link } = generateLinkWithType({ path, token, originUrl });
     const codeHash = hashToken(token);
 
     // lưu hash code

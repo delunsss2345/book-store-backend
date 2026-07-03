@@ -10,7 +10,7 @@ export class LoggingInterceptor implements NestInterceptor {
         if (request.headers) {
             const headers = (request.headers);
             Logger.log(`Request headers...`);
-            Logger.log(headers);
+            // Logger.log(headers);
         }
         if (request.body) {
             const body = (request.body);
@@ -22,7 +22,7 @@ export class LoggingInterceptor implements NestInterceptor {
             .handle()
             .pipe(
                 tap((data) => {
-                    console.log(`After... ${Date.now() - now}ms`)
+                    // console.log(`After... ${Date.now() - now}ms`)
                     // Logger.log(data);
                 }));
     }

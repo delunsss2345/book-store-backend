@@ -269,6 +269,48 @@ export class OrderRepository {
   `);
   }
 
+  incrementVariantsStock(
+    variantKeys: string[],
+    variantMap: Map<string, number>,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    if (variantKeys.length === 0) return Promise.resolve(0);
+
+    const stockCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN stock + ${quantity}`;
+    });
+
+    const reservedCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN reserved + ${quantity}`;
+    });
+
+    const ids = variantKeys.map(Number);
+
+    return tx.$executeRaw(Prisma.sql`
+    UPDATE book_variants
+    SET
+      stock = CASE id
+        ${Prisma.join(stockCases, ' ')}
+        ELSE stock
+      END,
+      reserved = CASE id
+        ${Prisma.join(reservedCases, ' ')}
+        ELSE reserved
+      END
+    WHERE id IN (${Prisma.join(ids)})
+  `);
+  }
+
   findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
     return tx.order.findFirst({
       where: { cartHash },

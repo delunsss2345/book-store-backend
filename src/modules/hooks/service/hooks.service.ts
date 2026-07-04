@@ -7,6 +7,7 @@ import { TransactionService } from '@/modules/transaction/service/transaction.se
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -152,32 +153,36 @@ export class HooksService {
       ),
       this.paymentIntent.markPaymentIntent(orderCode, PaymentStatus.SUCCESS),
     ]);
-
-    return this.transactionService.doInTransaction(async (tx) => {
-      const orders =
-        await this.orderService.findOrderItemWWithParentVariantByOrderId(
-          paidOrder.id,
-          tx,
-        );
-
-      const variantMapWithQuantity = new Map<string, number>(
-        orders?.items.map((item) => [
-          item.bookVariantSnapshot.bookVariant.id.toString(),
-          item.quantity,
-        ]),
+    const orders =
+      await this.orderService.findOrderItemWWithParentVariantByOrderId(
+        paidOrder.id,
       );
+    const variantMapWithQuantity = new Map<string, number>(
+      orders?.items.map((item) => [
+        item.bookVariantSnapshot.bookVariant.id.toString(),
+        item.quantity,
+      ]),
+    );
 
+    try {
       await this.orderService.updateOrderDone(
         variantMapWithQuantity,
         paidOrder.id,
-        tx,
       );
+    }
+    catch {
+      await this.orderService.updateOrderNotDone(
+        variantMapWithQuantity,
+        paidOrder.id,
+      );
+      throw new InternalServerErrorException()
+    }
 
-      return {
-        paidOrder,
-        doneWebhook,
-      };
-    });
+    return {
+      paidOrder,
+      doneWebhook,
+    };
+
   };
 
   async handleSepayWebhook(body: SePayHooksDto) {

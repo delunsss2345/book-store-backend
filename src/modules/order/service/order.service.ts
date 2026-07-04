@@ -376,7 +376,17 @@ export class OrderService {
       tx,
     );
   }
-
+  updateOrderNotDone(
+    variantMap: Map<string, number>,
+    orderId: number,
+    tx?: PrismaClientTransaction,
+  ) {
+    const variantKeys = [...variantMap.keys()];
+    return Promise.all([
+      this.orderRepository.incrementVariantsStock(variantKeys, variantMap, tx),
+      this.orderRepository.updateOrderStatusById(orderId, OrderStatus.PENDING_PAYMENT, tx),
+    ]);
+  }
   updateOrderDone(
     variantMap: Map<string, number>,
     orderId: number,

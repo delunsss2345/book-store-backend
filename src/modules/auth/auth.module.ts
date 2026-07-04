@@ -11,6 +11,7 @@ import { UserDeviceService } from '@/modules/auth/service/user-device.service';
 import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
 import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
+import { PermissionModule } from '@/modules/permission/permission.module';
 import { RoleModule } from '@/modules/role/role.module';
 import { UserModule } from '@/modules/user/user.module';
 import { VerificationCodeModule } from '@/modules/verification-code/verification-code.module';
@@ -27,6 +28,7 @@ import { AuthService } from './service/auth.service';
     GuestSessionModule,
     UserModule,
     RoleModule,
+    PermissionModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -44,4 +46,4 @@ import { AuthService } from './service/auth.service';
   ],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

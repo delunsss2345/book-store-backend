@@ -392,47 +392,17 @@ const PERMISSIONS: PermissionSeed[] = [
 ];
 
 const STAFF_PERMISSIONS: PermissionCode[] = [
-  PermissionCode.SUPPLIER_READ,
-  PermissionCode.SUPPLIER_CREATE,
-  PermissionCode.SUPPLIER_UPDATE,
-  PermissionCode.AUTHOR_CREATE,
-  PermissionCode.PUBLISHER_CREATE,
-  PermissionCode.CATEGORY_READ,
-  PermissionCode.CATEGORY_CREATE,
   PermissionCode.BOOK_READ,
-  PermissionCode.BOOK_CREATE,
-  PermissionCode.BOOK_UPDATE,
-  PermissionCode.BOOK_DELETE,
-  PermissionCode.BOOK_TRANSLATION_CREATE,
-  PermissionCode.BOOK_SNAPSHOT_READ,
-  PermissionCode.BOOK_VARIANT_READ,
-  PermissionCode.BOOK_VARIANT_UPDATE,
   PermissionCode.ORDER_READ,
   PermissionCode.ORDER_UPDATE,
   PermissionCode.PURCHASE_ORDER_READ,
   PermissionCode.PURCHASE_ORDER_CREATE,
-  PermissionCode.PURCHASE_ORDER_APPROVE,
-  PermissionCode.PURCHASE_ORDER_TRANSFER,
-  PermissionCode.STOCK_IMPORT_READ,
-  PermissionCode.STOCK_IMPORT_CREATE,
-  PermissionCode.USER_READ,
-  PermissionCode.UPLOAD_MANAGE,
-  PermissionCode.DEVICE_READ,
-  PermissionCode.EMAIL_OUTBOX_READ,
-  PermissionCode.GUEST_SESSION_READ,
-  PermissionCode.SEARCH_REINDEX_BOOKS,
 ];
 
 const WAREHOUSE_PERMISSIONS: PermissionCode[] = [
-  PermissionCode.SUPPLIER_READ,
-  PermissionCode.BOOK_READ,
-  PermissionCode.BOOK_VARIANT_READ,
-  PermissionCode.BOOK_VARIANT_UPDATE,
-  PermissionCode.PURCHASE_ORDER_READ,
   PermissionCode.PURCHASE_ORDER_TRANSFER,
   PermissionCode.STOCK_IMPORT_READ,
   PermissionCode.STOCK_IMPORT_CREATE,
-  PermissionCode.UPLOAD_MANAGE,
 ];
 
 const CUSTOMER_PERMISSIONS: PermissionCode[] = [];
@@ -1264,10 +1234,10 @@ async function seedAddressesForUser(user: SeededUser) {
           index === 0
             ? AddressType.HOME
             : randomOne([
-                AddressType.HOME,
-                AddressType.WORK,
-                AddressType.OTHER,
-              ]),
+              AddressType.HOME,
+              AddressType.WORK,
+              AddressType.OTHER,
+            ]),
         recipientName: fullName,
         phoneNumber: user.phoneNumber ?? `09${randomInt(10000000, 99999999)}`,
         addressDetail: `Số ${randomInt(1, 350)} đường ${randomOne(STREET_POOL)}`,
@@ -1514,7 +1484,7 @@ const BASE_BOOKS: BaseBook[] = [
     descriptionEn: 'A hands-on guide to building machine learning models.',
   },
   {
-    title: 'Deep Learning',
+    title: 'Deep Learning', 
     author: 'Ian Goodfellow, Yoshua Bengio, Aaron Courville',
     publisher: 'MIT Press',
     publicationYear: 2016,

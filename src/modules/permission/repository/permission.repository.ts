@@ -17,7 +17,7 @@ export type UpdatePermissionParams = {
 
 @Injectable()
 export class PermissionRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   findAllPermissions() {
     return this.prisma.permission.findMany({
@@ -35,6 +35,39 @@ export class PermissionRepository {
         },
       },
     });
+  }
+
+  async findPermissionByUserId(userId: number) {
+    const userRoles = await this.prisma.userRole.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        role: {
+          select: {
+            code: true,
+            roles: {
+              select: {
+                permission: {
+                  select: {
+                    code: true,
+                    method: true,
+                    pathPattern: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return userRoles.map((userRole) => ({
+      role: {
+        code: userRole.role.code,
+        rolePermissions: userRole.role.roles,
+      },
+    }));
   }
 
   createPermission(params: CreatePermissionParams, actorUserId: number) {

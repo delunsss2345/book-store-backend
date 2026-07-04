@@ -22,6 +22,7 @@ import { UserDeviceService } from '@/modules/auth/service/user-device.service';
 import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { EmailOutboxService } from '@/modules/email-outbox/service/email-outbox.service';
 import { GuestSessionService } from '@/modules/guest-session/service/guest-session.service';
+import { PermissionService } from '@/modules/permission/service/permission.service';
 import { RoleService } from '@/modules/role/service/role.service';
 import { UserRoleService } from '@/modules/user/service/user-role.service';
 import { OTP_TIME_SECONDS } from '@/modules/verification-code/constants/verification-code.constants';
@@ -61,17 +62,24 @@ export class AuthService {
     private readonly userRoleService: UserRoleService,
     private readonly roleService: RoleService,
     private readonly guestSessionService: GuestSessionService,
+    private readonly permissionService: PermissionService,
   ) { }
 
-  getMe(id: number) {
-    return this.authRepository.findUserById(id);
+  async getMe(id: number) {
+    const [user, permission] = await Promise.all([
+      this.authRepository.findUserById(id),
+      this.permissionService.findPermissionByUserId(id),
+    ]);
+    const permissions = permission.flatMap(per => per.role.rolePermissions).map(p => p.permission.code)
+    if (!user) return null;
+
+    return { ...user, permissions };
   }
 
   getActiveDeviceSessions(userId: number) {
     return this.userSessionService.findActiveSessionsByUserId(userId);
   }
 
-  // Cho phép domain khác (Cart, Wishlist) lấy user theo id qua service thay vì repository
   findUserById(id: number) {
     return this.authRepository.findUserById(id);
   }
@@ -131,7 +139,7 @@ export class AuthService {
     ]);
 
     const expiresAt = this.signVerifyCode();
-    console.log(user)
+    console.log(user);
     const verificationBundle =
       await this.verificationCodeService.createRegisterVerification({
         email: user.email,

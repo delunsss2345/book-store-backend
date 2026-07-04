@@ -8,4 +8,4 @@ import { Module } from '@nestjs/common';
   providers: [PineconeService],
   exports: [PineconeService],
 })
-export class PineconeModule {}
+export class PineconeModule { }

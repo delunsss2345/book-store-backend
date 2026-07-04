@@ -1,12 +1,12 @@
-import { AdminBookMessage } from '@/common';
 import { AppModule } from '@/app.module';
+import { AdminBookMessage } from '@/common';
 import { optimizeProductImage } from '@/utils/upload.util';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { R2ServiceService } from '../../../r2-service/service/r2-service.service';
+import { R2ServiceService } from '../../../uploads/r2-service/service/r2-service.service';
 import { ConfirmBookAssetRequestDto } from '../dto/request/confirm-book-asset.request.dto';
 import { UploadBookAssetRequestDto } from '../dto/request/upload-book-asset.request.dto';
 import BookAssetRepository from '../repository/book-asset.repository';

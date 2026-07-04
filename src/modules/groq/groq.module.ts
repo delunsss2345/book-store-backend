@@ -5,4 +5,4 @@ import { Module } from '@nestjs/common';
   providers: [GroqService],
   exports: [GroqService],
 })
-export class GroqModule {}
+export class GroqModule { }

@@ -1,5 +1,5 @@
 import { CacheProvider } from '@/config/redis.config';
-import { AuditLogModule } from '@/modules/audit-log/audit-log.module';
+import { AuditLogModule } from '@/modules/admin/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';

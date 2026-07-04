@@ -3,7 +3,7 @@ import { PresignRequestDto } from '@/modules/uploads/dto/request/get-single-url.
 import { generateKeyPresign } from '@/modules/uploads/utils/generateKeyImage.util';
 import { optimizeProductImage } from '@/utils/upload.util';
 import { Injectable } from '@nestjs/common';
-import { R2ServiceService } from '../../r2-service/service/r2-service.service';
+import { R2ServiceService } from '../r2-service/service/r2-service.service';
 
 @Injectable()
 export class UploadsService {

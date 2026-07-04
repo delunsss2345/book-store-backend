@@ -27,10 +27,10 @@ import { AdminStockImportService } from '../service/admin-stock-import.service';
 export class AdminStockImportController {
   constructor(
     private readonly adminStockImportService: AdminStockImportService,
-  ) { }
+  ) {}
 
-  @Post("/create")
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @Post('/create')
+  @RequirePermissions(PermissionCode.STOCK_IMPORT_CREATE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new stock import record' })
   @ApiBody({ type: CreateAdminStockImportRequestDto })
@@ -46,7 +46,7 @@ export class AdminStockImportController {
   }
 
   @Get()
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.STOCK_IMPORT_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of stock imports' })
   @ApiOkResponse({ type: AdminStockImportListResponseDto })
@@ -55,10 +55,14 @@ export class AdminStockImportController {
   }
 
   @Get('/:purchaseOrderId')
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.STOCK_IMPORT_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get stock import detail by purchase order ID' })
-  @ApiParam({ name: 'purchaseOrderId', type: String, description: 'Purchase order ID' })
+  @ApiParam({
+    name: 'purchaseOrderId',
+    type: String,
+    description: 'Purchase order ID',
+  })
   @ApiOkResponse({ type: AdminStockImportDetailResponseDto })
   getStockImportDetail(@Param('purchaseOrderId') purchaseOrderId: string) {
     return this.adminStockImportService.getStockImportDetail(purchaseOrderId);

@@ -34,7 +34,6 @@ describe('Permission', () => {
             .expect(401)
     });
 
-
     it(`/GET permission with staff`, () => {
         const token = createTokenForUserWithoutPermission(2, ['STAFF']);
         return request(app.getHttpServer())

@@ -27,7 +27,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AdminBookService } from '../service/admin-book.service';
-import { AdminBookListQueryDto, UpdateAdminBookRequestDto } from '../dto/request';
+import {
+  AdminBookListQueryDto,
+  UpdateAdminBookRequestDto,
+} from '../dto/request';
 import { AdminBookDetailQueryDto } from '../dto/request/admin-book-detail.query.dto';
 import { CreateAdminBookRequestDto } from '../dto/request/create-admin-book.request.dto';
 import { AdminBookDetailResponseDto } from '../dto/response/admin-book-detail.response.dto';
@@ -42,10 +45,10 @@ import {
 @ApiTags('admin')
 @Controller('admin/books')
 export class AdminBookController {
-  constructor(private readonly adminBookService: AdminBookService) { }
+  constructor(private readonly adminBookService: AdminBookService) {}
 
   @Get('stats')
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.BOOK_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get book statistics for admin dashboard' })
   @ApiOkResponse({ type: AdminBookStatsResponseDto })
@@ -54,21 +57,38 @@ export class AdminBookController {
   }
 
   @Get('list')
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.BOOK_READ)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get paginated list of books with full detail for admin' })
+  @ApiOperation({
+    summary: 'Get paginated list of books with full detail for admin',
+  })
   @ApiOkResponse({ type: AdminBookListDetailResponseDto })
-  listBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+  listBooks(
+    @Query() query: AdminBookListQueryDto,
+    @GetLanguageId() langId: number,
+  ) {
     return this.adminBookService.listBooks(query, langId);
   }
 
   @Public()
-  @Get(":bookId")
+  @Get(':bookId')
   @ApiOperation({ summary: 'Get book detail by ID' })
   @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book' })
-  @ApiQuery({ name: 'type', required: false, enum: ['view_price'], description: 'view_price returns only active variants with purchaseOrderItem ids' })
-  @ApiOkResponse({ type: AdminBookDetailResponseDto, description: 'Full detail (default)' })
-  @ApiOkResponse({ type: AdminBookPriceViewResponseDto, description: 'Price view when type=view_price' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ['view_price'],
+    description:
+      'view_price returns only active variants with purchaseOrderItem ids',
+  })
+  @ApiOkResponse({
+    type: AdminBookDetailResponseDto,
+    description: 'Full detail (default)',
+  })
+  @ApiOkResponse({
+    type: AdminBookPriceViewResponseDto,
+    description: 'Price view when type=view_price',
+  })
   getDetail(
     @Param('bookId', ParseIntPipe) bookId: number,
     @Query() query: AdminBookDetailQueryDto,
@@ -77,6 +97,7 @@ export class AdminBookController {
   }
 
   @Post()
+  @RequirePermissions(PermissionCode.BOOK_CREATE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new book' })
   @ApiBody({ type: CreateAdminBookRequestDto })
@@ -92,10 +113,14 @@ export class AdminBookController {
   }
 
   @Patch(':bookId')
-  @RequirePermissions(PermissionCode.ADMIN_UPDATE_BOOK)
+  @RequirePermissions(PermissionCode.BOOK_UPDATE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update a book by ID' })
-  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book to update' })
+  @ApiParam({
+    name: 'bookId',
+    type: Number,
+    description: 'ID of the book to update',
+  })
   @ApiBody({ type: UpdateAdminBookRequestDto })
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   updateBook(
@@ -109,10 +134,14 @@ export class AdminBookController {
   }
 
   @Delete(':bookId')
-  @RequirePermissions(PermissionCode.ADMIN_DELETE_BOOK)
+  @RequirePermissions(PermissionCode.BOOK_DELETE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete a book by ID' })
-  @ApiParam({ name: 'bookId', type: Number, description: 'ID of the book to delete' })
+  @ApiParam({
+    name: 'bookId',
+    type: Number,
+    description: 'ID of the book to delete',
+  })
   @ApiOkResponse({ type: AdminBookItemResponseDto })
   deleteBook(
     @Param('bookId', ParseIntPipe) bookId: number,
@@ -124,11 +153,14 @@ export class AdminBookController {
   }
 
   @Get()
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.BOOK_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of books for admin' })
   @ApiOkResponse({ type: AdminBookListResponseDto })
-  getBooks(@Query() query: AdminBookListQueryDto, @GetLanguageId() langId: number) {
+  getBooks(
+    @Query() query: AdminBookListQueryDto,
+    @GetLanguageId() langId: number,
+  ) {
     return this.adminBookService.getBooks(query, langId);
   }
 }

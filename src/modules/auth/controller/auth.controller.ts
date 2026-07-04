@@ -1,4 +1,5 @@
 import { ResponseDto } from '@/common';
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetAccessToken } from '@/common/decorators/getAccessToken.decorator';
 import { GetOriginUrl } from '@/common/decorators/getOrginUrl.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
@@ -6,6 +7,7 @@ import { UserAgent } from '@/common/decorators/userAgent.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RefreshSession } from '@/common/security/decorators/refresh-session.decorator';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Refresh } from '@/common/security/decorators/refresh.decorator';
 import { RefreshGuard } from '@/common/security/guard/refresh.guard';
 import {
@@ -65,7 +67,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user account' })
@@ -78,7 +80,13 @@ export class AuthController {
   ) {
     const originUrl = req['x-origin-url'] ?? '';
     const guestSessionId = req.cookies?.guestSessionId as string | undefined;
-    return this.authService.register(body, userAgent, ip, originUrl, guestSessionId);
+    return this.authService.register(
+      body,
+      userAgent,
+      ip,
+      originUrl,
+      guestSessionId,
+    );
   }
 
   @Public()
@@ -95,7 +103,8 @@ export class AuthController {
   ) {
     // Check cookie
     const cookieFp = req.cookies?.[DEVICE_FINGERPRINT_COOKIE];
-    const deviceFingerprint = body.deviceFingerprint || cookieFp || randomUUID();
+    const deviceFingerprint =
+      body.deviceFingerprint || cookieFp || randomUUID();
 
     if (!cookieFp) {
       res.cookie(
@@ -121,6 +130,7 @@ export class AuthController {
   }
 
   @Get('device/:userId')
+  @RequirePermissions(PermissionCode.DEVICE_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get active device sessions for a user' })
   @ApiParam({ name: 'userId', type: Number, description: 'ID of the user' })
@@ -206,7 +216,9 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('reset-password')
-  @ApiOperation({ summary: 'Reset the user password using a valid reset token' })
+  @ApiOperation({
+    summary: 'Reset the user password using a valid reset token',
+  })
   @ApiOkResponse({ type: ResponseDto<ResetPasswordResponseDto> })
   resetPassword(@Body() body: ResetPasswordRequestDto) {
     return this.authService.resetPassword(body);

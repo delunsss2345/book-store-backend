@@ -1,6 +1,8 @@
 import type { JwtPayload } from '@/common';
+import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetLanguageId } from '@/common/decorators/getLanguageId.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,12 +25,16 @@ import { PurchaseOrderService } from '../service/purchase-order.service';
 @ApiTags('purchase-orders')
 @Controller('purchase-orders')
 export class PurchaseOrderController {
-  constructor(private readonly purchaseOrderService: PurchaseOrderService) { }
+  constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
 
   @Post()
+  @RequirePermissions(PermissionCode.PURCHASE_ORDER_CREATE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new purchase order' })
-  @ApiCreatedResponse({ type: Object, description: 'Purchase order created successfully' })
+  @ApiCreatedResponse({
+    type: Object,
+    description: 'Purchase order created successfully',
+  })
   createPurchaseOrder(
     @Body() body: CreatePurchaseOrderRequestDto,
     @GetUser() user: JwtPayload,
@@ -38,18 +44,30 @@ export class PurchaseOrderController {
   }
 
   @Get()
+  @RequirePermissions(PermissionCode.PURCHASE_ORDER_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get list of purchase orders' })
-  @ApiOkResponse({ type: PurchaseOrderListResponseDto, description: 'List of purchase orders' })
+  @ApiOkResponse({
+    type: PurchaseOrderListResponseDto,
+    description: 'List of purchase orders',
+  })
   async getPurchaseOrders(@Query() query: GetPurchaseOrdersQueryDto) {
     return this.purchaseOrderService.getPurchaseOrders(query);
   }
 
   @Get(':purchaseOrderId')
+  @RequirePermissions(PermissionCode.PURCHASE_ORDER_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get purchase order detail by ID' })
-  @ApiParam({ name: 'purchaseOrderId', type: String, description: 'Purchase order ID' })
-  @ApiOkResponse({ type: PurchaseOrderItemResponseDto, description: 'Purchase order detail' })
+  @ApiParam({
+    name: 'purchaseOrderId',
+    type: String,
+    description: 'Purchase order ID',
+  })
+  @ApiOkResponse({
+    type: PurchaseOrderItemResponseDto,
+    description: 'Purchase order detail',
+  })
   getPurchaseOrderDetail(
     @Param('purchaseOrderId') purchaseOrderId: string,
     @Query() query: GetPurchaseOrderItemsQueryDto,
@@ -63,10 +81,18 @@ export class PurchaseOrderController {
   }
 
   @Post(':purchaseOrderId/approve')
+  @RequirePermissions(PermissionCode.PURCHASE_ORDER_APPROVE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Approve or reject a purchase order' })
-  @ApiParam({ name: 'purchaseOrderId', type: String, description: 'Purchase order ID' })
-  @ApiCreatedResponse({ type: Object, description: 'Purchase order approval result' })
+  @ApiParam({
+    name: 'purchaseOrderId',
+    type: String,
+    description: 'Purchase order ID',
+  })
+  @ApiCreatedResponse({
+    type: Object,
+    description: 'Purchase order approval result',
+  })
   approvePurchaseOrder(
     @Param('purchaseOrderId') purchaseOrderId: string,
     @Body() body: ApprovePurchaseOrderRequestDto,
@@ -81,10 +107,20 @@ export class PurchaseOrderController {
   }
 
   @Post(':purchaseOrderId/transfer-processing')
+  @RequirePermissions(PermissionCode.PURCHASE_ORDER_TRANSFER)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update purchase order status to transfer processing' })
-  @ApiParam({ name: 'purchaseOrderId', type: String, description: 'Purchase order ID' })
-  @ApiCreatedResponse({ type: Object, description: 'Purchase order transfer processing status updated' })
+  @ApiOperation({
+    summary: 'Update purchase order status to transfer processing',
+  })
+  @ApiParam({
+    name: 'purchaseOrderId',
+    type: String,
+    description: 'Purchase order ID',
+  })
+  @ApiCreatedResponse({
+    type: Object,
+    description: 'Purchase order transfer processing status updated',
+  })
   updateStatusTransfer(
     @Param('purchaseOrderId') purchaseOrderId: string,
     @GetUser() user: JwtPayload,

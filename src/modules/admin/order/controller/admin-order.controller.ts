@@ -22,7 +22,7 @@ export class AdminOrderController {
   constructor(private readonly adminOrderService: AdminOrderService) {}
 
   @Get()
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.ORDER_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of guest orders' })
   @ApiOkResponse({ type: AdminGuestOrderListResponseDto })
@@ -31,7 +31,7 @@ export class AdminOrderController {
   }
 
   @Get('/user')
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.ORDER_READ)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get paginated list of registered user orders' })
   @ApiOkResponse({ type: AdminUserOrderListResponseDto })
@@ -40,7 +40,7 @@ export class AdminOrderController {
   }
 
   @Patch(':orderId/status')
-  @RequirePermissions(PermissionCode.ADMIN_READ)
+  @RequirePermissions(PermissionCode.ORDER_UPDATE)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update the status of an order' })
   @ApiParam({ name: 'orderId', type: 'string', description: 'Order ID' })

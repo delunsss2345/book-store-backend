@@ -5,7 +5,7 @@ export class RegisterVerificationRequestDto {
     @ApiProperty()
     @IsNumber()
     @IsNotEmpty()
-    userId: bigint;
+    userId: number;
 
     @ApiProperty()
     @IsEmail()

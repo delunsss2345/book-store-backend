@@ -1,0 +1,421 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order email — four visual directions</title>
+  <style>
+    :root {
+      --ivory:    #FAF9F5;
+      --slate:    #141413;
+      --clay:     #D97757;
+      --oat:      #E3DACC;
+      --olive:    #788C5D;
+      --gray-150: #F0EEE6;
+      --gray-300: #D1CFC5;
+      --gray-500: #87867F;
+      --gray-700: #3D3D3A;
+      --white:    #FFFFFF;
+
+      --serif: ui-serif, Georgia, 'Times New Roman', serif;
+      --sans:  system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --mono:  ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--ivory);
+      color: var(--gray-700);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 96px;
+    }
+
+    /* ---------- sticky toolbar ---------- */
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--ivory);
+      border-bottom: 1.5px solid var(--gray-300);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 13px;
+    }
+
+    .toolbar .title {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--gray-500);
+      margin-right: auto;
+    }
+
+    .toolbar .field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar .field > span {
+      color: var(--gray-700);
+      font-weight: 500;
+    }
+
+    .seg {
+      display: inline-flex;
+      border: 1.5px solid var(--gray-300);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--white);
+    }
+
+    .seg label {
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--gray-700);
+      user-select: none;
+    }
+
+    .seg label + label {
+      border-left: 1.5px solid var(--gray-300);
+    }
+
+    .seg input { display: none; }
+
+    .seg input:checked + span {
+      color: var(--slate);
+      font-weight: 600;
+    }
+
+    .seg label:has(input:checked) {
+      background: var(--oat);
+    }
+
+    /* ---------- page header ---------- */
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 48px 32px 0;
+    }
+
+    header.page-head {
+      max-width: 760px;
+      margin-bottom: 40px;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 38px;
+      line-height: 1.15;
+      color: var(--slate);
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .prompt-box {
+      background: var(--gray-150);
+      border: 1.5px solid var(--gray-300);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 14.5px;
+    }
+
+    .prompt-box .label {
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-500);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .prompt-box code { font-family: var(--mono); font-size: 0.92em; }
+
+    /* ---------- artboard grid ---------- */
+
+    .board {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 960px) {
+      .board { grid-template-columns: 1fr; }
+    }
+
+    .artboard {
+      background: var(--white);
+      border: 1.5px solid var(--gray-300);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .tag {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      background: var(--oat);
+      color: var(--slate);
+      padding: 4px 10px;
+      border-radius: 8px;
+      z-index: 2;
+    }
+
+    .stage {
+      min-height: 340px;
+      border-radius: 8px;
+      border: 1.5px solid var(--gray-300);
+      background: var(--ivory);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px;
+      transition: background 0.15s, border-color 0.15s;
+      overflow: hidden;
+    }
+
+    .stage.dark {
+      background: var(--slate);
+      border-color: var(--slate);
+    }
+
+    .rationale {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--gray-500);
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       Email variants — scoped under .em-*
+       Theme tokens flip when .stage.dark is present.
+       ========================================================= */
+
+    .stage        { --fg: var(--slate); --muted: var(--gray-500); --line: var(--gray-300); --panel: var(--white); --soft: var(--gray-150); }
+    .stage.dark   { --fg: #F0EEE6;      --muted: #9C9A93;         --line: #3D3D3A;         --panel: #1F1E1B;        --soft: #26241F;     }
+
+    .mail {
+      width: 100%;
+      max-width: 340px;
+      background: var(--panel);
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .mail .body { padding: 18px 20px 20px; }
+    .mail .muted { color: var(--muted); }
+    .mono { font-family: var(--mono); }
+
+    /* ---- A · Minimal receipt ---- */
+    .em-a .head { padding: 18px 20px 0; }
+    .em-a .brand { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+    .em-a h3 { font-family: var(--serif); font-weight: 500; font-size: 20px; color: var(--fg); margin: 8px 0 4px; }
+    .em-a .code { font-family: var(--mono); font-size: 13px; color: var(--fg); }
+    .em-a .line { border-top: 1px solid var(--line); margin: 14px 0; }
+    .em-a .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--fg); margin-bottom: 6px; }
+    .em-a .row .l { color: var(--muted); }
+    .em-a .total { font-weight: 700; }
+
+    /* ---- B · Branded with status banner ---- */
+    .em-b .banner { background: var(--olive); color: #fff; text-align: center; padding: 18px; }
+    .em-b .banner .tick { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.2); margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .em-b .banner h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; }
+    .em-b .chip { display: inline-block; font-family: var(--mono); font-size: 11px; background: var(--soft); color: var(--fg); padding: 3px 9px; border-radius: 999px; margin-bottom: 12px; }
+    .em-b p { font-size: 13px; color: var(--fg); margin-bottom: 12px; }
+    .em-b .btn { display: block; text-align: center; background: var(--clay); color: #fff; font-size: 13px; font-weight: 600; padding: 10px; border-radius: 8px; }
+
+    /* ---- C · Itemized card ---- */
+    .em-c .head { padding: 18px 20px 0; }
+    .em-c .brand { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clay); }
+    .em-c h3 { font-family: var(--serif); font-weight: 500; font-size: 18px; color: var(--fg); margin: 6px 0 12px; }
+    .em-c .item { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .em-c .cover { width: 36px; height: 48px; border-radius: 4px; background: var(--oat); flex-shrink: 0; }
+    .em-c .cover.alt { background: var(--olive); }
+    .em-c .it-t { font-size: 13px; color: var(--fg); font-weight: 600; }
+    .em-c .it-s { font-size: 11.5px; color: var(--muted); }
+    .em-c .it-p { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--fg); }
+    .em-c .total { border-top: 1px solid var(--line); padding-top: 10px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--fg); }
+
+    /* ---- D · Timeline / status tracker ---- */
+    .em-d .head { padding: 18px 20px 0; }
+    .em-d .brand { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+    .em-d h3 { font-family: var(--serif); font-weight: 500; font-size: 18px; color: var(--fg); margin: 6px 0 4px; }
+    .em-d .code { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .em-d ol { list-style: none; }
+    .em-d li { position: relative; padding: 0 0 16px 24px; font-size: 13px; color: var(--fg); }
+    .em-d li:last-child { padding-bottom: 0; }
+    .em-d li::before { content: ''; position: absolute; left: 4px; top: 3px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); }
+    .em-d li.on::before { background: var(--clay); border-color: var(--clay); }
+    .em-d li:not(:last-child)::after { content: ''; position: absolute; left: 8px; top: 14px; bottom: 2px; width: 2px; background: var(--line); }
+    .em-d li span { display: block; font-size: 11.5px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="title">book-store-be &middot; email exploration</div>
+    <div class="field">
+      <span>Client theme:</span>
+      <div class="seg" id="bg-seg">
+        <label><input type="radio" name="bg" value="light" checked><span>Light</span></label>
+        <label><input type="radio" name="bg" value="dark"><span>Dark</span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <header class="page-head">
+      <div class="eyebrow">Exploration &middot; Order confirmation email</div>
+      <h1>Four visual directions for the order email</h1>
+      <div class="prompt-box">
+        <span class="label">Prompt</span>
+        The backend renders <code>EMAIL_TEMPLATE_ORDER_SUCCESS</code> via the BullMQ email worker,
+        filling <code>{{orderCode}}</code>, <code>{{orderId}}</code>, and <code>{{orderStatus}}</code>.
+        Explore four visual directions for that email — render each live so we can compare tone and
+        density, and see how each holds up in light and dark mail clients.
+      </div>
+    </header>
+
+    <section class="board">
+
+      <!-- ================= A — Minimal receipt ================= -->
+      <article class="artboard">
+        <span class="tag">A &mdash; Minimal receipt</span>
+        <div class="stage">
+          <div class="mail em-a">
+            <div class="head">
+              <div class="brand">Bookstore</div>
+              <h3>Thanks for your order</h3>
+              <div class="code">OD-260616-7QK2ZP</div>
+            </div>
+            <div class="body">
+              <div class="line"></div>
+              <div class="row"><span class="l">Status</span><span>PAID</span></div>
+              <div class="row"><span class="l">Items</span><span>3</span></div>
+              <div class="row"><span class="l">Subtotal</span><span>410,000&#8363;</span></div>
+              <div class="row"><span class="l">Shipping</span><span>30,000&#8363;</span></div>
+              <div class="line"></div>
+              <div class="row total"><span>Total</span><span>440,000&#8363;</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="rationale">
+          Pure typography, no imagery. Closest to today's template and the safest across mail clients —
+          renders identically everywhere and degrades to plain text cleanly.
+        </p>
+      </article>
+
+      <!-- ================= B — Branded banner ================= -->
+      <article class="artboard">
+        <span class="tag">B &mdash; Branded banner</span>
+        <div class="stage">
+          <div class="mail em-b">
+            <div class="banner">
+              <div class="tick">&#10003;</div>
+              <h3>Payment received</h3>
+            </div>
+            <div class="body">
+              <span class="chip mono">OD-260616-7QK2ZP</span>
+              <p>Your order is confirmed and being prepared. We'll email you again when it ships.</p>
+              <span class="btn">Track your order</span>
+            </div>
+          </div>
+        </div>
+        <p class="rationale">
+          A colored status banner makes the outcome legible in one glance, and the CTA pulls the
+          reader to the order-status endpoint. Needs bullet-proof inline styles for Outlook.
+        </p>
+      </article>
+
+      <!-- ================= C — Itemized card ================= -->
+      <article class="artboard">
+        <span class="tag">C &mdash; Itemized</span>
+        <div class="stage">
+          <div class="mail em-c">
+            <div class="head">
+              <div class="brand">Bookstore</div>
+              <h3>Order OD-260616-7QK2ZP</h3>
+            </div>
+            <div class="body">
+              <div class="item">
+                <div class="cover"></div>
+                <div><div class="it-t">Clean Architecture</div><div class="it-s">Paperback &middot; &times;1</div></div>
+                <div class="it-p">180,000&#8363;</div>
+              </div>
+              <div class="item">
+                <div class="cover alt"></div>
+                <div><div class="it-t">The Pragmatic Programmer</div><div class="it-s">Hardcover &middot; &times;2</div></div>
+                <div class="it-p">230,000&#8363;</div>
+              </div>
+              <div class="total"><span>Total</span><span>440,000&#8363;</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="rationale">
+          Shows the actual line items with covers. Most useful and most reassuring — but requires the
+          worker to join snapshot rows into the payload, which today carries only code/id/status.
+        </p>
+      </article>
+
+      <!-- ================= D — Status timeline ================= -->
+      <article class="artboard">
+        <span class="tag">D &mdash; Status timeline</span>
+        <div class="stage">
+          <div class="mail em-d">
+            <div class="head">
+              <div class="brand">Bookstore</div>
+              <h3>Your order is on its way</h3>
+              <div class="code">OD-260616-7QK2ZP</div>
+            </div>
+            <div class="body">
+              <ol>
+                <li class="on">Order placed<span>16 Jun, 10:24</span></li>
+                <li class="on">Payment received<span>16 Jun, 10:25</span></li>
+                <li>Packed &amp; shipped<span>Pending</span></li>
+                <li>Delivered<span>Pending</span></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <p class="rationale">
+          Reframes the email as a living status tracker, reusing the order's status enum
+          (<code style="font-family:var(--mono)">PENDING_PAYMENT &rarr; PAID</code>). Best if we later send the
+          same template on each status change rather than once.
+        </p>
+      </article>
+
+    </section>
+  </div>
+
+  <script>
+    const stages = document.querySelectorAll('.stage');
+    document.getElementById('bg-seg').addEventListener('change', (e) => {
+      const dark = e.target.value === 'dark';
+      stages.forEach((s) => s.classList.toggle('dark', dark));
+    });
+  </script>
+</body>
+</html>

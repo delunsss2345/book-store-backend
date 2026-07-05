@@ -1,0 +1,19 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: shared-nginx
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/conf.d/cert.pem:/etc/nginx/conf.d/cert.pem
+      - ./nginx/conf.d/key.pem:/etc/nginx/conf.d/key.pem
+    restart: unless-stopped
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    external: true
+    driver: bridge

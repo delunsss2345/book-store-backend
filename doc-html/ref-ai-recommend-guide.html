@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/ai-recommend-method-1-guide.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Huong Dan Phuong Phap 1: AI Recommend tu orderItem + userEvent · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>recommendation algorithm</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Recommendation</p>
+    <h1>Huong Dan Phuong Phap 1: AI Recommend tu orderItem + userEvent</h1>
+    <p class="lede">Cap nhat: 2026-02-15.</p>
+  </header>
+
+  <main>
+<p>Muc tieu tai lieu:</p>
+<ul>
+<li>Giai thich ro &quot;phuong phap 1&quot; la gi.</li>
+<li>Cho ban mot lo trinh trien khai thuc te, khong can LLM trong runtime.</li>
+<li>Bam sat du lieu hien co cua project (<code>order_items</code>, <code>orders</code>, <code>user_events</code>, <code>books</code>, <code>book_variants</code>).</li>
+</ul>
+<h2 id="1-phuong-phap-1-la-gi" class="h h2"><a class="anchor" href="#1-phuong-phap-1-la-gi" aria-label="Link to this section">#</a>1. Phuong phap 1 la gi?</h2>
+<p>Phuong phap 1 la recommend kieu &quot;AI ranking tu hanh vi&quot;, cu the:</p>
+<ul>
+<li>Hoc tu hanh vi mua that (<code>orderItem</code>): tin hieu manh nhat.</li>
+<li>Hoc tu hanh vi tuong tac (<code>userEvent</code>): xem, them gio, checkout, thanh toan...</li>
+<li>Gom cac ung vien sach phu hop, roi xep hang theo diem.</li>
+</ul>
+<p>No la AI vi he thong dang hoc mau hanh vi tu du lieu, khong phai hard-code thu cong danh sach sach.</p>
+<p>Luu y:</p>
+<ul>
+<li>Day KHONG phai la LLM recommend theo prompt.</li>
+<li>Day la recommendation engine theo du lieu giao dich + event (on dinh, re, de kiem soat).</li>
+</ul>
+<h2 id="2-tai-sao-nen-dung-cho-he-thong-cua-ban" class="h h2"><a class="anchor" href="#2-tai-sao-nen-dung-cho-he-thong-cua-ban" aria-label="Link to this section">#</a>2. Tai sao nen dung cho he thong cua ban?</h2>
+<p>Ban da co san:</p>
+<ul>
+<li><code>OrderItem</code> + <code>Order status</code> de biet &quot;mua that&quot;.</li>
+<li><code>UserEvent</code> de biet &quot;quan tam&quot;.</li>
+<li><code>Catalog</code> va cache de phuc vu API nhanh.</li>
+</ul>
+<p>Nen co the di theo huong:</p>
+<ul>
+<li>Batch tinh diem dinh ky.</li>
+<li>API lay ket qua tu bang da tinh san.</li>
+<li>Cache de latency thap.</li>
+</ul>
+<h2 id="3-dau-vao-du-lieu-hien-co-trong-schema" class="h h2"><a class="anchor" href="#3-dau-vao-du-lieu-hien-co-trong-schema" aria-label="Link to this section">#</a>3. Dau vao du lieu (hien co trong schema)</h2>
+<p>Nguon 1 - Purchase signal (manh):</p>
+<ul>
+<li>Tu <code>order_items</code> join <code>orders</code>.</li>
+<li>Chi lay don hop le: <code>PAID</code>, <code>CONFIRMED</code>, <code>PACKING</code>, <code>SHIPPING</code>, <code>DELIVERED</code>.</li>
+<li>Muc dich: biet sach nao duoc mua cung nhau, sach nao co ty le chuyen doi cao.</li>
+</ul>
+<p>Nguon 2 - Behavior signal (nhanh, phong phu):</p>
+<ul>
+<li>Tu <code>user_events</code>.</li>
+<li>Event uu tien:</li>
+<li><code>VIEW_BOOK</code></li>
+<li><code>ADD_TO_CART</code></li>
+<li><code>CHECKOUT_START</code></li>
+<li><code>PLACE_ORDER</code></li>
+<li><code>PAYMENT_SUCCESS</code></li>
+<li>Event phat: <code>REMOVE_FROM_CART</code>, <code>PAYMENT_FAILED</code></li>
+</ul>
+<p>Nguon 3 - Product context:</p>
+<ul>
+<li>Category, price band, stock, isActive, language.</li>
+<li>Dung de loc va bo sung fallback.</li>
+</ul>
+<h2 id="4-luong-recommend-chi-tiet-theo-code-hien-tai" class="h h2"><a class="anchor" href="#4-luong-recommend-chi-tiet-theo-code-hien-tai" aria-label="Link to this section">#</a>4. Luong recommend chi tiet (theo code hien tai)</h2>
+<h3 id="4-1-input-contract-cho-2-luong-event" class="h h3"><a class="anchor" href="#4-1-input-contract-cho-2-luong-event" aria-label="Link to this section">#</a>4.1 Input contract cho 2 luong event</h3>
+<ul>
+<li><p>Luong <code>bookVariant</code>:</p>
+</li>
+<li><p><code>objectType = &quot;bookVariant&quot;</code>, <code>objectId = &lt;bookVariantId&gt;</code>.</p>
+</li>
+<li><p>Event duoc tinh diem: <code>VIEW_BOOK</code>, <code>ADD_TO_CART</code>, <code>REMOVE_FROM_CART</code>.</p>
+</li>
+<li><p>Luong <code>order</code>:</p>
+</li>
+<li><p><code>objectType = &quot;order&quot;</code>, <code>objectId = &lt;orderId&gt;</code>.</p>
+</li>
+<li><p>Event duoc tinh diem: <code>CHECKOUT_START</code>, <code>PLACE_ORDER</code>, <code>PAYMENT_SUCCESS</code>, <code>PAYMENT_FAILED</code>.</p>
+</li>
+</ul>
+<h3 id="4-2-sequence-online-request-time-cho-endpoint-recommend" class="h h3"><a class="anchor" href="#4-2-sequence-online-request-time-cho-endpoint-recommend" aria-label="Link to this section">#</a>4.2 Sequence online (request-time) cho endpoint recommend</h3>
+<ol>
+<li>Controller goi <code>UserEventService.getRecommend(userId)</code>.</li>
+<li>Service build song song 2 map diem:</li>
+</ol>
+<ul>
+<li><code>buildScoreWithRecommendVariant(userId)</code> -&gt; map <code>&lt;variantId, score&gt;</code>.</li>
+<li><code>buildScoreWithRecommendOrder(userId)</code> -&gt; map <code>&lt;orderId, score&gt;</code>.</li>
+</ul>
+<ol start="3">
+<li>Service merge 2 map:</li>
+</ol>
+<ul>
+<li><code>mergerRecommendVariantAndOrder(variants, orders)</code>.</li>
+<li>Quy trinh merge:</li>
+<li>lay <code>orderIds</code> tu map order.</li>
+<li>query <code>OrderRepository.findOrderItemsByOrderId(orderIds)</code>.</li>
+<li>flatten item theo <code>bookVariantSnapshotId</code>.</li>
+<li>map <code>snapshotId -&gt; bookVariantId</code> qua <code>BookSnapshotRepository</code>.</li>
+<li>cong diem order vao map variant (co nhan <code>quantity</code>).</li>
+</ul>
+<ol start="4">
+<li>Sau merge, dung <code>variantIds</code> lam seed:</li>
+</ol>
+<ul>
+<li>doi <code>variantIds -&gt; snapshotIds</code>.</li>
+<li>doi <code>snapshotIds -&gt; orderIds</code> (cac order co chua seed).</li>
+<li>group co-buy candidate snapshot ids:</li>
+<li><code>OrderItemRepository.groupAlsoBoughtSnapshotCandidates(...)</code>.</li>
+</ul>
+<ol start="5">
+<li>Materialize candidate:</li>
+</ol>
+<ul>
+<li>doi <code>candidateSnapshotIds -&gt; candidateVariantIds</code>.</li>
+<li>dedupe variant ids.</li>
+<li>query <code>CatalogRepository.findBooksVariantByIds(...)</code>.</li>
+</ul>
+<ol start="6">
+<li>Tra danh sach recommend.</li>
+<li>Neu khong co du lieu o bat ky stage nao, return <code>[]</code> ngay (fail-fast).</li>
+</ol>
+<h3 id="4-3-tai-sao-merge-2-luong-la-diem-hay" class="h h3"><a class="anchor" href="#4-3-tai-sao-merge-2-luong-la-diem-hay" aria-label="Link to this section">#</a>4.3 Tai sao merge 2 luong la &quot;diem hay&quot;</h3>
+<ul>
+<li>Luong <code>bookVariant</code> bat duoc &quot;interest signal&quot; ngay lap tuc (view/add/remove).</li>
+<li>Luong <code>order</code> bat duoc &quot;purchase-intent signal&quot; manh hon (checkout/payment).</li>
+<li>Sau merge, tat ca diem quy ve cung key <code>bookVariantId</code>, nen candidate generation nhat quan, de mo rong va de debug.</li>
+<li>He thong deterministic, explainable, khong phu thuoc LLM runtime.</li>
+</ul>
+<h3 id="4-4-quy-uoc-de-tranh-leak-chat-luong-du-lieu" class="h h3"><a class="anchor" href="#4-4-quy-uoc-de-tranh-leak-chat-luong-du-lieu" aria-label="Link to this section">#</a>4.4 Quy uoc de tranh leak chat luong du lieu</h3>
+<ul>
+<li>Bat buoc thong nhat format <code>objectType</code> va <code>objectId</code> nhu muc 4.1.</li>
+<li>Khong tron id type trong cung objectType (vd: <code>bookId</code> nhung ghi vao <code>bookVariant</code>).</li>
+<li>Khong ghi event &quot;order&quot; neu chua co <code>orderId</code> hop le.</li>
+<li>Uu tien su dung event timestamp goc de score/time-decay dung ngu nghia.</li>
+</ul>
+<h3 id="4-5-definition-of-done-cho-workflow-hien-tai" class="h h3"><a class="anchor" href="#4-5-definition-of-done-cho-workflow-hien-tai" aria-label="Link to this section">#</a>4.5 Definition of done cho workflow hien tai</h3>
+<ul>
+<li>Co du 2 map diem (<code>variant</code>, <code>order</code>) va merge thanh mot map variant.</li>
+<li>Candidate co-buy sinh tu seed sau merge, khong chi tu mot luong.</li>
+<li>Endpoint return ket qua on dinh cho:</li>
+<li>user co event variant nhieu,</li>
+<li>user co event order nhieu,</li>
+<li>user co ca hai loai event,</li>
+<li>user khong co du lieu (fallback <code>[]</code>).</li>
+</ul>
+<h2 id="5-cong-thuc-diem-de-bat-dau-ban-de-van-hanh" class="h h2"><a class="anchor" href="#5-cong-thuc-diem-de-bat-dau-ban-de-van-hanh" aria-label="Link to this section">#</a>5. Cong thuc diem de bat dau (ban de van hanh)</h2>
+<p>Goi y trong so event:</p>
+<ul>
+<li><code>VIEW_BOOK</code> = +1</li>
+<li><code>ADD_TO_CART</code> = +4</li>
+<li><code>CHECKOUT_START</code> = +6</li>
+<li><code>PLACE_ORDER</code> = +8</li>
+<li><code>PAYMENT_SUCCESS</code> = +10</li>
+<li><code>REMOVE_FROM_CART</code> = -3</li>
+<li><code>PAYMENT_FAILED</code> = -4</li>
+</ul>
+<p>Time decay:</p>
+<ul>
+<li>Diem su kien giam dan theo thoi gian (vi du nua doi 21 ngay).</li>
+</ul>
+<p>Diem tong:</p>
+<ul>
+<li><code>Score = 0.50 * OrderCF + 0.30 * Behavior + 0.15 * Trend7d + 0.05 * Freshness</code></li>
+</ul>
+<p>Y nghia:</p>
+<ul>
+<li><code>OrderCF</code>: &quot;nguoi mua sach A hay mua them sach nao&quot;.</li>
+<li><code>Behavior</code>: &quot;user nay dang quan tam gi gan day&quot;.</li>
+<li><code>Trend7d</code>: tranh qua ca nhan hoa trong du lieu it.</li>
+<li><code>Freshness</code>: co hoi cho sach moi.</li>
+</ul>
+<h2 id="6-cold-start-va-fallback" class="h h2"><a class="anchor" href="#6-cold-start-va-fallback" aria-label="Link to this section">#</a>6. Cold-start va fallback</h2>
+<p>Cold-start user (chua co lich su):</p>
+<ul>
+<li>Dung <code>bestSeller + topRated + newArrivals</code>.</li>
+<li>Neu co guest session event thi dung guest history tam.</li>
+</ul>
+<p>Cold-start item (sach moi):</p>
+<ul>
+<li>Day item moi vao nhom <code>newArrivals</code>.</li>
+<li>Boost nhe trong 7-14 ngay dau.</li>
+</ul>
+<p>Data qua it:</p>
+<ul>
+<li>Tang ti le trend/fallback.</li>
+<li>Giam trong so personalization.</li>
+</ul>
+<h2 id="7-muc-tieu-chat-luong-de-do-hieu-qua" class="h h2"><a class="anchor" href="#7-muc-tieu-chat-luong-de-do-hieu-qua" aria-label="Link to this section">#</a>7. Muc tieu chat luong (de do hieu qua)</h2>
+<p>Online KPI:</p>
+<ul>
+<li>CTR o block recommend.</li>
+<li>Add-to-cart rate tu recommend.</li>
+<li>Conversion rate tu recommend.</li>
+<li>GMV/session do recommend dong gop.</li>
+</ul>
+<p>Offline KPI:</p>
+<ul>
+<li>Recall@K (do phu item user co mua).</li>
+<li>NDCG@K (thu hang co hop ly khong).</li>
+</ul>
+<p>Moc danh gia de bat dau:</p>
+<ul>
+<li>Sau 2 tuan A/B test, neu CTR tang &gt;= 10% va conversion tang &gt;= 3-5% thi dat.</li>
+</ul>
+<h2 id="8-lo-trinh-trien-khai-de-khong-vo-tran" class="h h2"><a class="anchor" href="#8-lo-trinh-trien-khai-de-khong-vo-tran" aria-label="Link to this section">#</a>8. Lo trinh trien khai de khong &quot;vo tran&quot;</h2>
+<p>Phase 1 (3-5 ngay): Baseline</p>
+<ul>
+<li>Dung trong so event + bestSeller fallback.</li>
+<li>Tra recommend cho <code>catalog home</code>.</li>
+<li>Chua can model ML nang cao.</li>
+</ul>
+<p>Phase 2 (1-2 tuan): Hybrid day du</p>
+<ul>
+<li>Them co-buy matrix tu <code>orderItem</code>.</li>
+<li>Them batch job tinh san top N theo user.</li>
+<li>Luu ket qua vao bang recommendation de doc nhanh.</li>
+</ul>
+<p>Phase 3 (2-4 tuan): Nang cap</p>
+<ul>
+<li>Learning-to-rank (LightGBM/XGBoost) voi feature tu order + event + context.</li>
+<li>Explainability (&quot;vi ban da xem/mua...&quot;).</li>
+</ul>
+<h2 id="9-van-hanh-va-chi-phi" class="h h2"><a class="anchor" href="#9-van-hanh-va-chi-phi" aria-label="Link to this section">#</a>9. Van hanh va chi phi</h2>
+<p>Tai sao cach nay &quot;on&quot;:</p>
+<ul>
+<li>Khong goi LLM cho moi request.</li>
+<li>Chi phi thap, latency thap, ket qua on dinh.</li>
+<li>De debug va de giai thich.</li>
+</ul>
+<p>Tan suat batch goi y:</p>
+<ul>
+<li>Moi 15-60 phut tuy traffic.</li>
+<li>Neu traffic thap, 2-4 lan/ngay van du.</li>
+</ul>
+<p>Cache:</p>
+<ul>
+<li>Cache ket qua recommend 1-5 phut cho endpoint home.</li>
+<li>Co invalidation khi co dot sale lon.</li>
+</ul>
+<h2 id="10-hieu-nhanh-trong-1-cau" class="h h2"><a class="anchor" href="#10-hieu-nhanh-trong-1-cau" aria-label="Link to this section">#</a>10. Hieu nhanh trong 1 cau</h2>
+<p>&quot;Phuong phap 1&quot; = dung AI ranking dua tren du lieu mua hang that (<code>orderItem</code>) + du lieu hanh vi (<code>userEvent</code>), tinh diem va xep hang top N; LLM chi la lop bo sung, khong phai dong co chinh.</p>
+<h2 id="11-checklist-truoc-khi-bat-dau-lam" class="h h2"><a class="anchor" href="#11-checklist-truoc-khi-bat-dau-lam" aria-label="Link to this section">#</a>11. Checklist truoc khi bat dau lam</h2>
+<ul>
+<li>Da ghi day du <code>userEvent</code> cho cac hanh vi quan trong.</li>
+<li>Da thong nhat map tu event -&gt; <code>bookId</code>/<code>bookVariantId</code>.</li>
+<li>Da co fallback cho user moi.</li>
+<li>Da co KPI va cach do truoc/sau.</li>
+<li>Da co lich batch + cache key ro rang.</li>
+</ul>
+<h2 id="12-mermaid-sequence-chi-tiet-nhat" class="h h2"><a class="anchor" href="#12-mermaid-sequence-chi-tiet-nhat" aria-label="Link to this section">#</a>12. Mermaid Sequence (chi tiet nhat)</h2>
+<figure class="codeblock diagram"><figcaption>Mermaid diagram</figcaption><pre><code>sequenceDiagram
+    autonumber
+    actor U as User
+    participant C as UserEventController
+    participant S as UserEventService
+    participant UER as UserEventRepository
+    participant OR as OrderRepository
+    participant OIR as OrderItemRepository
+    participant BSR as BookSnapshotRepository
+    participant CR as CatalogRepository
+    participant DB as MySQL (Prisma)
+
+    U-&gt;&gt;C: GET /api/v1/user-events/hyper-recommend/books
+    C-&gt;&gt;C: Parse JWT sub -&gt; userId: bigint
+    C-&gt;&gt;S: getRecommend(userId)
+
+    par Stream A: Variant behavior score map
+        S-&gt;&gt;UER: findEventTypeByUser(userId, &quot;bookVariant&quot;)
+        UER-&gt;&gt;DB: SELECT user_events WHERE object_type=&#39;bookVariant&#39;
+        DB--&gt;&gt;UER: events[]
+        UER--&gt;&gt;S: events[]
+        loop For each event in stream A
+            S-&gt;&gt;S: Validate objectId + allowed type
+            S-&gt;&gt;S: scoreEvent(type, createdAt)
+            S-&gt;&gt;S: upsertScore(mapVariant, objectId, score)
+        end
+        S-&gt;&gt;S: getTopKMap(mapVariant, 20)
+    and Stream B: Order behavior score map
+        S-&gt;&gt;UER: findEventTypeByUser(userId, &quot;order&quot;)
+        UER-&gt;&gt;DB: SELECT user_events WHERE object_type=&#39;order&#39;
+        DB--&gt;&gt;UER: events[]
+        UER--&gt;&gt;S: events[]
+        loop For each event in stream B
+            S-&gt;&gt;S: Validate objectId + allowed type
+            S-&gt;&gt;S: scoreEvent(type, createdAt)
+            S-&gt;&gt;S: upsertScore(mapOrder, objectId, score)
+        end
+        S-&gt;&gt;S: getTopKMap(mapOrder, 20)
+    end
+
+    S-&gt;&gt;S: mergerRecommendVariantAndOrder(mapVariant, mapOrder)
+    S-&gt;&gt;S: orderIds = keys(mapOrder)
+
+    alt orderIds empty
+        S-&gt;&gt;S: mergedMap = mapVariant
+    else has orderIds
+        S-&gt;&gt;OR: findOrderItemsByOrderId(orderIds)
+        OR-&gt;&gt;DB: SELECT orders + order_items
+        DB--&gt;&gt;OR: ordersWithItems[]
+        OR--&gt;&gt;S: ordersWithItems[]
+
+        alt ordersWithItems empty
+            S-&gt;&gt;S: mergedMap = mapVariant
+        else has ordersWithItems
+            loop For each orderItem
+                S-&gt;&gt;S: build orderSignals(snapshotId, score*quantity)
+            end
+
+            S-&gt;&gt;S: dedupe snapshotIds from orderSignals
+            alt snapshotIds empty
+                S-&gt;&gt;S: mergedMap = mapVariant
+            else has snapshotIds
+                S-&gt;&gt;BSR: findVariantIdsBySnapshotIds(snapshotIds)
+                BSR-&gt;&gt;DB: SELECT id, book_variant_id FROM book_variant_snapshots
+                DB--&gt;&gt;BSR: snapshot-&gt;variant rows
+                BSR--&gt;&gt;S: snapshot-&gt;variant rows
+
+                loop For each orderSignal
+                    S-&gt;&gt;S: map snapshotId -&gt; variantId
+                    S-&gt;&gt;S: upsertScore(mergedMap, variantId, score)
+                end
+                S-&gt;&gt;S: mergedMap = getTopKMap(mergedMap, 20)
+            end
+        end
+    end
+
+    S-&gt;&gt;S: variantIds = keys(mergedMap)
+    alt variantIds empty
+        S--&gt;&gt;C: []
+        C--&gt;&gt;U: 200 OK []
+    else has variantIds
+        S-&gt;&gt;BSR: findSnapshotIdsByVariantIds(variantIds)
+        BSR-&gt;&gt;DB: SELECT id FROM book_variant_snapshots WHERE variant_id IN (...)
+        DB--&gt;&gt;BSR: seedSnapshotIds[]
+        BSR--&gt;&gt;S: seedSnapshotIds[]
+
+        alt seedSnapshotIds empty
+            S--&gt;&gt;C: []
+            C--&gt;&gt;U: 200 OK []
+        else has seedSnapshotIds
+            S-&gt;&gt;OIR: findOrderIdsBySnapshotIds(seedSnapshotIds)
+            OIR-&gt;&gt;DB: SELECT order_id FROM order_items WHERE snapshot_id IN (...)
+            DB--&gt;&gt;OIR: orderIds[]
+            OIR--&gt;&gt;S: orderIds[]
+            S-&gt;&gt;S: uniqueOrderIds = dedupe(orderIds)
+
+            alt uniqueOrderIds empty
+                S--&gt;&gt;C: []
+                C--&gt;&gt;U: 200 OK []
+            else has uniqueOrderIds
+                S-&gt;&gt;OIR: groupAlsoBoughtSnapshotCandidates(uniqueOrderIds, seedSnapshotIds, 200)
+                OIR-&gt;&gt;DB: GROUP BY snapshot_id ORDER BY count desc
+                DB--&gt;&gt;OIR: candidates[]
+                OIR--&gt;&gt;S: candidates[]
+
+                alt candidates empty
+                    S--&gt;&gt;C: []
+                    C--&gt;&gt;U: 200 OK []
+                else has candidates
+                    S-&gt;&gt;S: candidateSnapshotIds = map/filter valid ids
+                    alt candidateSnapshotIds empty
+                        S--&gt;&gt;C: []
+                        C--&gt;&gt;U: 200 OK []
+                    else has candidateSnapshotIds
+                        S-&gt;&gt;BSR: findVariantIdsBySnapshotIds(candidateSnapshotIds)
+                        BSR-&gt;&gt;DB: SELECT id, book_variant_id FROM book_variant_snapshots
+                        DB--&gt;&gt;BSR: rows[]
+                        BSR--&gt;&gt;S: rows[]
+                        S-&gt;&gt;S: candidateVariantIds = dedupe(rows.bookVariantId)
+
+                        alt candidateVariantIds empty
+                            S--&gt;&gt;C: []
+                            C--&gt;&gt;U: 200 OK []
+                        else has candidateVariantIds
+                            S-&gt;&gt;CR: findBooksVariantByIds(candidateVariantIds, languageId=3)
+                            CR-&gt;&gt;DB: SELECT book_variants + joins book/translations/categories
+                            DB--&gt;&gt;CR: variantRecommend[]
+                            CR--&gt;&gt;S: variantRecommend[]
+                            S-&gt;&gt;S: map response payload
+                            S--&gt;&gt;C: recommend[]
+                            C--&gt;&gt;U: 200 OK recommend[]
+                        end
+                    end
+                end
+            end
+        end
+    end</code></pre></figure>
+<h2 id="13-mermaid-flowchart-kien-truc-luong-du-lieu" class="h h2"><a class="anchor" href="#13-mermaid-flowchart-kien-truc-luong-du-lieu" aria-label="Link to this section">#</a>13. Mermaid Flowchart (kien truc luong du lieu)</h2>
+<figure class="codeblock diagram"><figcaption>Mermaid diagram</figcaption><pre><code>flowchart TD
+    A[GET hyper-recommend/books] --&gt; B[Parse userId]
+    B --&gt; C[Build mapVariant from user_events objectType=bookVariant]
+    B --&gt; D[Build mapOrder from user_events objectType=order]
+    C --&gt; E[Merge 2 streams to variant-space]
+    D --&gt; E
+    E --&gt; F{merged variant ids empty?}
+    F -- yes --&gt; Z[Return empty list]
+    F -- no --&gt; G[variantIds -&gt; seedSnapshotIds]
+    G --&gt; H{seedSnapshotIds empty?}
+    H -- yes --&gt; Z
+    H -- no --&gt; I[seedSnapshotIds -&gt; orderIds]
+    I --&gt; J{orderIds empty?}
+    J -- yes --&gt; Z
+    J -- no --&gt; K[group also-bought snapshot candidates]
+    K --&gt; L{candidates empty?}
+    L -- yes --&gt; Z
+    L -- no --&gt; M[candidateSnapshotIds -&gt; candidateVariantIds]
+    M --&gt; N{candidateVariantIds empty?}
+    N -- yes --&gt; Z
+    N -- no --&gt; O[load catalog cards by variantIds]
+    O --&gt; P[map payload]
+    P --&gt; Q[Return recommend list]</code></pre></figure>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#1-phuong-phap-1-la-gi">1. Phuong phap 1 la gi?</a></li><li class="lvl2"><a href="#2-tai-sao-nen-dung-cho-he-thong-cua-ban">2. Tai sao nen dung cho he thong cua ban?</a></li><li class="lvl2"><a href="#3-dau-vao-du-lieu-hien-co-trong-schema">3. Dau vao du lieu (hien co trong schema)</a></li><li class="lvl2"><a href="#4-luong-recommend-chi-tiet-theo-code-hien-tai">4. Luong recommend chi tiet (theo code hien tai)</a></li><li class="lvl3"><a href="#4-1-input-contract-cho-2-luong-event">4.1 Input contract cho 2 luong event</a></li><li class="lvl3"><a href="#4-2-sequence-online-request-time-cho-endpoint-recommend">4.2 Sequence online (request-time) cho endpoint recommend</a></li><li class="lvl3"><a href="#4-3-tai-sao-merge-2-luong-la-diem-hay">4.3 Tai sao merge 2 luong la &quot;diem hay&quot;</a></li><li class="lvl3"><a href="#4-4-quy-uoc-de-tranh-leak-chat-luong-du-lieu">4.4 Quy uoc de tranh leak chat luong du lieu</a></li><li class="lvl3"><a href="#4-5-definition-of-done-cho-workflow-hien-tai">4.5 Definition of done cho workflow hien tai</a></li><li class="lvl2"><a href="#5-cong-thuc-diem-de-bat-dau-ban-de-van-hanh">5. Cong thuc diem de bat dau (ban de van hanh)</a></li><li class="lvl2"><a href="#6-cold-start-va-fallback">6. Cold-start va fallback</a></li><li class="lvl2"><a href="#7-muc-tieu-chat-luong-de-do-hieu-qua">7. Muc tieu chat luong (de do hieu qua)</a></li><li class="lvl2"><a href="#8-lo-trinh-trien-khai-de-khong-vo-tran">8. Lo trinh trien khai de khong &quot;vo tran&quot;</a></li><li class="lvl2"><a href="#9-van-hanh-va-chi-phi">9. Van hanh va chi phi</a></li><li class="lvl2"><a href="#10-hieu-nhanh-trong-1-cau">10. Hieu nhanh trong 1 cau</a></li><li class="lvl2"><a href="#11-checklist-truoc-khi-bat-dau-lam">11. Checklist truoc khi bat dau lam</a></li><li class="lvl2"><a href="#12-mermaid-sequence-chi-tiet-nhat">12. Mermaid Sequence (chi tiet nhat)</a></li><li class="lvl2"><a href="#13-mermaid-flowchart-kien-truc-luong-du-lieu">13. Mermaid Flowchart (kien truc luong du lieu)</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/ai-recommend-method-1-guide.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

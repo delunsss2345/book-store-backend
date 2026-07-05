@@ -1,0 +1,91 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Badge } from '@prisma/client';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  Min,
+  ValidateNested
+} from 'class-validator';
+import {
+  CreateBookAuthorDto,
+  CreateBookSpecDto,
+  CreateBookVariantItemDto,
+  CreateCategoriesDto,
+} from './create-admin-book-all.request.dto';
+
+export { CreateBookAuthorDto, CreateBookSpecDto, CreateBookVariantItemDto, CreateCategoriesDto };
+
+export class CreateAdminBookRequestDto {
+  @ApiProperty({ example: 'Dế Mèn Phiêu Lưu Ký' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  title: string;
+
+  @ApiProperty({ example: 'Một tác phẩm thiếu nhi kinh điển...' })
+  @IsString()
+  @IsNotEmpty()
+  description: string;
+
+  @ApiProperty({ example: 'NXB Kim Đồng' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  publisherName: string;
+
+  @ApiPropertyOptional({ type: () => [CreateBookAuthorDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateBookAuthorDto)
+  authors?: CreateBookAuthorDto[];
+
+  @ApiPropertyOptional({ type: () => [CreateCategoriesDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCategoriesDto)
+  categories?: CreateCategoriesDto[];
+
+  @ApiPropertyOptional({ type: () => CreateBookSpecDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateBookSpecDto)
+  spec?: CreateBookSpecDto;
+
+  @ApiPropertyOptional({ example: 320 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageCount?: number;
+
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/covers/sample.jpg', maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @IsUrl({ require_protocol: true })
+  coverImageUrl?: string;
+
+  @ApiPropertyOptional({ enum: Badge, example: Badge.NEW })
+  @IsOptional()
+  @IsEnum(Badge)
+  badgeCode?: Badge;
+
+  @ApiProperty({ type: () => [CreateBookVariantItemDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => CreateBookVariantItemDto)
+  bookVariantItems: CreateBookVariantItemDto[];
+}

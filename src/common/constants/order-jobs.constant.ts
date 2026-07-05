@@ -1,0 +1,3 @@
+export const ORDER_JOBS = {
+  CHECKOUT: 'ORDER_JOBS.CHECKOUT',
+}

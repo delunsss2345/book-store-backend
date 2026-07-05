@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/schema-ondelete-matrix.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schema OnDelete Matrix (Toàn bộ schema hiện tại) · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>onDelete constraints</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Schema</p>
+    <h1>Schema OnDelete Matrix (Toàn bộ schema hiện tại)</h1>
+    <p class="lede">Schema hiện có <strong>37 model</strong>. Bảng dưới liệt kê toàn bộ FK ở phía owning relation (<code>fields: [...]</code>).</p>
+  </header>
+
+  <main>
+<h2 id="1-fk-matrix" class="h h2"><a class="anchor" href="#1-fk-matrix" aria-label="Link to this section">#</a>1. FK Matrix</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>child_table</th>
+<th>fk_field</th>
+<th>parent_table</th>
+<th>onDelete</th>
+<th>Khi xóa bản ghi parent</th>
+</tr>
+</thead><tbody><tr>
+<td><code>roles</code></td>
+<td><code>created_by_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td><code>roles.created_by_id = NULL</code></td>
+</tr>
+<tr>
+<td><code>roles</code></td>
+<td><code>updated_by_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td><code>roles.updated_by_id = NULL</code></td>
+</tr>
+<tr>
+<td><code>user_roles</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn dòng mapping user-role</td>
+</tr>
+<tr>
+<td><code>user_roles</code></td>
+<td><code>role_id</code></td>
+<td><code>roles</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn dòng mapping user-role</td>
+</tr>
+<tr>
+<td><code>permissions</code></td>
+<td><code>created_by_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td><code>permissions.created_by_id = NULL</code></td>
+</tr>
+<tr>
+<td><code>permissions</code></td>
+<td><code>updated_by_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td><code>permissions.updated_by_id = NULL</code></td>
+</tr>
+<tr>
+<td><code>role_permissions</code></td>
+<td><code>role_id</code></td>
+<td><code>roles</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn mapping role-permission</td>
+</tr>
+<tr>
+<td><code>role_permissions</code></td>
+<td><code>permission_id</code></td>
+<td><code>permissions</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn mapping role-permission</td>
+</tr>
+<tr>
+<td><code>verification_codes</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn verification code của user</td>
+</tr>
+<tr>
+<td><code>login_attempts</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa lịch sử login attempt của user</td>
+</tr>
+<tr>
+<td><code>user_devices</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa toàn bộ device của user</td>
+</tr>
+<tr>
+<td><code>user_sessions</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa toàn bộ session của user</td>
+</tr>
+<tr>
+<td><code>user_sessions</code></td>
+<td><code>device_id</code></td>
+<td><code>user_devices</code></td>
+<td><code>SetNull</code></td>
+<td>Session còn, nhưng mất link thiết bị</td>
+</tr>
+<tr>
+<td><code>user_addresses</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa toàn bộ địa chỉ user</td>
+</tr>
+<tr>
+<td><code>guest_sessions</code></td>
+<td><code>converted_user_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td>Guest session còn, <code>converted_user_id = NULL</code></td>
+</tr>
+<tr>
+<td><code>categories</code></td>
+<td><code>parent_id</code></td>
+<td><code>categories</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu còn child trỏ đến parent</td>
+</tr>
+<tr>
+<td><code>categories</code></td>
+<td><code>created_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu còn category trỏ tới user</td>
+</tr>
+<tr>
+<td><code>categories</code></td>
+<td><code>updated_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu còn category trỏ tới user</td>
+</tr>
+<tr>
+<td><code>category_translations</code></td>
+<td><code>category_id</code></td>
+<td><code>categories</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn translation của category</td>
+</tr>
+<tr>
+<td><code>category_translations</code></td>
+<td><code>language_id</code></td>
+<td><code>languages</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn translation theo language</td>
+</tr>
+<tr>
+<td><code>book_translations</code></td>
+<td><code>book_id</code></td>
+<td><code>books</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa luôn translation của book</td>
+</tr>
+<tr>
+<td><code>book_translations</code></td>
+<td><code>language_id</code></td>
+<td><code>languages</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa translation của book theo language</td>
+</tr>
+<tr>
+<td><code>author_translations</code></td>
+<td><code>author_id</code></td>
+<td><code>authors</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa translation của author</td>
+</tr>
+<tr>
+<td><code>author_translations</code></td>
+<td><code>language_id</code></td>
+<td><code>languages</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa translation của author theo language</td>
+</tr>
+<tr>
+<td><code>book_authors</code></td>
+<td><code>book_id</code></td>
+<td><code>books</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa mapping book-author</td>
+</tr>
+<tr>
+<td><code>book_authors</code></td>
+<td><code>author_id</code></td>
+<td><code>authors</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa mapping book-author</td>
+</tr>
+<tr>
+<td><code>books</code></td>
+<td><code>publisher_id</code></td>
+<td><code>publishers</code></td>
+<td><code>SetNull</code></td>
+<td>Book còn, publisher bị null</td>
+</tr>
+<tr>
+<td><code>books</code></td>
+<td><code>created_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu book còn tham chiếu creator</td>
+</tr>
+<tr>
+<td><code>books</code></td>
+<td><code>updated_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu book còn tham chiếu updater</td>
+</tr>
+<tr>
+<td><code>book_categories</code></td>
+<td><code>book_id</code></td>
+<td><code>books</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa mapping book-category</td>
+</tr>
+<tr>
+<td><code>book_categories</code></td>
+<td><code>category_id</code></td>
+<td><code>categories</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa mapping book-category</td>
+</tr>
+<tr>
+<td><code>book_variants</code></td>
+<td><code>book_id</code></td>
+<td><code>books</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa toàn bộ variant của book</td>
+</tr>
+<tr>
+<td><code>book_variant_snapshots</code></td>
+<td><code>book_variant_id</code></td>
+<td><code>book_variants</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa snapshot theo variant</td>
+</tr>
+<tr>
+<td><code>book_variant_snapshots</code></td>
+<td><code>order_item_id</code></td>
+<td><code>order_items</code></td>
+<td><code>DEFAULT</code></td>
+<td>Theo default DB (thường <code>Restrict/NoAction</code>)</td>
+</tr>
+<tr>
+<td><code>book_variant_assets</code></td>
+<td><code>book_variant_id</code></td>
+<td><code>book_variants</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa asset của variant</td>
+</tr>
+<tr>
+<td><code>reviews</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa review của user</td>
+</tr>
+<tr>
+<td><code>reviews</code></td>
+<td><code>book_id</code></td>
+<td><code>books</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa review của book</td>
+</tr>
+<tr>
+<td><code>carts</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td>Cart còn, user bị null</td>
+</tr>
+<tr>
+<td><code>carts</code></td>
+<td><code>guest_session_id</code></td>
+<td><code>guest_sessions</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa cart guest</td>
+</tr>
+<tr>
+<td><code>cart_items</code></td>
+<td><code>cart_id</code></td>
+<td><code>carts</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa item trong cart</td>
+</tr>
+<tr>
+<td><code>cart_items</code></td>
+<td><code>book_variant_id</code></td>
+<td><code>book_variants</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa item nếu variant bị xóa</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td>Order còn, user bị null</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>guest_session_id</code></td>
+<td><code>guest_sessions</code></td>
+<td><code>SetNull</code></td>
+<td>Order guest còn, guest_session null</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>created_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu order còn trỏ creator</td>
+</tr>
+<tr>
+<td><code>orders</code></td>
+<td><code>updated_by</code></td>
+<td><code>users</code></td>
+<td><code>NoAction</code></td>
+<td>Bị chặn nếu order còn trỏ updater</td>
+</tr>
+<tr>
+<td><code>order_addresses</code></td>
+<td><code>order_id</code></td>
+<td><code>orders</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa địa chỉ đơn</td>
+</tr>
+<tr>
+<td><code>order_items</code></td>
+<td><code>order_id</code></td>
+<td><code>orders</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa item đơn</td>
+</tr>
+<tr>
+<td><code>order_items</code></td>
+<td><code>book_variant_id</code></td>
+<td><code>book_variants</code></td>
+<td><code>SetNull</code></td>
+<td>Item còn, variant bị null</td>
+</tr>
+<tr>
+<td><code>inventory_movements</code></td>
+<td><code>book_variant_id</code></td>
+<td><code>book_variants</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa lịch sử tồn kho của variant</td>
+</tr>
+<tr>
+<td><code>inventory_movements</code></td>
+<td><code>created_by</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td>Giữ log, bỏ liên kết user tạo</td>
+</tr>
+<tr>
+<td><code>user_events</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa event của user</td>
+</tr>
+<tr>
+<td><code>user_events</code></td>
+<td><code>guest_session_id</code></td>
+<td><code>guest_sessions</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa event của guest</td>
+</tr>
+<tr>
+<td><code>user_events</code></td>
+<td><code>session_id</code></td>
+<td><code>user_sessions</code></td>
+<td><code>SetNull</code></td>
+<td>Event còn, session bị null</td>
+</tr>
+<tr>
+<td><code>audit_logs</code></td>
+<td><code>actor_user_id</code></td>
+<td><code>users</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa audit log theo actor user</td>
+</tr>
+<tr>
+<td><code>payment_transactions</code></td>
+<td><code>order_id</code></td>
+<td><code>orders</code></td>
+<td><code>Cascade</code></td>
+<td>Xóa transaction khi xóa order</td>
+</tr>
+<tr>
+<td><code>payment_transactions</code></td>
+<td><code>user_id</code></td>
+<td><code>users</code></td>
+<td><code>SetNull</code></td>
+<td>Giữ transaction, bỏ user</td>
+</tr>
+</tbody></table></div>
+<h2 id="2-quan-he-dang-de-default-ondelete" class="h h2"><a class="anchor" href="#2-quan-he-dang-de-default-ondelete" aria-label="Link to this section">#</a>2. Quan hệ đang để default onDelete</h2>
+<ul>
+<li><code>book_variant_snapshots.order_item_id -&gt; order_items.id</code> đang không khai báo <code>onDelete</code> explicit.</li>
+<li>Nên explicit hóa để tránh hiểu nhầm nghiệp vụ, ví dụ:<ul>
+<li><code>onDelete: SetNull</code> nếu muốn giữ snapshot dù order item bị xóa.</li>
+<li><code>onDelete: Cascade</code> nếu snapshot là dữ liệu phụ thuộc bắt buộc.</li>
+</ul>
+</li>
+</ul>
+<p>Lưu ý:</p>
+<ul>
+<li>Các relation ở phía mảng/back-reference (ví dụ <code>User.userRoles</code>) không tạo FK trực tiếp, nên không phải nơi quyết định <code>onDelete</code>.</li>
+</ul>
+<h2 id="3-delete-scenario-by-parent" class="h h2"><a class="anchor" href="#3-delete-scenario-by-parent" aria-label="Link to this section">#</a>3. Delete scenario by parent</h2>
+<h2 id="user-users" class="h h2"><a class="anchor" href="#user-users" aria-label="Link to this section">#</a>User (<code>users</code>)</h2>
+<ul>
+<li>Cascade: <code>user_roles</code>, <code>verification_codes</code>, <code>login_attempts</code>, <code>user_devices</code>, <code>user_sessions</code>, <code>user_addresses</code>, <code>reviews</code>, <code>user_events</code>, <code>audit_logs</code>.</li>
+<li>SetNull: <code>roles.created_by_id</code>, <code>roles.updated_by_id</code>, <code>permissions.created_by_id</code>, <code>permissions.updated_by_id</code>, <code>guest_sessions.converted_user_id</code>, <code>carts.user_id</code>, <code>orders.user_id</code>, <code>inventory_movements.created_by</code>, <code>payment_transactions.user_id</code>.</li>
+<li>NoAction (có thể chặn delete user): <code>categories.created_by</code>, <code>categories.updated_by</code>, <code>books.created_by</code>, <code>books.updated_by</code>, <code>orders.created_by</code>, <code>orders.updated_by</code>.</li>
+</ul>
+<h2 id="role-roles" class="h h2"><a class="anchor" href="#role-roles" aria-label="Link to this section">#</a>Role (<code>roles</code>)</h2>
+<ul>
+<li>Cascade: <code>user_roles</code>, <code>role_permissions</code>.</li>
+<li><code>Role</code> là bảng parent trong RBAC mapping nên xóa role sẽ xóa mapping tương ứng.</li>
+</ul>
+<h2 id="book-books" class="h h2"><a class="anchor" href="#book-books" aria-label="Link to this section">#</a>Book (<code>books</code>)</h2>
+<ul>
+<li>Cascade: <code>book_translations</code>, <code>book_authors</code>, <code>book_categories</code>, <code>book_variants</code>, <code>reviews</code>.</li>
+<li>Hệ quả cascade tiếp:<ul>
+<li><code>book_variants</code> bị xóa -&gt; <code>cart_items</code>, <code>inventory_movements</code>, <code>book_variant_assets</code>, <code>book_variant_snapshots</code> bị xóa.</li>
+<li><code>order_items.book_variant_id</code> bị <code>SetNull</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="category-categories" class="h h2"><a class="anchor" href="#category-categories" aria-label="Link to this section">#</a>Category (<code>categories</code>)</h2>
+<ul>
+<li>Self relation <code>parent_id</code> là <code>NoAction</code>: không xóa parent nếu còn child.</li>
+<li>Cascade: <code>book_categories</code>, <code>category_translations</code>.</li>
+</ul>
+<h2 id="order-orders" class="h h2"><a class="anchor" href="#order-orders" aria-label="Link to this section">#</a>Order (<code>orders</code>)</h2>
+<ul>
+<li>Cascade: <code>order_addresses</code>, <code>order_items</code>, <code>payment_transactions</code>.</li>
+<li><code>bestSeller</code>/analytics đọc từ <code>order_items</code> bị ảnh hưởng trực tiếp khi xóa order.</li>
+</ul>
+<h2 id="guestsession-guest-sessions" class="h h2"><a class="anchor" href="#guestsession-guest-sessions" aria-label="Link to this section">#</a>GuestSession (<code>guest_sessions</code>)</h2>
+<ul>
+<li>Cascade: <code>carts</code>, <code>user_events</code>.</li>
+<li>SetNull: <code>orders.guest_session_id</code> (order guest vẫn giữ, chỉ mất link session).</li>
+</ul>
+<h2 id="usersession-user-sessions" class="h h2"><a class="anchor" href="#usersession-user-sessions" aria-label="Link to this section">#</a>UserSession (<code>user_sessions</code>)</h2>
+<ul>
+<li>SetNull: <code>user_events.session_id</code>.</li>
+</ul>
+<h2 id="language-languages" class="h h2"><a class="anchor" href="#language-languages" aria-label="Link to this section">#</a>Language (<code>languages</code>)</h2>
+<ul>
+<li>Cascade: <code>category_translations</code>, <code>book_translations</code>, <code>author_translations</code>.</li>
+<li>Xóa language sẽ làm mất toàn bộ dữ liệu hiển thị đa ngôn ngữ tương ứng.</li>
+</ul>
+<h2 id="4-bang-khong-co-fk-truc-tiep-owning-side" class="h h2"><a class="anchor" href="#4-bang-khong-co-fk-truc-tiep-owning-side" aria-label="Link to this section">#</a>4. Bảng không có FK trực tiếp (owning side)</h2>
+<ul>
+<li><code>email_outbox</code></li>
+<li><code>revoked_tokens</code></li>
+<li><code>webhook_inbox</code></li>
+<li><code>languages</code> (không là child, chỉ là parent)</li>
+<li><code>publishers</code> (không là child, chỉ là parent)</li>
+<li><code>authors</code> (không là child, chỉ là parent)</li>
+</ul>
+<h2 id="5-khuyen-nghi-ky-thuat" class="h h2"><a class="anchor" href="#5-khuyen-nghi-ky-thuat" aria-label="Link to this section">#</a>5. Khuyến nghị kỹ thuật</h2>
+<ul>
+<li>Explicit hóa <code>onDelete</code> cho mọi FK quan trọng (tránh phụ thuộc default DB).</li>
+<li>Với bảng log/audit quan trọng, cân nhắc tránh <code>Cascade</code> để giữ lịch sử.</li>
+<li>Với quan hệ <code>NoAction</code>, cần quy trình soft-delete hoặc reassign trước khi hard-delete parent.</li>
+</ul>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#1-fk-matrix">1. FK Matrix</a></li><li class="lvl2"><a href="#2-quan-he-dang-de-default-ondelete">2. Quan hệ đang để default onDelete</a></li><li class="lvl2"><a href="#3-delete-scenario-by-parent">3. Delete scenario by parent</a></li><li class="lvl2"><a href="#user-users">User (users)</a></li><li class="lvl2"><a href="#role-roles">Role (roles)</a></li><li class="lvl2"><a href="#book-books">Book (books)</a></li><li class="lvl2"><a href="#category-categories">Category (categories)</a></li><li class="lvl2"><a href="#order-orders">Order (orders)</a></li><li class="lvl2"><a href="#guestsession-guest-sessions">GuestSession (guest_sessions)</a></li><li class="lvl2"><a href="#usersession-user-sessions">UserSession (user_sessions)</a></li><li class="lvl2"><a href="#language-languages">Language (languages)</a></li><li class="lvl2"><a href="#4-bang-khong-co-fk-truc-tiep-owning-side">4. Bảng không có FK trực tiếp (owning side)</a></li><li class="lvl2"><a href="#5-khuyen-nghi-ky-thuat">5. Khuyến nghị kỹ thuật</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/schema-ondelete-matrix.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

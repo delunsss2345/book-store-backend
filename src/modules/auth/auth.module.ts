@@ -1,35 +1,49 @@
-import { AuthGuard } from '@/common/guard/auth.guard';
-import { RefreshGuard } from '@/common/guard/refresh.guard';
+import { RefreshGuard } from '@/common/security/guard/refresh.guard';
 import { JwtProvider } from '@/config/jwt.config';
-import { AuthRepository } from '@/modules/auth/auth.repository';
+import { AuthRepository } from '@/modules/auth/repository/auth.repository';
+import { LoginAttemptRepository } from '@/modules/auth/repository/login-attempt.repository';
+import { RevokedTokenRepository } from '@/modules/auth/repository/revoked-token.repository';
+import { UserDeviceRepository } from '@/modules/auth/repository/user-device.repository';
+import { UserSessionRepository } from '@/modules/auth/repository/user-session.repository';
+import { LoginAttemptService } from '@/modules/auth/service/login-attempt.service';
+import { RevokedTokenService } from '@/modules/auth/service/revoked-token.service';
+import { UserDeviceService } from '@/modules/auth/service/user-device.service';
+import { UserSessionService } from '@/modules/auth/service/user-session.service';
 import { EmailOutboxModule } from '@/modules/email-outbox/email-outbox.module';
-import { JobsModule } from '@/modules/jobs/jobs.module';
-import { LoginAttemptModule } from '@/modules/login-attempt/login-attempt.module';
-import { RevokedTokenModule } from '@/modules/revoked-token/revoked-token.module';
+import { GuestSessionModule } from '@/modules/guest-session/guest-session.module';
+import { PermissionModule } from '@/modules/permission/permission.module';
 import { RoleModule } from '@/modules/role/role.module';
-import { UserDeviceModule } from '@/modules/user-device/user-device.module';
-import { UserRoleModule } from '@/modules/user-role/user-role.module';
-import { UserSessionModule } from '@/modules/user-session/user-session.module';
+import { UserModule } from '@/modules/user/user.module';
 import { VerificationCodeModule } from '@/modules/verification-code/verification-code.module';
+import { EmailModule } from '@/queue/email/email.module';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { AuthController } from './controller/auth.controller';
+import { AuthService } from './service/auth.service';
 @Module({
-    imports: [
-        JwtProvider,
-        VerificationCodeModule,
-        EmailOutboxModule,
-        LoginAttemptModule,
-        UserSessionModule,
-        RevokedTokenModule,
-        UserDeviceModule,
-        JobsModule,
-        UserRoleModule,
-        RoleModule
-    ],
-    controllers: [AuthController],
-    providers: [AuthService, AuthRepository, RefreshGuard, { provide: APP_GUARD, useClass: AuthGuard }],
-
+  imports: [
+    JwtProvider,
+    VerificationCodeModule,
+    EmailOutboxModule,
+    EmailModule,
+    GuestSessionModule,
+    UserModule,
+    RoleModule,
+    PermissionModule,
+  ],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    AuthRepository,
+    RefreshGuard,
+    LoginAttemptService,
+    LoginAttemptRepository,
+    UserDeviceService,
+    UserDeviceRepository,
+    UserSessionService,
+    UserSessionRepository,
+    RevokedTokenService,
+    RevokedTokenRepository,
+  ],
+  exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

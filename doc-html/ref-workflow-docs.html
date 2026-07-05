@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/workflow-docs.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow Docs · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>workflow docs</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Business flows</p>
+    <h1>Workflow Docs</h1>
+    <p class="lede">This file stores implementation workflows by task. New tasks must append a new section and keep old sections unchanged.</p>
+  </header>
+
+  <main>
+<hr>
+<h2 id="task-catalog-categories-endpoint-with-cache-first-tree-response" class="h h2"><a class="anchor" href="#task-catalog-categories-endpoint-with-cache-first-tree-response" aria-label="Link to this section">#</a>Task: Catalog categories endpoint with cache-first tree response</h2>
+<h3 id="task" class="h h3"><a class="anchor" href="#task" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Implement <code>GET /catalog/categories</code>.</li>
+<li>Return only active categories and build recursive children.</li>
+<li>Support <code>lang</code> in <code>vi|en</code> with default <code>en</code>.</li>
+<li>Use cache-first flow before querying database.</li>
+</ul>
+<h3 id="endpoint" class="h h3"><a class="anchor" href="#endpoint" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>GET /api/v1/catalog/categories?lang=en|vi</code></li>
+</ul>
+<h3 id="input" class="h h3"><a class="anchor" href="#input" aria-label="Link to this section">#</a>Input</h3>
+<ul>
+<li>Query param:</li>
+<li><code>lang</code> (optional): <code>vi</code> or <code>en</code>, default <code>en</code>.</li>
+</ul>
+<h3 id="process-flow" class="h h3"><a class="anchor" href="#process-flow" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Read <code>lang</code> from query, normalize to lowercase, default to <code>en</code>.</li>
+<li>Validate <code>lang</code> is only <code>vi</code> or <code>en</code>. Invalid value returns <code>400</code>.</li>
+<li>Build category cache key: <code>catalog:categories:{lang}</code>.</li>
+<li>Check cache:</li>
+</ol>
+<ul>
+<li>If hit: return cached tree immediately.</li>
+<li>If miss: continue.</li>
+</ul>
+<ol start="5">
+<li>Resolve language id from <code>languages</code> table using active language code.</li>
+<li>Query active categories from <code>categories</code> with translation from <code>category_translations</code> by <code>languageId</code>.</li>
+<li>Build tree:</li>
+</ol>
+<ul>
+<li>Map rows by <code>id</code>.</li>
+<li>Attach child node to parent node.</li>
+<li>Keep only root nodes (<code>parentId = null</code>).</li>
+<li>Skip rows without translation.</li>
+<li>Skip orphan rows if parent is not present in filtered set.</li>
+</ul>
+<ol start="8">
+<li>Sort nodes by <code>sortOrder</code>, then <code>id</code>.</li>
+<li>Save tree to cache with TTL <code>60000</code>.</li>
+<li>Return tree response.</li>
+</ol>
+<h3 id="db-tables" class="h h3"><a class="anchor" href="#db-tables" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>languages</code></li>
+<li><code>categories</code></li>
+<li><code>category_translations</code></li>
+</ul>
+<h3 id="cache-keys-ttl" class="h h3"><a class="anchor" href="#cache-keys-ttl" aria-label="Link to this section">#</a>Cache Keys + TTL</h3>
+<ul>
+<li>Language cache: <code>catalog:lang:{lang}</code> with TTL <code>60000</code>.</li>
+<li>Category tree cache: <code>catalog:categories:{lang}</code> with TTL <code>60000</code>.</li>
+</ul>
+<h3 id="response-shape" class="h h3"><a class="anchor" href="#response-shape" aria-label="Link to this section">#</a>Response Shape</h3>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>[
+  {
+    &quot;id&quot;: &quot;1&quot;,
+    &quot;parentId&quot;: null,
+    &quot;name&quot;: &quot;Programming&quot;,
+    &quot;slug&quot;: &quot;programming&quot;,
+    &quot;sortOrder&quot;: 1,
+    &quot;children&quot;: [
+      {
+        &quot;id&quot;: &quot;2&quot;,
+        &quot;parentId&quot;: &quot;1&quot;,
+        &quot;name&quot;: &quot;Backend&quot;,
+        &quot;slug&quot;: &quot;backend&quot;,
+        &quot;sortOrder&quot;: 2,
+        &quot;children&quot;: []
+      }
+    ]
+  }
+]</code></pre></figure>
+<h3 id="files-changed" class="h h3"><a class="anchor" href="#files-changed" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/catalog/dto/request/catalog-categories.query.dto.ts</code></li>
+<li><code>src/modules/catalog/dto/request/index.ts</code></li>
+<li><code>src/modules/catalog/catalog.controller.ts</code></li>
+<li><code>src/modules/catalog/catalog.repository.ts</code></li>
+<li><code>src/modules/catalog/catalog.service.ts</code></li>
+<li><code>src/modules/catalog/dto/response/catalog-book-card.dto.ts</code></li>
+</ul>
+<h3 id="verification" class="h h3"><a class="anchor" href="#verification" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li><code>GET /api/v1/catalog/categories</code> returns <code>200</code> and defaults to <code>en</code>.</li>
+<li><code>GET /api/v1/catalog/categories?lang=vi</code> returns Vietnamese translations.</li>
+<li><code>GET /api/v1/catalog/categories?lang=jp</code> returns <code>400</code>.</li>
+<li>Repeat same request confirms cache hit behavior.</li>
+</ul>
+<hr>
+<h2 id="task-catalog-books-list-with-language-filter-and-cheapest-variant" class="h h2"><a class="anchor" href="#task-catalog-books-list-with-language-filter-and-cheapest-variant" aria-label="Link to this section">#</a>Task: Catalog books list with language filter and cheapest variant</h2>
+<h3 id="task-1" class="h h3"><a class="anchor" href="#task-1" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Implement simple list endpoint <code>GET /catalog/books</code>.</li>
+<li>Join <code>books</code> with <code>book_translations</code>.</li>
+<li>Filter translation by language code only (<code>vi</code> or <code>en</code>).</li>
+<li>Return only cheapest active variant price for each book.</li>
+<li>If a book has no active variant, mark product as out of stock.</li>
+<li>Support pagination and cache by page/limit/filter.</li>
+</ul>
+<h3 id="endpoint-1" class="h h3"><a class="anchor" href="#endpoint-1" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>GET /api/v1/catalog/books?page=1&amp;limit=20&amp;lang=en</code></li>
+</ul>
+<h3 id="input-1" class="h h3"><a class="anchor" href="#input-1" aria-label="Link to this section">#</a>Input</h3>
+<ul>
+<li>Query params:</li>
+<li><code>page</code> (optional, default <code>1</code>)</li>
+<li><code>limit</code> (optional, default <code>20</code>)</li>
+<li><code>lang</code> (optional, <code>vi|en</code>, default <code>en</code>)</li>
+</ul>
+<h3 id="process-flow-1" class="h h3"><a class="anchor" href="#process-flow-1" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Read <code>page</code>, <code>limit</code>, <code>lang</code>.</li>
+<li>Resolve language by <code>lang</code> (default <code>en</code>).</li>
+<li>Build cache key:</li>
+</ol>
+<ul>
+<li><code>catalog:books:lang={lang}:p{page}:l{limit}</code></li>
+</ul>
+<ol start="4">
+<li>Check cache:</li>
+</ol>
+<ul>
+<li>If hit: return cached payload.</li>
+<li>If miss: continue.</li>
+</ul>
+<ol start="5">
+<li>Build DB filter:</li>
+</ol>
+<ul>
+<li>Base: active book + not deleted.</li>
+<li>Translation condition: <code>book_translations.language_id = languageId</code></li>
+</ul>
+<ol start="6">
+<li>Query total count.</li>
+<li>Query paginated books with:</li>
+</ol>
+<ul>
+<li>translation row (<code>title</code>, <code>slug</code>)</li>
+<li>only 1 active variant with min price (<code>order by price asc, id asc, take 1</code>)</li>
+</ul>
+<ol start="8">
+<li>Map response item:</li>
+</ol>
+<ul>
+<li><code>minPrice</code> = cheapest variant price</li>
+<li><code>isOutOfStock = true</code> when no variant or stock &lt;= 0</li>
+</ul>
+<ol start="9">
+<li>Save to cache and return <code>{ page, limit, total, totalPages, items }</code>.</li>
+</ol>
+<h3 id="db-tables-1" class="h h3"><a class="anchor" href="#db-tables-1" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>books</code></li>
+<li><code>book_translations</code></li>
+<li><code>book_variants</code></li>
+<li><code>languages</code></li>
+</ul>
+<h3 id="cache-keys-ttl-1" class="h h3"><a class="anchor" href="#cache-keys-ttl-1" aria-label="Link to this section">#</a>Cache Keys + TTL</h3>
+<ul>
+<li>Key: <code>catalog:books:lang={lang}:p{page}:l{limit}</code></li>
+<li>TTL: <code>45000</code></li>
+</ul>
+<h3 id="response-shape-1" class="h h3"><a class="anchor" href="#response-shape-1" aria-label="Link to this section">#</a>Response Shape</h3>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;page&quot;: 1,
+  &quot;limit&quot;: 20,
+  &quot;total&quot;: 120,
+  &quot;totalPages&quot;: 6,
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;1&quot;,
+      &quot;title&quot;: &quot;Book title&quot;,
+      &quot;slug&quot;: &quot;book-title&quot;,
+      &quot;coverImageUrl&quot;: &quot;https://...&quot;,
+      &quot;minPrice&quot;: &quot;10.00&quot;,
+      &quot;currencyCode&quot;: &quot;USD&quot;,
+      &quot;isOutOfStock&quot;: false,
+      &quot;createdAt&quot;: &quot;2026-02-13T09:00:00.000Z&quot;
+    }
+  ]
+}</code></pre></figure>
+<h3 id="files-changed-1" class="h h3"><a class="anchor" href="#files-changed-1" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/catalog/catalog.controller.ts</code></li>
+<li><code>src/modules/catalog/catalog.service.ts</code></li>
+<li><code>src/modules/catalog/catalog.repository.ts</code></li>
+<li><code>src/modules/catalog/dto/request/catalog-book-list.query.dto.ts</code></li>
+<li><code>src/modules/catalog/dto/response/catalog-book-card.dto.ts</code></li>
+</ul>
+<h3 id="verification-1" class="h h3"><a class="anchor" href="#verification-1" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li><code>GET /api/v1/catalog/books</code> returns paginated list with default <code>lang=en</code>.</li>
+<li><code>GET /api/v1/catalog/books?lang=vi</code> returns Vietnamese translation.</li>
+<li>Repeat same query confirms cache hit by page/limit/filter.</li>
+</ul>
+<hr>
+<h2 id="task-catalog-book-detail-by-slug-no-min-max-price" class="h h2"><a class="anchor" href="#task-catalog-book-detail-by-slug-no-min-max-price" aria-label="Link to this section">#</a>Task: Catalog book detail by slug (no min/max price)</h2>
+<h3 id="task-2" class="h h3"><a class="anchor" href="#task-2" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Add endpoint to get book detail by translation slug.</li>
+<li>Keep detail response focused on book + variant list.</li>
+<li>Remove min/max price aggregation from detail flow.</li>
+</ul>
+<h3 id="endpoint-2" class="h h3"><a class="anchor" href="#endpoint-2" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>GET /api/v1/catalog/books/slug/:slug?lang=vi|en</code></li>
+</ul>
+<h3 id="input-2" class="h h3"><a class="anchor" href="#input-2" aria-label="Link to this section">#</a>Input</h3>
+<ul>
+<li>Path param:</li>
+<li><code>slug</code> (required)</li>
+<li>Query param:</li>
+<li><code>lang</code> (optional, current detail language behavior)</li>
+</ul>
+<h3 id="process-flow-2" class="h h3"><a class="anchor" href="#process-flow-2" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Read <code>slug</code>, normalize (<code>trim</code>) and validate not empty.</li>
+<li>Resolve language.</li>
+<li>Check cache by slug + language:</li>
+</ol>
+<ul>
+<li><code>catalog:detail:slug:{slug}:{lang}</code></li>
+</ul>
+<ol start="4">
+<li>If cache miss:</li>
+</ol>
+<ul>
+<li>Find book by <code>book_translations.slug</code> + <code>language_id</code>.</li>
+<li>Get book info + categories + active variants.</li>
+<li>Aggregate rating.</li>
+</ul>
+<ol start="5">
+<li>Return detail response:</li>
+</ol>
+<ul>
+<li>no <code>minPrice</code>, no <code>maxPrice</code>, no aggregated <code>currencyCode</code></li>
+<li>variants keep their own <code>price</code> and <code>currencyCode</code>.</li>
+</ul>
+<h3 id="db-tables-2" class="h h3"><a class="anchor" href="#db-tables-2" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>books</code></li>
+<li><code>book_translations</code></li>
+<li><code>book_variants</code></li>
+<li><code>reviews</code></li>
+<li><code>categories</code></li>
+<li><code>category_translations</code></li>
+</ul>
+<h3 id="cache-keys-ttl-2" class="h h3"><a class="anchor" href="#cache-keys-ttl-2" aria-label="Link to this section">#</a>Cache Keys + TTL</h3>
+<ul>
+<li>Key: <code>catalog:detail:slug:{slug}:{lang}</code></li>
+<li>TTL: <code>120000</code></li>
+</ul>
+<h3 id="files-changed-2" class="h h3"><a class="anchor" href="#files-changed-2" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/catalog/catalog.controller.ts</code></li>
+<li><code>src/modules/catalog/catalog.service.ts</code></li>
+<li><code>src/modules/catalog/catalog.repository.ts</code></li>
+<li><code>src/modules/catalog/dto/response/catalog-book-detail.dto.ts</code></li>
+</ul>
+<h3 id="verification-2" class="h h3"><a class="anchor" href="#verification-2" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li><code>GET /api/v1/catalog/books/slug/&lt;slug&gt;?lang=vi</code> returns detail.</li>
+<li>Invalid slug (empty after trim) returns <code>400</code>.</li>
+<li>Unknown slug returns <code>404</code>.</li>
+<li>Detail response contains <code>variants[]</code> with each variant price and no min/max fields.</li>
+</ul>
+<hr>
+<h2 id="task-review-publisher-author-modules-with-internal-bookauthor" class="h h2"><a class="anchor" href="#task-review-publisher-author-modules-with-internal-bookauthor" aria-label="Link to this section">#</a>Task: Review + Publisher + Author modules (with internal BookAuthor)</h2>
+<h3 id="task-3" class="h h3"><a class="anchor" href="#task-3" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Add public modules: <code>review</code>, <code>publisher</code>, <code>author</code>.</li>
+<li>Add internal module: <code>book-author</code> (no controller) to support author-book queries.</li>
+<li>Keep implementation simple with Prisma repository queries and pagination.</li>
+</ul>
+<h3 id="endpoints" class="h h3"><a class="anchor" href="#endpoints" aria-label="Link to this section">#</a>Endpoints</h3>
+<ul>
+<li><code>GET /api/v1/reviews/books/:slug?page=1&amp;limit=20&amp;lang=en</code></li>
+<li><code>GET /api/v1/publishers?page=1&amp;limit=20</code></li>
+<li><code>GET /api/v1/publishers/:publisherId/books?page=1&amp;limit=20&amp;lang=en</code></li>
+<li><code>GET /api/v1/authors?page=1&amp;limit=20&amp;lang=en</code></li>
+<li><code>GET /api/v1/authors/:authorId/books?page=1&amp;limit=20&amp;lang=en</code></li>
+</ul>
+<h3 id="input-rules" class="h h3"><a class="anchor" href="#input-rules" aria-label="Link to this section">#</a>Input rules</h3>
+<ul>
+<li>List queries use <code>page</code> and <code>limit</code>.</li>
+<li>Language queries use <code>lang</code> in <code>vi|en</code> (default <code>en</code>).</li>
+<li>Path ids (<code>publisherId</code>, <code>authorId</code>) are parsed as bigint.</li>
+</ul>
+<h3 id="process-flow-summary" class="h h3"><a class="anchor" href="#process-flow-summary" aria-label="Link to this section">#</a>Process Flow (Summary)</h3>
+<ol>
+<li>Validate query/path inputs via DTO + bigint parse.</li>
+<li>Resolve active language from <code>languages</code> when route needs translation.</li>
+<li>Run count query + paginated query in parallel.</li>
+<li>Map response with required fields only.</li>
+<li>Return paginated payload: <code>page</code>, <code>limit</code>, <code>total</code>, <code>totalPages</code>, <code>items</code>.</li>
+</ol>
+<h3 id="db-tables-used" class="h h3"><a class="anchor" href="#db-tables-used" aria-label="Link to this section">#</a>DB Tables used</h3>
+<ul>
+<li><code>reviews</code>, <code>book_variants</code>, <code>books</code>, <code>book_translations</code></li>
+<li><code>publishers</code></li>
+<li><code>authors</code>, <code>author_translations</code>, <code>book_authors</code></li>
+<li><code>languages</code></li>
+</ul>
+<h3 id="files-added" class="h h3"><a class="anchor" href="#files-added" aria-label="Link to this section">#</a>Files Added</h3>
+<ul>
+<li><code>src/modules/review/*</code></li>
+<li><code>src/modules/publisher/*</code></li>
+<li><code>src/modules/author/*</code></li>
+<li><code>src/modules/book-author/*</code></li>
+</ul>
+<h3 id="files-updated" class="h h3"><a class="anchor" href="#files-updated" aria-label="Link to this section">#</a>Files Updated</h3>
+<ul>
+<li><code>src/app.module.ts</code></li>
+</ul>
+<h3 id="verification-3" class="h h3"><a class="anchor" href="#verification-3" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li><code>npm run build</code></li>
+<li>Manual API checks for all new routes with valid and invalid params.</li>
+</ul>
+<hr>
+<h2 id="task-cart-guard-with-guest-session-fallback" class="h h2"><a class="anchor" href="#task-cart-guard-with-guest-session-fallback" aria-label="Link to this section">#</a>Task: Cart guard with guest-session fallback</h2>
+<h3 id="task-4" class="h h3"><a class="anchor" href="#task-4" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Add a simple guard for cart routes only.</li>
+<li>Verify Bearer token when provided.</li>
+<li>If token is valid: find user from DB and attach to request.</li>
+<li>If token is invalid: create <code>guest_sessions</code> record and mark <code>request.authError = true</code>.</li>
+<li>Store guest-session metadata: <code>ipFirst</code>, <code>userAgentHash</code>.</li>
+</ul>
+<h3 id="scope" class="h h3"><a class="anchor" href="#scope" aria-label="Link to this section">#</a>Scope</h3>
+<ul>
+<li>Apply only to <code>cart</code> module first.</li>
+<li>Keep implementation simple, no extra business logic.</li>
+</ul>
+<h3 id="endpoints-affected" class="h h3"><a class="anchor" href="#endpoints-affected" aria-label="Link to this section">#</a>Endpoints (affected)</h3>
+<ul>
+<li><code>GET /api/v1/cart</code></li>
+<li><code>POST /api/v1/cart/items</code></li>
+<li><code>PATCH /api/v1/cart/items/:itemKey</code></li>
+<li><code>PATCH /api/v1/cart/items/:itemKey/delta</code></li>
+<li><code>DELETE /api/v1/cart/items/:itemKey</code></li>
+<li><code>DELETE /api/v1/cart</code></li>
+<li><code>POST /api/v1/cart/merge</code></li>
+</ul>
+<h3 id="process-flow-3" class="h h3"><a class="anchor" href="#process-flow-3" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Mark <code>CartController</code> as <code>@Public()</code> to bypass global strict auth guard.</li>
+<li>Attach <code>CartGuestSessionGuard</code> at controller level.</li>
+<li>In guard:</li>
+</ol>
+<ul>
+<li>Read Bearer token from <code>Authorization</code>.</li>
+<li>If no token: create guest session and continue request.</li>
+<li>If token exists and verify success:</li>
+<li>Parse <code>sub</code>, find user from <code>users</code> table, attach to <code>request.user</code>.</li>
+<li>Set <code>request.authError = false</code>.</li>
+<li>If verify fails or user not found:</li>
+<li>Create guest session with <code>ip_first</code> + hashed <code>user-agent</code>.</li>
+<li>Set <code>request.authError = true</code>.</li>
+</ul>
+<ol start="4">
+<li>Save created guest session into request context (<code>guestSession</code>, <code>guestSessionId</code>) for cart flow usage.</li>
+</ol>
+<h3 id="db-tables-3" class="h h3"><a class="anchor" href="#db-tables-3" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>users</code></li>
+<li><code>user_roles</code></li>
+<li><code>roles</code></li>
+<li><code>guest_sessions</code></li>
+</ul>
+<h3 id="files-changed-3" class="h h3"><a class="anchor" href="#files-changed-3" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/common/security/guard/cart-guest-session.guard.ts</code></li>
+<li><code>src/modules/cart/cart.controller.ts</code></li>
+<li><code>src/modules/cart/cart.module.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.service.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.repository.ts</code></li>
+</ul>
+<h3 id="verification-4" class="h h3"><a class="anchor" href="#verification-4" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li>Call cart endpoint with valid token: request should carry <code>request.user</code>.</li>
+<li>Call cart endpoint with invalid token: DB should create <code>guest_sessions</code> row and <code>request.authError = true</code>.</li>
+<li>Call cart endpoint without token: DB should create <code>guest_sessions</code> row and request continues.</li>
+</ul>
+<hr>
+<h2 id="task-post-cart-items-with-guest-db-user-db-flow-with-cleanup" class="h h2"><a class="anchor" href="#task-post-cart-items-with-guest-db-user-db-flow-with-cleanup" aria-label="Link to this section">#</a>Task: POST /cart/items with guest-db + user-db flow (with cleanup)</h2>
+<h3 id="task-5" class="h h3"><a class="anchor" href="#task-5" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Implement <code>POST /cart/items</code>.</li>
+<li>Input:</li>
+<li><code>bookVariantId</code> (required number).</li>
+<li>Every request increases by <code>+1</code>.</li>
+</ul>
+<h3 id="endpoint-3" class="h h3"><a class="anchor" href="#endpoint-3" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>POST /api/v1/cart/items</code></li>
+</ul>
+<h3 id="process-flow-4" class="h h3"><a class="anchor" href="#process-flow-4" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Controller reads request context from cart guard (<code>user</code>, <code>authError</code>, <code>guestSessionId</code>) and DTO body.</li>
+<li>Service normalizes <code>bookVariantId</code> to bigint and decides branch:</li>
+</ol>
+<ul>
+<li>Guest branch when <code>authError = true</code> or request has no user id.</li>
+<li>User branch when user id exists and auth is valid.</li>
+</ul>
+<ol start="3">
+<li>Guest branch:</li>
+</ol>
+<ul>
+<li>Read guest cart by <code>guestSessionId</code> (<code>findByGuestSessionId</code>).</li>
+<li>If guest cart not found: create cart by <code>guestSessionId</code>, then create <code>cart_item</code> with quantity <code>1</code>.</li>
+<li>If guest cart exists and same variant exists: increase quantity by <code>+1</code> in database.</li>
+<li>If guest cart exists and variant does not exist: create <code>cart_item</code> with quantity <code>1</code>.</li>
+<li>Return payload with <code>authError = true</code> and cart item data.</li>
+</ul>
+<ol start="4">
+<li>User branch:</li>
+</ol>
+<ul>
+<li>Verify user exists via <code>authRepository.findUserById(userId)</code>.</li>
+<li>Find cart by <code>userId</code>; create cart if missing.</li>
+<li>Find cart item by <code>(cartId, bookVariantId)</code>:</li>
+<li>If exists: update quantity = current + 1 in DB.</li>
+<li>If not exists: create new item with quantity = 1 in DB.</li>
+</ul>
+<ol start="5">
+<li>Cleanup strategy for guest data:</li>
+</ol>
+<ul>
+<li>Guest cart data is persisted to support smoother guest experience across requests.</li>
+<li>Old guest carts and related items must be removed by scheduled cleanup (TTL/time-based deletion) to avoid data growth.</li>
+</ul>
+<ol start="6">
+<li>Response:</li>
+</ol>
+<ul>
+<li>Guest:</li>
+</ul>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;authError&quot;: true,
+  &quot;cartItem&quot;: {
+    &quot;bookVariantId&quot;: 101,
+    &quot;quantity&quot;: 1
+  }
+}</code></pre></figure>
+<ul>
+<li>User:</li>
+</ul>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;authError&quot;: false,
+  &quot;cartItem&quot;: {
+    &quot;bookVariantId&quot;: 101,
+    &quot;quantity&quot;: 2
+  }
+}</code></pre></figure>
+<h3 id="db-tables-4" class="h h3"><a class="anchor" href="#db-tables-4" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>users</code></li>
+<li><code>carts</code></li>
+<li><code>cart_items</code></li>
+<li><code>guest_sessions</code></li>
+</ul>
+<h3 id="files-changed-4" class="h h3"><a class="anchor" href="#files-changed-4" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/cart/dto/request/add-cart-item.request.dto.ts</code></li>
+<li><code>src/modules/cart/dto/request/index.ts</code></li>
+<li><code>src/modules/cart/cart.controller.ts</code></li>
+<li><code>src/modules/cart/cart.service.ts</code></li>
+<li><code>src/modules/cart/cart.repository.ts</code></li>
+<li><code>src/modules/cart/cart.module.ts</code></li>
+<li><code>src/modules/cart-item/cart-item.service.ts</code></li>
+<li><code>src/modules/cart-item/cart-item.repository.ts</code></li>
+<li><code>src/common/security/guard/cart-guest-session.guard.ts</code></li>
+</ul>
+<h3 id="verification-5" class="h h3"><a class="anchor" href="#verification-5" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li><code>POST /api/v1/cart/items</code> with invalid/no token returns <code>authError = true</code> and guest cart data is persisted.</li>
+<li><code>POST /api/v1/cart/items</code> with valid token writes/updates <code>cart_items</code>.</li>
+<li>Repeated calls always increase item quantity by 1.</li>
+<li>Run cleanup task and verify old guest carts/items are deleted as expected.</li>
+</ul>
+<hr>
+<h2 id="task-guest-session-touch-daily-cleanup-cron" class="h h2"><a class="anchor" href="#task-guest-session-touch-daily-cleanup-cron" aria-label="Link to this section">#</a>Task: Guest session touch + daily cleanup cron</h2>
+<h3 id="task-6" class="h h3"><a class="anchor" href="#task-6" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Fix potential failure in <code>attachGuestSession</code> when cookie <code>guestSessionId</code> exists but DB record was deleted.</li>
+<li>Update <code>lastSeenAt</code> when guest session is still valid.</li>
+<li>Add cron job to clean inactive guest data at midnight every day.</li>
+</ul>
+<h3 id="process-flow-5" class="h h3"><a class="anchor" href="#process-flow-5" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Guard <code>attachGuestSession</code>:</li>
+</ol>
+<ul>
+<li>If cookie exists and session exists: update <code>lastSeenAt</code>, attach <code>request.guestSession</code> and <code>request.guestSessionId</code>.</li>
+<li>If cookie exists but session not found: create new guest session and rotate cookie.</li>
+<li>If cookie missing: create guest session and set cookie.</li>
+</ul>
+<ol start="2">
+<li>Cleanup cron:</li>
+</ol>
+<ul>
+<li>Run at <code>00:00</code> daily.</li>
+<li>Cutoff = now - 3 days.</li>
+<li>Delete in order: <code>cart_items</code> -&gt; <code>carts</code> -&gt; <code>guest_sessions</code> for inactive guest sessions.</li>
+</ul>
+<h3 id="files-changed-5" class="h h3"><a class="anchor" href="#files-changed-5" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/common/security/guard/cart-guest-session.guard.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.service.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.repository.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.cleanup.job.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.module.ts</code></li>
+<li><code>src/app.module.ts</code></li>
+</ul>
+<h3 id="verification-6" class="h h3"><a class="anchor" href="#verification-6" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li>Existing valid <code>guestSessionId</code> updates <code>lastSeenAt</code>.</li>
+<li>Missing/expired <code>guestSessionId</code> creates new session without throwing.</li>
+<li>Cron execution removes guest data inactive for more than 3 days.</li>
+</ul>
+<hr>
+<h2 id="task-cart-quantity-delta-api-and-remove-direct-patch-api" class="h h2"><a class="anchor" href="#task-cart-quantity-delta-api-and-remove-direct-patch-api" aria-label="Link to this section">#</a>Task: Cart quantity-delta API and remove direct patch API</h2>
+<h3 id="task-7" class="h h3"><a class="anchor" href="#task-7" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Remove direct overwrite API: <code>PATCH /api/v1/cart/items/:itemKey</code>.</li>
+<li>Use only delta API: <code>PATCH /api/v1/cart/items/:itemKey/delta</code>.</li>
+<li>Support custom increase/decrease by <code>quantity</code> delta.</li>
+<li>Keep delete APIs:</li>
+<li><code>DELETE /api/v1/cart/items/:itemKey</code> to remove one cart item.</li>
+<li><code>DELETE /api/v1/cart</code> to remove cart and all related cart items.</li>
+<li>Keep <code>POST /api/v1/cart/merge</code> as pending (not implemented now).</li>
+</ul>
+<h3 id="endpoint-contract" class="h h3"><a class="anchor" href="#endpoint-contract" aria-label="Link to this section">#</a>Endpoint Contract</h3>
+<ul>
+<li><code>PATCH /api/v1/cart/items/:itemKey/delta</code></li>
+<li>Request body:</li>
+</ul>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;quantity&quot;: -10
+}</code></pre></figure>
+<h3 id="process-flow-6" class="h h3"><a class="anchor" href="#process-flow-6" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>FE may batch fast clicks (increase/decrease) and send final delta once timeout is reached.</li>
+<li>BE resolves actor from request context:</li>
+</ol>
+<ul>
+<li>guest (<code>authError = true</code>)</li>
+<li>user (<code>authError = false</code>)</li>
+</ul>
+<ol start="3">
+<li>Find target item by <code>itemKey</code> and actor scope:</li>
+</ol>
+<ul>
+<li>guest: item must belong to guest cart (<code>guestSessionId</code>)</li>
+<li>user: item must belong to user cart (<code>userId</code>)</li>
+</ul>
+<ol start="4">
+<li>Calculate new quantity:</li>
+</ol>
+<ul>
+<li><code>newQuantity = currentQuantity + delta</code></li>
+<li>Clamp lower bound: if below 0 -&gt; set to 0</li>
+<li>Clamp upper bound by variant stock:</li>
+<li>if requested quantity exceeds stock -&gt; set to stock</li>
+</ul>
+<ol start="5">
+<li>Save updated quantity to DB.</li>
+<li>Return actor-specific response with updated item info.</li>
+</ol>
+<h3 id="notes" class="h h3"><a class="anchor" href="#notes" aria-label="Link to this section">#</a>Notes</h3>
+<ul>
+<li>Cart quantity is behavioral data, not a guaranteed purchase intent.</li>
+<li>High quantity attempts are capped by stock.</li>
+<li>Very large negative delta will clamp to <code>0</code> instead of negative values.</li>
+</ul>
+<h3 id="files-changed-6" class="h h3"><a class="anchor" href="#files-changed-6" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/cart/cart.controller.ts</code></li>
+<li><code>src/modules/cart/cart.service.ts</code></li>
+<li><code>src/modules/cart/cart.repository.ts</code></li>
+<li><code>src/modules/cart/dto/request/update-cart-item-delta.request.dto.ts</code></li>
+<li><code>src/modules/cart/dto/request/index.ts</code></li>
+<li><code>src/modules/cart-item/cart-item.service.ts</code></li>
+<li><code>src/modules/cart-item/cart-item.repository.ts</code></li>
+<li><code>src/common/security/guard/cart-guest-session.guard.ts</code></li>
+</ul>
+<h3 id="verification-7" class="h h3"><a class="anchor" href="#verification-7" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li>Delta increase updates quantity correctly.</li>
+<li>Delta decrease below zero is clamped to zero.</li>
+<li>Delta over stock is clamped to stock.</li>
+<li>Delete item only removes one item.</li>
+<li>Delete cart removes cart and related cart items.</li>
+<li>Merge endpoint currently returns not-implemented response.</li>
+</ul>
+<hr>
+<h2 id="task-register-converts-guest-session-to-user" class="h h2"><a class="anchor" href="#task-register-converts-guest-session-to-user" aria-label="Link to this section">#</a>Task: Register converts guest session to user</h2>
+<h3 id="task-8" class="h h3"><a class="anchor" href="#task-8" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Extend <code>POST /auth/register</code> flow.</li>
+<li>If request has <code>guestSessionId</code> cookie, convert that guest session to created user.</li>
+<li>Keep current register business flow unchanged.</li>
+</ul>
+<h3 id="endpoint-4" class="h h3"><a class="anchor" href="#endpoint-4" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>POST /api/v1/auth/register</code></li>
+</ul>
+<h3 id="process-flow-7" class="h h3"><a class="anchor" href="#process-flow-7" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Controller reads <code>guestSessionId</code> from request cookies.</li>
+<li>Controller calls <code>authService.register(body, userAgent, ip, guestSessionId)</code>.</li>
+<li>Service executes existing register flow:</li>
+</ol>
+<ul>
+<li>validate password confirm</li>
+<li>check email exists</li>
+<li>create user + role + loginAttempt + userSession</li>
+<li>create verification and enqueue email</li>
+</ul>
+<ol start="4">
+<li>At the end, if <code>guestSessionId</code> exists:</li>
+</ol>
+<ul>
+<li>update <code>guest_sessions</code> by id</li>
+<li>set <code>converted_user_id = user.id</code></li>
+<li>set <code>converted_at = now</code></li>
+</ul>
+<h3 id="db-tables-5" class="h h3"><a class="anchor" href="#db-tables-5" aria-label="Link to this section">#</a>DB Tables</h3>
+<ul>
+<li><code>users</code></li>
+<li><code>guest_sessions</code></li>
+</ul>
+<h3 id="files-changed-7" class="h h3"><a class="anchor" href="#files-changed-7" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/auth/auth.controller.ts</code></li>
+<li><code>src/modules/auth/auth.service.ts</code></li>
+<li><code>src/modules/auth/auth.module.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.service.ts</code></li>
+<li><code>src/modules/guest-session/guest-session.repository.ts</code></li>
+</ul>
+<h3 id="verification-8" class="h h3"><a class="anchor" href="#verification-8" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li>Register without <code>guestSessionId</code> still succeeds as before.</li>
+<li>Register with valid <code>guestSessionId</code> updates <code>converted_user_id</code> and <code>converted_at</code>.</li>
+<li>Register with stale/invalid <code>guestSessionId</code> does not break register flow (updateMany no-op).</li>
+</ul>
+<hr>
+<h2 id="task-review-routes-workflow-ai-draft-create-review-list-review" class="h h2"><a class="anchor" href="#task-review-routes-workflow-ai-draft-create-review-list-review" aria-label="Link to this section">#</a>Task: Review routes workflow (AI draft + create review + list review)</h2>
+<h3 id="task-9" class="h h3"><a class="anchor" href="#task-9" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Add AI-assisted draft route for review text generation.</li>
+<li>Add guarded create-review route that only allows purchased variants.</li>
+<li>Keep public list-review-by-book-slug route.</li>
+<li>Reuse review business rule for both AI draft and create:</li>
+<li>user must have purchased the variant</li>
+<li>user can review only once for the same <code>userId + bookId + bookVariantId</code>.</li>
+</ul>
+<h3 id="endpoints-1" class="h h3"><a class="anchor" href="#endpoints-1" aria-label="Link to this section">#</a>Endpoints</h3>
+<ul>
+<li><code>POST /api/v1/reviews/review/draft</code> (auth required)</li>
+<li><code>POST /api/v1/reviews</code> (auth required)</li>
+<li><code>GET /api/v1/reviews/books/:slug?lang=vi|en&amp;page=1&amp;limit=20</code> (public)</li>
+</ul>
+<h3 id="input-contract" class="h h3"><a class="anchor" href="#input-contract" aria-label="Link to this section">#</a>Input Contract</h3>
+<ol>
+<li><code>POST /reviews/review/draft</code></li>
+</ol>
+<ul>
+<li>body:</li>
+<li><code>bookId</code> (number)</li>
+<li><code>bookVariantId</code> (number)</li>
+<li><code>userHint</code> (string)</li>
+<li><code>tone?</code> (string)</li>
+<li><code>language?</code> (<code>vi|en</code>)</li>
+<li><code>targetWords?</code> (number)</li>
+</ul>
+<ol start="2">
+<li><code>POST /reviews</code></li>
+</ol>
+<ul>
+<li>body:</li>
+<li><code>bookId</code> (number)</li>
+<li><code>bookVariantId</code> (number)</li>
+<li><code>rating</code> (1..5)</li>
+<li><code>content?</code> (string)</li>
+</ul>
+<ol start="3">
+<li><code>GET /reviews/books/:slug</code></li>
+</ol>
+<ul>
+<li>path:</li>
+<li><code>slug</code> (required)</li>
+<li>query:</li>
+<li><code>lang?</code> (<code>vi|en</code>)</li>
+<li><code>page?</code> (default <code>1</code>)</li>
+<li><code>limit?</code> (default <code>20</code>)</li>
+</ul>
+<h3 id="process-flow-8" class="h h3"><a class="anchor" href="#process-flow-8" aria-label="Link to this section">#</a>Process Flow</h3>
+<h4 id="a-ai-draft-flow-post-reviews-review-draft" class="h h4"><a class="anchor" href="#a-ai-draft-flow-post-reviews-review-draft" aria-label="Link to this section">#</a>A) AI draft flow - <code>POST /reviews/review/draft</code></h4>
+<ol>
+<li>Controller extracts <code>user.sub</code> from access token and parses to bigint.</li>
+<li>Service converts <code>bookId</code>, <code>bookVariantId</code> to bigint.</li>
+<li>Check purchase permission:</li>
+</ol>
+<ul>
+<li>query <code>order_items</code> -&gt; <code>book_variant_snapshots</code> -&gt; <code>orders</code></li>
+<li>order status must be in: <code>PAID</code>, <code>CONFIRMED</code>, <code>PACKING</code>, <code>SHIPPING</code>, <code>DELIVERED</code>.</li>
+</ul>
+<ol start="4">
+<li>Check duplicate review in <code>reviews</code> with composite logic:</li>
+</ol>
+<ul>
+<li>same <code>userId + bookId + bookVariantId</code>.</li>
+</ul>
+<ol start="5">
+<li>Validate <code>userHint</code> (trim + not empty).</li>
+<li>Load book detail from catalog service by <code>bookId</code> + <code>language</code> (default <code>vi</code>).</li>
+<li>Validate <code>bookVariantId</code> exists inside loaded book variants.</li>
+<li>Call Gemini service with context:</li>
+</ol>
+<ul>
+<li><code>title</code>, <code>format</code>, <code>userHint</code>, <code>targetWords</code>.</li>
+</ul>
+<ol start="9">
+<li>Return draft response:</li>
+</ol>
+<ul>
+<li><code>bookId</code>, <code>bookVariantId</code>, <code>draftText</code>, <code>wordCount</code>.</li>
+</ul>
+<h4 id="b-create-review-flow-post-reviews" class="h h4"><a class="anchor" href="#b-create-review-flow-post-reviews" aria-label="Link to this section">#</a>B) Create review flow - <code>POST /reviews</code></h4>
+<ol>
+<li>Controller extracts <code>user.sub</code> and parses to bigint.</li>
+<li>Service parses <code>bookId</code>, <code>bookVariantId</code> from request body.</li>
+<li>Re-check purchased variant rule (same query logic as AI draft).</li>
+<li>Re-check duplicate review (<code>userId + bookId + bookVariantId</code>).</li>
+<li>Normalize <code>content</code> (trim, optional nullable).</li>
+<li>Create review row in <code>reviews</code>.</li>
+<li>Return created review payload:</li>
+</ol>
+<ul>
+<li><code>reviewId</code>, <code>userId</code>, <code>rating</code>, <code>content</code>, <code>createdAt</code>, <code>variant</code>.</li>
+</ul>
+<h4 id="c-list-review-flow-get-reviews-books-slug" class="h h4"><a class="anchor" href="#c-list-review-flow-get-reviews-books-slug" aria-label="Link to this section">#</a>C) List review flow - <code>GET /reviews/books/:slug</code></h4>
+<ol>
+<li>Validate <code>slug</code> not empty.</li>
+<li>Resolve language by <code>lang</code> (<code>en</code> default in current implementation).</li>
+<li>Find book by translation slug.</li>
+<li>Query review count + paginated rows by <code>bookId</code>.</li>
+<li>Map response:</li>
+</ol>
+<ul>
+<li><code>page</code>, <code>limit</code>, <code>total</code>, <code>totalPages</code>, <code>items</code>.</li>
+</ul>
+<h3 id="error-behavior" class="h h3"><a class="anchor" href="#error-behavior" aria-label="Link to this section">#</a>Error Behavior</h3>
+<ul>
+<li><code>400 BadRequest</code></li>
+<li>invalid bigint params</li>
+<li>user has not purchased the variant</li>
+<li>missing/empty <code>userHint</code></li>
+<li>invalid pagination/lang query</li>
+<li><code>401 Unauthorized</code></li>
+<li>missing/invalid access token on protected routes</li>
+<li><code>404 NotFound</code></li>
+<li>book not found</li>
+<li>book variant not found in selected book (AI draft flow)</li>
+<li>language not active</li>
+<li><code>409 Conflict</code></li>
+<li>duplicate review for same <code>userId + bookId + bookVariantId</code></li>
+</ul>
+<h3 id="db-tables-used-1" class="h h3"><a class="anchor" href="#db-tables-used-1" aria-label="Link to this section">#</a>DB Tables Used</h3>
+<ul>
+<li><code>orders</code></li>
+<li><code>order_items</code></li>
+<li><code>book_variant_snapshots</code></li>
+<li><code>reviews</code></li>
+<li><code>books</code></li>
+<li><code>book_variants</code></li>
+<li><code>book_translations</code></li>
+<li><code>languages</code></li>
+</ul>
+<h3 id="ai-integration-notes" class="h h3"><a class="anchor" href="#ai-integration-notes" aria-label="Link to this section">#</a>AI Integration Notes</h3>
+<ul>
+<li>AI draft route does not write into <code>reviews</code> table.</li>
+<li>AI output is suggestion only; final review still requires <code>POST /reviews</code>.</li>
+<li>Gemini is called only after purchase check + duplicate check pass.</li>
+<li>Prompt context comes from DB (book title + selected variant format + userHint).</li>
+</ul>
+<h3 id="files-changed-8" class="h h3"><a class="anchor" href="#files-changed-8" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/review/review.controller.ts</code></li>
+<li><code>src/modules/review/review.service.ts</code></li>
+<li><code>src/modules/review/review.repository.ts</code></li>
+<li><code>src/modules/review/dto/request/create-review.request.dto.ts</code></li>
+<li><code>src/modules/review/dto/request/create-review-daft.request.dto.ts</code></li>
+<li><code>src/modules/review/dto/response/review-daft.response.dto.ts</code></li>
+<li><code>src/modules/review/review.module.ts</code></li>
+<li><code>src/modules/review-ai/review-ai.service.ts</code></li>
+<li><code>src/modules/gemini/gemini.module.ts</code></li>
+<li><code>src/modules/gemini/gemini.service.ts</code></li>
+<li><code>docs/gemini-review-assistant-guide.md</code></li>
+</ul>
+<h3 id="verification-9" class="h h3"><a class="anchor" href="#verification-9" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li><code>POST /reviews/review/draft</code> without token -&gt; <code>401</code>.</li>
+<li><code>POST /reviews/review/draft</code> with not-purchased variant -&gt; <code>400</code>.</li>
+<li><code>POST /reviews/review/draft</code> purchased + not reviewed -&gt; returns draft.</li>
+<li><code>POST /reviews</code> first submit -&gt; creates review.</li>
+<li><code>POST /reviews</code> second submit same <code>userId + bookId + bookVariantId</code> -&gt; <code>409</code>.</li>
+<li><code>GET /reviews/books/:slug</code> returns paginated list.</li>
+</ul>
+<hr>
+<h2 id="task-add-orderitem-module-and-wire-into-userevent-module" class="h h2"><a class="anchor" href="#task-add-orderitem-module-and-wire-into-userevent-module" aria-label="Link to this section">#</a>Task: Add OrderItem module and wire into UserEvent module</h2>
+<h3 id="task-10" class="h h3"><a class="anchor" href="#task-10" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Create <code>order-item</code> module quickly with repository method <code>findByUserId</code>.</li>
+<li>Query order items by <code>userId</code>.</li>
+<li>Return fields:</li>
+<li><code>quantity</code></li>
+<li><code>bookVariantSnapshotId</code></li>
+<li><code>bookVariantId</code></li>
+<li><code>bookId</code></li>
+<li>Import <code>OrderItemModule</code> into <code>UserEventModule</code>.</li>
+</ul>
+<h3 id="process-flow-9" class="h h3"><a class="anchor" href="#process-flow-9" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Create <code>OrderItemRepository</code> using Prisma.</li>
+<li>Implement <code>findByUserId(userId)</code>:</li>
+</ol>
+<ul>
+<li>filter by <code>order.userId = userId</code></li>
+<li>select quantity + snapshot id + snapshot-&gt;variant-&gt;book chain</li>
+<li>map output to flattened shape:</li>
+<li><code>quantity</code></li>
+<li><code>bookVariantSnapshotId</code></li>
+<li><code>bookVariantId</code></li>
+<li><code>bookId</code></li>
+</ul>
+<ol start="3">
+<li>Create <code>OrderItemModule</code> and export repository provider.</li>
+<li>Update <code>UserEventModule</code>:</li>
+</ol>
+<ul>
+<li>import <code>OrderItemModule</code></li>
+<li>keep <code>UserEventService</code> + <code>UserEventRepository</code> providers</li>
+<li>expose service/repository exports.</li>
+</ul>
+<ol start="5">
+<li>Update user-event service/repository/controller skeleton to valid Nest classes for DI wiring.</li>
+</ol>
+<h3 id="files-changed-9" class="h h3"><a class="anchor" href="#files-changed-9" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/order-item/order-item.repository.ts</code></li>
+<li><code>src/modules/order-item/order-item.module.ts</code></li>
+<li><code>src/modules/user-event/user-event.module.ts</code></li>
+<li><code>src/modules/user-event/user-event.repository.ts</code></li>
+<li><code>src/modules/user-event/user-event.service.ts</code></li>
+<li><code>src/modules/user-event/user-event.controller.ts</code></li>
+</ul>
+<h3 id="verification-10" class="h h3"><a class="anchor" href="#verification-10" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Manual checks:</li>
+<li>call repository method <code>findByUserId</code> and confirm each row has:</li>
+<li><code>quantity</code></li>
+<li><code>bookVariantSnapshotId</code></li>
+<li><code>bookVariantId</code></li>
+<li><code>bookId</code></li>
+</ul>
+<hr>
+<h2 id="task-userevent-service-add-create-event-business-service-repository-only" class="h h2"><a class="anchor" href="#task-userevent-service-add-create-event-business-service-repository-only" aria-label="Link to this section">#</a>Task: UserEvent service add create-event business (service/repository only)</h2>
+<h3 id="task-11" class="h h3"><a class="anchor" href="#task-11" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Add write business in <code>UserEventService</code> to create user events.</li>
+<li>Scope in this step: service + repository only (no new controller endpoints).</li>
+<li>Prioritized event types:</li>
+<li><code>VIEW_BOOK</code></li>
+<li><code>ADD_TO_CART</code></li>
+<li><code>REMOVE_FROM_CART</code></li>
+</ul>
+<h3 id="change-history" class="h h3"><a class="anchor" href="#change-history" aria-label="Link to this section">#</a>Change History</h3>
+<ol>
+<li>Added DTO input for event creation payload:</li>
+</ol>
+<ul>
+<li>file: <code>src/modules/user-event/dto/request/create-user-event.request.dto.ts</code></li>
+<li>fields: <code>objectType</code>, <code>objectId</code>, <code>amount</code>, <code>currencyCode</code>, <code>metadata</code>.</li>
+</ul>
+<ol start="2">
+<li>Added repository write method:</li>
+</ol>
+<ul>
+<li>file: <code>src/modules/user-event/user-event.repository.ts</code></li>
+<li>method: <code>createUserEvent(userId, eventType, body)</code>.</li>
+</ul>
+<ol start="3">
+<li>Added service business methods:</li>
+</ol>
+<ul>
+<li>file: <code>src/modules/user-event/user-event.service.ts</code></li>
+<li>methods:</li>
+<li><code>createViewBookEvent(userId, body)</code></li>
+<li><code>createAddToCartEvent(userId, body)</code></li>
+<li><code>createRemoveFromCartEvent(userId, body)</code></li>
+</ul>
+<ol start="4">
+<li>Controller endpoints for these create actions were intentionally deferred by request.</li>
+</ol>
+<h3 id="business-flow" class="h h3"><a class="anchor" href="#business-flow" aria-label="Link to this section">#</a>Business Flow</h3>
+<ol>
+<li>Caller passes authenticated <code>userId</code> and event payload DTO to service method.</li>
+<li>Service maps method to Prisma enum event type:</li>
+</ol>
+<ul>
+<li><code>VIEW_BOOK</code> for view action</li>
+<li><code>ADD_TO_CART</code> for add action</li>
+<li><code>REMOVE_FROM_CART</code> for remove action</li>
+</ul>
+<ol start="3">
+<li>Service delegates to repository <code>createUserEvent(...)</code>.</li>
+<li>Repository inserts one new row into <code>user_events</code> for each action call.</li>
+<li>Stored fields include:</li>
+</ol>
+<ul>
+<li><code>userId</code></li>
+<li><code>eventType</code></li>
+<li><code>objectType</code></li>
+<li><code>objectId</code></li>
+<li><code>amount</code> (nullable)</li>
+<li><code>currencyCode</code> (nullable)</li>
+<li><code>metadata</code> (nullable JSON)</li>
+<li><code>createdAt</code> (DB default now).</li>
+</ul>
+<h3 id="db-table" class="h h3"><a class="anchor" href="#db-table" aria-label="Link to this section">#</a>DB Table</h3>
+<ul>
+<li><code>user_events</code></li>
+</ul>
+<h3 id="files-changed-10" class="h h3"><a class="anchor" href="#files-changed-10" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/user-event/dto/request/create-user-event.request.dto.ts</code></li>
+<li><code>src/modules/user-event/user-event.repository.ts</code></li>
+<li><code>src/modules/user-event/user-event.service.ts</code></li>
+</ul>
+<h3 id="verification-11" class="h h3"><a class="anchor" href="#verification-11" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li>Build command: <code>npm run build</code></li>
+<li>Result: pass.</li>
+</ul>
+<hr>
+<h2 id="task-userevent-sequence-ready-workflow-service-first-endpoint-ready" class="h h2"><a class="anchor" href="#task-userevent-sequence-ready-workflow-service-first-endpoint-ready" aria-label="Link to this section">#</a>Task: UserEvent sequence-ready workflow (service-first, endpoint-ready)</h2>
+<h3 id="task-12" class="h h3"><a class="anchor" href="#task-12" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Clarify user-event workflow in a sequence-diagram friendly format.</li>
+<li>Keep current implementation status:</li>
+<li>write business is implemented at service/repository level</li>
+<li>create endpoints are not published yet in controller (proposed mapping documented).</li>
+<li>Document exact method/class mapping so FE/BE can draw sequence without guessing.</li>
+</ul>
+<h3 id="endpoints-2" class="h h3"><a class="anchor" href="#endpoints-2" aria-label="Link to this section">#</a>Endpoints</h3>
+<ul>
+<li><p>Current:</p>
+</li>
+<li><p><code>GET /api/v1/user-events/</code>  </p>
+<ul>
+<li>Access: auth required</li>
+<li>Purpose: read user score/recommendation summary</li>
+<li>Controller method: <code>UserEventController.getScoreUser()</code></li>
+</ul>
+</li>
+<li><p>Proposed (mapped to implemented service methods):</p>
+</li>
+<li><p><code>POST /api/v1/user-events/VIEW_BOOK</code>  </p>
+<ul>
+<li>Access: auth required</li>
+<li>Controller method (proposed): <code>UserEventController.createViewBookEvent()</code></li>
+</ul>
+</li>
+<li><p><code>POST /api/v1/user-events/ADD_TO_CART</code>  </p>
+<ul>
+<li>Access: auth required</li>
+<li>Controller method (proposed): <code>UserEventController.createAddToCartEvent()</code></li>
+</ul>
+</li>
+<li><p><code>POST /api/v1/user-events/REMOVE_FROM_CART</code>  </p>
+<ul>
+<li>Access: auth required</li>
+<li>Controller method (proposed): <code>UserEventController.createRemoveFromCartEvent()</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="input-contract-1" class="h h3"><a class="anchor" href="#input-contract-1" aria-label="Link to this section">#</a>Input Contract</h3>
+<ul>
+<li><p>Path params:</p>
+</li>
+<li><p>none for current/proposed endpoints.</p>
+</li>
+<li><p>Query params:</p>
+</li>
+<li><p>none for write endpoints.</p>
+</li>
+<li><p>Body DTO for proposed write endpoints:</p>
+</li>
+<li><p><code>CreateUserEventRequestDto</code> — <code>src/modules/user-event/dto/request/create-user-event.request.dto.ts</code></p>
+</li>
+<li><p>fields:</p>
+</li>
+<li><p><code>objectType?: string</code> (max 50, trim on write)</p>
+</li>
+<li><p><code>objectId?: string</code> (max 100, trim on write)</p>
+</li>
+<li><p><code>amount?: number</code> (optional)</p>
+</li>
+<li><p><code>currencyCode?: string</code> (max 3, trim on write)</p>
+</li>
+<li><p><code>metadata?: Record&lt;string, unknown&gt;</code> (optional JSON object)</p>
+</li>
+<li><p>Auth identity:</p>
+</li>
+<li><p><code>userId</code> from <code>@GetUser().sub</code> parsed to <code>bigint</code>.</p>
+</li>
+</ul>
+<h3 id="output-contract" class="h h3"><a class="anchor" href="#output-contract" aria-label="Link to this section">#</a>Output Contract</h3>
+<ul>
+<li><p>Write endpoints (proposed) return created user-event row:</p>
+</li>
+<li><p><code>id</code></p>
+</li>
+<li><p><code>userId</code></p>
+</li>
+<li><p><code>eventType</code></p>
+</li>
+<li><p><code>objectType</code></p>
+</li>
+<li><p><code>objectId</code></p>
+</li>
+<li><p><code>amount</code></p>
+</li>
+<li><p><code>currencyCode</code></p>
+</li>
+<li><p><code>metadata</code></p>
+</li>
+<li><p><code>createdAt</code></p>
+</li>
+<li><p>Read endpoint (<code>GET /user-events/</code>) returns output of:</p>
+</li>
+<li><p><code>UserEventService.buildScoreWithRecommend(userId)</code> (current behavior).</p>
+</li>
+</ul>
+<h3 id="modules-classes-involved-must-be-explicit" class="h h3"><a class="anchor" href="#modules-classes-involved-must-be-explicit" aria-label="Link to this section">#</a>Modules / Classes Involved (MUST be explicit)</h3>
+<ul>
+<li><p>Module:</p>
+</li>
+<li><p><code>UserEventModule</code> — <code>src/modules/user-event/user-event.module.ts</code></p>
+</li>
+<li><p>imports <code>OrderItemModule</code></p>
+</li>
+<li><p>providers <code>UserEventService</code>, <code>UserEventRepository</code></p>
+</li>
+<li><p>Controller:</p>
+</li>
+<li><p><code>UserEventController</code> — <code>src/modules/user-event/user-event.controller.ts</code></p>
+</li>
+<li><p>current method:</p>
+</li>
+<li><p><code>getScoreUser()</code> -&gt; <code>GET /api/v1/user-events/</code></p>
+</li>
+<li><p>proposed methods:</p>
+</li>
+<li><p><code>createViewBookEvent()</code> -&gt; <code>POST /user-events/VIEW_BOOK</code></p>
+</li>
+<li><p><code>createAddToCartEvent()</code> -&gt; <code>POST /user-events/ADD_TO_CART</code></p>
+</li>
+<li><p><code>createRemoveFromCartEvent()</code> -&gt; <code>POST /user-events/REMOVE_FROM_CART</code></p>
+</li>
+<li><p>Service:</p>
+</li>
+<li><p><code>UserEventService</code> — <code>src/modules/user-event/user-event.service.ts</code></p>
+</li>
+<li><p>methods:</p>
+</li>
+<li><p><code>buildScoreWithRecommend(userId: bigint)</code></p>
+</li>
+<li><p><code>findEventTypeByUser(userId: bigint)</code></p>
+</li>
+<li><p><code>findOrderItemsByUserId(userId: bigint)</code></p>
+</li>
+<li><p><code>createViewBookEvent(userId: bigint, body: CreateUserEventRequestDto)</code></p>
+</li>
+<li><p><code>createAddToCartEvent(userId: bigint, body: CreateUserEventRequestDto)</code></p>
+</li>
+<li><p><code>createRemoveFromCartEvent(userId: bigint, body: CreateUserEventRequestDto)</code></p>
+</li>
+<li><p>Repository:</p>
+</li>
+<li><p><code>UserEventRepository</code> — <code>src/modules/user-event/user-event.repository.ts</code></p>
+</li>
+<li><p>methods:</p>
+</li>
+<li><p><code>findEventTypeByUser(userId: bigint)</code></p>
+</li>
+<li><p><code>createUserEvent(userId: bigint, eventType: PrismaEventType, body: CreateUserEventRequestDto)</code></p>
+</li>
+<li><p>Supporting repository:</p>
+</li>
+<li><p><code>OrderItemRepository</code> — <code>src/modules/order-item/order-item.repository.ts</code></p>
+</li>
+<li><p>method:</p>
+</li>
+<li><p><code>findByUserId(userId: bigint)</code></p>
+</li>
+<li><p>DTOs:</p>
+</li>
+<li><p>Request DTO:</p>
+</li>
+<li><p><code>CreateUserEventRequestDto</code> — <code>src/modules/user-event/dto/request/create-user-event.request.dto.ts</code></p>
+</li>
+<li><p>Guards/Interceptors:</p>
+</li>
+<li><p>Global auth path via <code>AuthGuard</code> (non-<code>@Public()</code> routes).</p>
+</li>
+</ul>
+<h3 id="process-flow-step-by-step-sequence-ready" class="h h3"><a class="anchor" href="#process-flow-step-by-step-sequence-ready" aria-label="Link to this section">#</a>Process Flow (Step-by-step, sequence-ready)</h3>
+<h4 id="a-proposed-write-flow-same-for-view-book-add-to-cart-remove-from-cart" class="h h4"><a class="anchor" href="#a-proposed-write-flow-same-for-view-book-add-to-cart-remove-from-cart" aria-label="Link to this section">#</a>A) Proposed write flow (same for VIEW_BOOK / ADD_TO_CART / REMOVE_FROM_CART)</h4>
+<ol>
+<li>Controller <code>UserEventController.create*Event()</code> receives request body and authenticated user.</li>
+<li>Controller parses <code>user.sub</code> to <code>bigint userId</code>.</li>
+<li>Controller calls service method by endpoint mapping:</li>
+</ol>
+<ul>
+<li><code>createViewBookEvent</code> / <code>createAddToCartEvent</code> / <code>createRemoveFromCartEvent</code>.</li>
+</ul>
+<ol start="4">
+<li>Service maps method to fixed event type:</li>
+</ol>
+<ul>
+<li><code>VIEW_BOOK</code> / <code>ADD_TO_CART</code> / <code>REMOVE_FROM_CART</code>.</li>
+</ul>
+<ol start="5">
+<li>Service calls repository:</li>
+</ol>
+<ul>
+<li><code>UserEventRepository.createUserEvent(userId, eventType, body)</code>.</li>
+</ul>
+<ol start="6">
+<li>Repository normalizes optional string fields (<code>trim</code>) and writes row into <code>user_events</code>.</li>
+<li>Repository returns created row (<code>select</code> fields).</li>
+<li>Service returns row to controller.</li>
+<li>Controller returns success response.</li>
+</ol>
+<h4 id="b-current-read-flow-get-user-events" class="h h4"><a class="anchor" href="#b-current-read-flow-get-user-events" aria-label="Link to this section">#</a>B) Current read flow (<code>GET /user-events/</code>)</h4>
+<ol>
+<li>Controller <code>UserEventController.getScoreUser()</code> reads authenticated user.</li>
+<li>Controller parses <code>user.sub</code> to bigint.</li>
+<li>Service <code>buildScoreWithRecommend(userId)</code> loads events via:</li>
+</ol>
+<ul>
+<li><code>UserEventRepository.findEventTypeByUser(userId)</code>.</li>
+</ul>
+<ol start="4">
+<li>Service applies event-score logic (<code>scoreEvent</code>, skip SEARCH/LOGIN/LOGOUT) and computes score map.</li>
+<li>Service returns score output to controller.</li>
+</ol>
+<h3 id="cache-keys-ttl-if-used" class="h h3"><a class="anchor" href="#cache-keys-ttl-if-used" aria-label="Link to this section">#</a>Cache Keys + TTL (if used)</h3>
+<ul>
+<li>No cache key in current user-event write/read flow.</li>
+</ul>
+<h3 id="db-tables-used-2" class="h h3"><a class="anchor" href="#db-tables-used-2" aria-label="Link to this section">#</a>DB Tables Used</h3>
+<ul>
+<li><code>user_events</code>:</li>
+<li>store each event row for tracking/score.</li>
+<li><code>users</code>:</li>
+<li>foreign key via <code>user_id</code>.</li>
+<li><code>order_items</code>, <code>book_variant_snapshots</code>, <code>book_variants</code>, <code>orders</code>:</li>
+<li>used by <code>OrderItemRepository.findByUserId(...)</code> support flow.</li>
+</ul>
+<h3 id="error-behavior-http-mapping" class="h h3"><a class="anchor" href="#error-behavior-http-mapping" aria-label="Link to this section">#</a>Error Behavior (HTTP mapping)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Condition</th>
+<th>Where detected</th>
+<th>HTTP</th>
+<th>Notes</th>
+</tr>
+</thead><tbody><tr>
+<td>invalid lang</td>
+<td>N/A in this scope</td>
+<td>N/A</td>
+<td>No <code>lang</code> param in current/proposed user-event endpoints</td>
+</tr>
+<tr>
+<td>invalid bigint parsing (<code>user.sub</code>)</td>
+<td>Controller (<code>parseBigInt</code> proposed for create, existing for read)</td>
+<td>400</td>
+<td>If token payload <code>sub</code> is missing/invalid bigint</td>
+</tr>
+<tr>
+<td>not found</td>
+<td>N/A in write flow</td>
+<td>N/A</td>
+<td>Current write flow inserts event without lookup dependencies</td>
+</tr>
+<tr>
+<td>conflict (duplicate)</td>
+<td>N/A in this scope</td>
+<td>N/A</td>
+<td>Event logging allows repeated rows by design</td>
+</tr>
+<tr>
+<td>unauthorized</td>
+<td>Global <code>AuthGuard</code></td>
+<td>401</td>
+<td>Missing/invalid bearer token on non-public routes</td>
+</tr>
+</tbody></table></div>
+<h3 id="files-added-changed" class="h h3"><a class="anchor" href="#files-added-changed" aria-label="Link to this section">#</a>Files Added / Changed</h3>
+<ul>
+<li><code>src/modules/user-event/dto/request/create-user-event.request.dto.ts</code> (added)</li>
+<li><code>src/modules/user-event/user-event.service.ts</code> (changed)</li>
+<li><code>src/modules/user-event/user-event.repository.ts</code> (changed)</li>
+<li><code>src/modules/user-event/user-event.controller.ts</code> (existing read route reference)</li>
+<li><code>src/modules/user-event/user-event.module.ts</code> (module wiring reference)</li>
+</ul>
+<h3 id="verification-12" class="h h3"><a class="anchor" href="#verification-12" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li><p>Build command:</p>
+</li>
+<li><p><code>npm run build</code></p>
+</li>
+<li><p>Manual checks for current scope:</p>
+</li>
+<li><p><code>GET /api/v1/user-events/</code> with valid token -&gt; success from <code>buildScoreWithRecommend</code>.</p>
+</li>
+<li><p>call service methods directly in integration flow:</p>
+</li>
+<li><p><code>createViewBookEvent(...)</code></p>
+</li>
+<li><p><code>createAddToCartEvent(...)</code></p>
+</li>
+<li><p><code>createRemoveFromCartEvent(...)</code></p>
+</li>
+<li><p>confirm each call inserts exactly one row in <code>user_events</code> with correct <code>eventType</code>.</p>
+</li>
+</ul>
+<hr>
+<h2 id="task-hyper-recommend-merge-2-event-streams-variant-order" class="h h2"><a class="anchor" href="#task-hyper-recommend-merge-2-event-streams-variant-order" aria-label="Link to this section">#</a>Task: Hyper recommend merge 2 event streams (variant + order)</h2>
+<h3 id="task-13" class="h h3"><a class="anchor" href="#task-13" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Document the main recommendation algorithm as a sequence-ready workflow.</li>
+<li>Clarify how 2 streams are merged:</li>
+<li>stream A: <code>bookVariant</code> interaction events.</li>
+<li>stream B: <code>order</code> transaction events.</li>
+<li>Keep this workflow aligned with current code in <code>user-event.service.ts</code>.</li>
+</ul>
+<h3 id="endpoint-5" class="h h3"><a class="anchor" href="#endpoint-5" aria-label="Link to this section">#</a>Endpoint</h3>
+<ul>
+<li><code>GET /api/v1/user-events/hyper-recommend/books</code></li>
+</ul>
+<h3 id="business-goal" class="h h3"><a class="anchor" href="#business-goal" aria-label="Link to this section">#</a>Business Goal</h3>
+<ul>
+<li>Personalize recommendation feed based on real user behavior and transaction intent.</li>
+<li>Convert user interest into purchase-supporting suggestions (&quot;co-buy&quot;) instead of generic bestseller-only list.</li>
+<li>Keep explainable and deterministic logic (no LLM call at request time).</li>
+</ul>
+<h3 id="business-scope" class="h h3"><a class="anchor" href="#business-scope" aria-label="Link to this section">#</a>Business Scope</h3>
+<ul>
+<li><p>In scope:</p>
+</li>
+<li><p>logged-in user only (<code>JWT</code> required).</p>
+</li>
+<li><p>recommendation from user event streams + order-item co-buy graph.</p>
+</li>
+<li><p>return book-facing payload for FE recommendation block.</p>
+</li>
+<li><p>Out of scope:</p>
+</li>
+<li><p>guest recommendation persistence.</p>
+</li>
+<li><p>ML model training / batch ranking table.</p>
+</li>
+<li><p>explicit campaign boost or merchandising override.</p>
+</li>
+</ul>
+<h3 id="business-workflow-domain-view" class="h h3"><a class="anchor" href="#business-workflow-domain-view" aria-label="Link to this section">#</a>Business Workflow (Domain View)</h3>
+<ol>
+<li>User opens recommendation entrypoint (<code>hyper-recommend</code>).</li>
+<li>System reads two intent sources:</li>
+</ol>
+<ul>
+<li>interaction intent (<code>bookVariant</code> events): view/cart behavior.</li>
+<li>transaction intent (<code>order</code> events): checkout/payment behavior.</li>
+</ul>
+<ol start="3">
+<li>System transforms both sources into comparable scores with time decay.</li>
+<li>System merges both sources into one unified <code>bookVariant</code> preference space.</li>
+<li>System expands preference set via co-buy relation from real orders.</li>
+<li>System resolves candidates into active catalog entities.</li>
+<li>System returns recommendation list or empty list when signal is insufficient.</li>
+</ol>
+<h3 id="business-rules" class="h h3"><a class="anchor" href="#business-rules" aria-label="Link to this section">#</a>Business Rules</h3>
+<ul>
+<li><p>Rule 1: only valid event families are scored.</p>
+</li>
+<li><p><code>bookVariant</code>: <code>VIEW_BOOK</code>, <code>ADD_TO_CART</code>, <code>REMOVE_FROM_CART</code>.</p>
+</li>
+<li><p><code>order</code>: <code>CHECKOUT_START</code>, <code>PLACE_ORDER</code>, <code>PAYMENT_SUCCESS</code>, <code>PAYMENT_FAILED</code>.</p>
+</li>
+<li><p>Rule 2: all merged scores must be normalized to <code>bookVariantId</code> key-space.</p>
+</li>
+<li><p>Rule 3: if stream B (<code>order</code>) exists, it can amplify stream A by:</p>
+</li>
+<li><p><code>orderId -&gt; orderItem -&gt; snapshotId -&gt; variantId</code>.</p>
+</li>
+<li><p>quantity factor from <code>orderItem.quantity</code>.</p>
+</li>
+<li><p>Rule 4: co-buy generation must exclude seed snapshots to avoid echoing input items.</p>
+</li>
+<li><p>Rule 5: fail-fast behavior is allowed.</p>
+</li>
+<li><p>if any critical stage has empty data, return <code>[]</code>.</p>
+</li>
+<li><p>Rule 6: output is deterministic for same input snapshot and data state.</p>
+</li>
+</ul>
+<h3 id="business-inputs-and-semantics" class="h h3"><a class="anchor" href="#business-inputs-and-semantics" aria-label="Link to this section">#</a>Business Inputs and Semantics</h3>
+<ul>
+<li><p><code>objectType = &quot;bookVariant&quot;</code>:</p>
+</li>
+<li><p>means &quot;user interacted with a specific sellable variant&quot;.</p>
+</li>
+<li><p><code>objectType = &quot;order&quot;</code>:</p>
+</li>
+<li><p>means &quot;user reached transactional milestone on a concrete order&quot;.</p>
+</li>
+<li><p><code>objectId</code>:</p>
+</li>
+<li><p>stored as string but semantically must map to existing <code>BigInt</code> IDs.</p>
+</li>
+</ul>
+<h3 id="business-output-contract" class="h h3"><a class="anchor" href="#business-output-contract" aria-label="Link to this section">#</a>Business Output Contract</h3>
+<ul>
+<li>Returns recommendation list tailored for FE block.</li>
+<li>Each item is resolved from candidate <code>bookVariantId</code> into book-facing payload.</li>
+<li>If business signal quality is low, returns <code>[]</code> (no noisy fallback in this flow).</li>
+</ul>
+<h3 id="business-acceptance-criteria" class="h h3"><a class="anchor" href="#business-acceptance-criteria" aria-label="Link to this section">#</a>Business Acceptance Criteria</h3>
+<ul>
+<li>User with only interaction events receives non-empty recommendations when co-buy graph exists.</li>
+<li>User with only order events still receives recommendations via conversion to variant preference space.</li>
+<li>User with mixed streams receives merged behavior (not overridden by one stream only).</li>
+<li>User without valid events receives <code>[]</code>.</li>
+<li>Response must remain deterministic and explainable from stored events.</li>
+</ul>
+<h3 id="input-contract-2" class="h h3"><a class="anchor" href="#input-contract-2" aria-label="Link to this section">#</a>Input Contract</h3>
+<ul>
+<li><p>Auth:</p>
+</li>
+<li><p>required JWT, <code>userId = BigInt(user.sub)</code>.</p>
+</li>
+<li><p>Event stream A (<code>bookVariant</code>):</p>
+</li>
+<li><p><code>objectType = &quot;bookVariant&quot;</code></p>
+</li>
+<li><p><code>objectId = &lt;bookVariantId string&gt;</code></p>
+</li>
+<li><p>allowed score events: <code>VIEW_BOOK</code>, <code>ADD_TO_CART</code>, <code>REMOVE_FROM_CART</code></p>
+</li>
+<li><p>Event stream B (<code>order</code>):</p>
+</li>
+<li><p><code>objectType = &quot;order&quot;</code></p>
+</li>
+<li><p><code>objectId = &lt;orderId string&gt;</code></p>
+</li>
+<li><p>allowed score events: <code>CHECKOUT_START</code>, <code>PLACE_ORDER</code>, <code>PAYMENT_SUCCESS</code>, <code>PAYMENT_FAILED</code></p>
+</li>
+</ul>
+<h3 id="modules-classes-involved" class="h h3"><a class="anchor" href="#modules-classes-involved" aria-label="Link to this section">#</a>Modules / Classes Involved</h3>
+<ul>
+<li><p>Controller:</p>
+</li>
+<li><p><code>UserEventController.listBooksByCategory()</code> -&gt; <code>GET /api/v1/user-events/hyper-recommend/books</code></p>
+</li>
+<li><p>Service:</p>
+</li>
+<li><p><code>UserEventService.getRecommend(userId)</code></p>
+</li>
+<li><p><code>UserEventService.buildScoreWithRecommendVariant(userId)</code></p>
+</li>
+<li><p><code>UserEventService.buildScoreWithRecommendOrder(userId)</code></p>
+</li>
+<li><p><code>UserEventService.mergerRecommendVariantAndOrder(variants, orders)</code></p>
+</li>
+<li><p><code>UserEventService.getTopKMap(...)</code></p>
+</li>
+<li><p>Repositories:</p>
+</li>
+<li><p><code>UserEventRepository.findEventTypeByUser(userId, objectType)</code></p>
+</li>
+<li><p><code>OrderRepository.findOrderItemsByOrderId(orderIds)</code></p>
+</li>
+<li><p><code>BookSnapshotRepository.findSnapshotIdsByVariantIds(variantIds)</code></p>
+</li>
+<li><p><code>BookSnapshotRepository.findVariantIdsBySnapshotIds(snapshotIds)</code></p>
+</li>
+<li><p><code>OrderItemRepository.findOrderIdsBySnapshotIds(snapshotIds)</code></p>
+</li>
+<li><p><code>OrderItemRepository.groupAlsoBoughtSnapshotCandidates(orderIds, excludeSnapshotIds, take)</code></p>
+</li>
+<li><p><code>CatalogRepository.findBooksVariantByIds(variantIds, languageId, take?)</code></p>
+</li>
+<li><p>Module wiring:</p>
+</li>
+<li><p><code>UserEventModule</code> imports:</p>
+</li>
+<li><p><code>OrderItemModule</code></p>
+</li>
+<li><p><code>OrderModule</code></p>
+</li>
+<li><p><code>BookSnapShotModule</code></p>
+</li>
+<li><p><code>CatalogModule</code></p>
+</li>
+</ul>
+<h3 id="process-flow-step-by-step" class="h h3"><a class="anchor" href="#process-flow-step-by-step" aria-label="Link to this section">#</a>Process Flow (Step-by-step)</h3>
+<ol>
+<li>Controller receives request and resolves <code>userId</code>.</li>
+<li>Service computes 2 score maps in parallel:</li>
+</ol>
+<ul>
+<li>map A from <code>objectType = bookVariant</code>.</li>
+<li>map B from <code>objectType = order</code>.</li>
+</ul>
+<ol start="3">
+<li>Service merges map A + map B into one variant map:</li>
+</ol>
+<ul>
+<li>convert <code>orderId -&gt; orderItems -&gt; snapshotIds -&gt; variantIds</code>.</li>
+<li>add order score into matching variant score.</li>
+<li>apply quantity factor from <code>orderItem.quantity</code>.</li>
+</ul>
+<ol start="4">
+<li>Service converts merged variant ids into seed snapshot ids.</li>
+<li>Service gets all order ids containing those seed snapshots.</li>
+<li>Service groups &quot;also bought&quot; candidate snapshots from those orders, excluding seed snapshots.</li>
+<li>Service maps candidate snapshot ids back to candidate variant ids.</li>
+<li>Service dedupes candidate variant ids and loads catalog rows by variant ids.</li>
+<li>Service maps rows to response payload and returns result.</li>
+<li>If data is empty at any stage, return <code>[]</code> early.</li>
+</ol>
+<h3 id="score-ranking-notes" class="h h3"><a class="anchor" href="#score-ranking-notes" aria-label="Link to this section">#</a>Score + Ranking Notes</h3>
+<ul>
+<li>Event score uses <code>scoreEvent(...)</code> (weight + time decay).</li>
+<li>Merge keeps data in one key-space (<code>bookVariantId</code>) to simplify candidate generation.</li>
+<li>Positive-score filter is applied before top-K trimming.</li>
+<li>Tie-break rule: newer <code>createdAt</code> wins when scores are equal.</li>
+</ul>
+<h3 id="db-tables-used-3" class="h h3"><a class="anchor" href="#db-tables-used-3" aria-label="Link to this section">#</a>DB Tables Used</h3>
+<ul>
+<li><code>user_events</code></li>
+<li><code>orders</code></li>
+<li><code>order_items</code></li>
+<li><code>book_variant_snapshots</code></li>
+<li><code>book_variants</code></li>
+<li><code>books</code> (+ translation/category relations via catalog query)</li>
+</ul>
+<h3 id="output-characteristics" class="h h3"><a class="anchor" href="#output-characteristics" aria-label="Link to this section">#</a>Output Characteristics</h3>
+<ul>
+<li>Output is recommendation list resolved from variant ids to book-facing payload.</li>
+<li>Current implementation uses language id <code>3</code> in catalog query for this endpoint path.</li>
+<li>This path is deterministic and explainable (no LLM call in runtime).</li>
+</ul>
+<h3 id="failure-edge-cases" class="h h3"><a class="anchor" href="#failure-edge-cases" aria-label="Link to this section">#</a>Failure / Edge Cases</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Condition</th>
+<th>Handling</th>
+</tr>
+</thead><tbody><tr>
+<td>no variant events and no order events</td>
+<td>return <code>[]</code></td>
+</tr>
+<tr>
+<td>only variant events</td>
+<td>continue with stream A only</td>
+</tr>
+<tr>
+<td>only order events</td>
+<td>stream B is converted into variant map, then continue</td>
+</tr>
+<tr>
+<td>no matching snapshots for merged variants</td>
+<td>return <code>[]</code></td>
+</tr>
+<tr>
+<td>no co-buy candidates</td>
+<td>return <code>[]</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="verification-13" class="h h3"><a class="anchor" href="#verification-13" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li><p>Build:</p>
+</li>
+<li><p><code>npm run build</code></p>
+</li>
+<li><p>Manual checks:</p>
+</li>
+<li><p>user with only <code>bookVariant</code> events still receives recommendations.</p>
+</li>
+<li><p>user with only <code>order</code> events still receives recommendations (after conversion to variant map).</p>
+</li>
+<li><p>user with both event streams has merged signal behavior.</p>
+</li>
+<li><p>user with no events returns <code>[]</code>.</p>
+</li>
+</ul>
+<hr>
+<h2 id="task-catalog-detail-add-specs-object-and-badges-enum-array" class="h h2"><a class="anchor" href="#task-catalog-detail-add-specs-object-and-badges-enum-array" aria-label="Link to this section">#</a>Task: Catalog detail add <code>specs</code> object and <code>badges</code> enum array</h2>
+<h3 id="task-14" class="h h3"><a class="anchor" href="#task-14" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Extend catalog book detail responses to include physical specs and badge codes.</li>
+<li>Keep existing fields unchanged.</li>
+<li>Badge payload must not expose badge <code>id</code>.</li>
+</ul>
+<h3 id="endpoints-3" class="h h3"><a class="anchor" href="#endpoints-3" aria-label="Link to this section">#</a>Endpoints</h3>
+<ul>
+<li><code>GET /api/v1/catalog/books/:bookId?lang=vi|en</code></li>
+<li><code>GET /api/v1/catalog/books/slug/:slug?lang=vi|en</code></li>
+</ul>
+<h3 id="response-changes" class="h h3"><a class="anchor" href="#response-changes" aria-label="Link to this section">#</a>Response changes</h3>
+<ul>
+<li><p>Add <code>specs</code> as object:</p>
+</li>
+<li><p><code>widthCm</code></p>
+</li>
+<li><p><code>heightCm</code></p>
+</li>
+<li><p><code>thicknessCm</code></p>
+</li>
+<li><p><code>packaging</code></p>
+</li>
+<li><p>Add <code>badges</code> as enum array:</p>
+</li>
+<li><p>values from Prisma enum <code>Badge</code> (<code>NEW</code>, <code>LIMITED</code>, <code>BESTSELLER</code>, <code>EDITION</code>)</p>
+</li>
+</ul>
+<h3 id="process-flow-10" class="h h3"><a class="anchor" href="#process-flow-10" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Resolve language as current flow.</li>
+<li>Check detail cache key.</li>
+<li>If cache miss:</li>
+</ol>
+<ul>
+<li>Query book detail with existing relations and aggregate rating.</li>
+<li>Include <code>specs</code> relation from <code>book_specs</code>.</li>
+<li>Include <code>bookBadge</code> relation from <code>book_badges</code> and only select <code>code</code>.</li>
+</ul>
+<ol start="4">
+<li>Map detail through shared mapper:</li>
+</ol>
+<ul>
+<li>categories mapper.</li>
+<li>variants mapper.</li>
+<li>specs mapper (return <code>{}</code> if no spec row).</li>
+<li>badges mapper (array of enum <code>code</code> only).</li>
+</ul>
+<ol start="5">
+<li>Save to cache and return payload.</li>
+</ol>
+<h3 id="db-tables-used-4" class="h h3"><a class="anchor" href="#db-tables-used-4" aria-label="Link to this section">#</a>DB Tables used</h3>
+<ul>
+<li><code>books</code></li>
+<li><code>book_translations</code></li>
+<li><code>book_variants</code></li>
+<li><code>reviews</code></li>
+<li><code>categories</code></li>
+<li><code>category_translations</code></li>
+<li><code>book_specs</code></li>
+<li><code>book_badges</code></li>
+</ul>
+<h3 id="files-changed-11" class="h h3"><a class="anchor" href="#files-changed-11" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/catalog/catalog.repository.ts</code></li>
+<li><code>src/modules/catalog/catalog.service.ts</code></li>
+<li><code>src/modules/catalog/dto/response/catalog-book-detail.dto.ts</code></li>
+</ul>
+<h3 id="verification-14" class="h h3"><a class="anchor" href="#verification-14" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li><p>Build:</p>
+</li>
+<li><p><code>npm run build</code></p>
+</li>
+<li><p>Manual checks:</p>
+</li>
+<li><p><code>GET /api/v1/catalog/books/:id</code> returns <code>specs</code> object and <code>badges</code> array.</p>
+</li>
+<li><p><code>GET /api/v1/catalog/books/slug/:slug</code> returns same structure.</p>
+</li>
+<li><p><code>badges</code> contains enum code only, no badge <code>id</code>.</p>
+</li>
+</ul>
+<hr>
+<h2 id="task-userevent-hyper-recommend-response-aligned-to-catalog-home-format" class="h h2"><a class="anchor" href="#task-userevent-hyper-recommend-response-aligned-to-catalog-home-format" aria-label="Link to this section">#</a>Task: UserEvent hyper-recommend response aligned to catalog home format</h2>
+<h3 id="task-15" class="h h3"><a class="anchor" href="#task-15" aria-label="Link to this section">#</a>Task</h3>
+<ul>
+<li>Update <code>GET /api/v1/user-events/hyper-recommend/books</code> to return the same payload shape as <code>GET /api/v1/catalog/home</code>.</li>
+<li>Support query <code>lang</code> and <code>limit</code> for this route.</li>
+</ul>
+<h3 id="input-3" class="h h3"><a class="anchor" href="#input-3" aria-label="Link to this section">#</a>Input</h3>
+<ul>
+<li>Auth: required JWT.</li>
+<li>Query:</li>
+<li><code>lang</code> (optional, same handling as catalog home flow)</li>
+<li><code>limit</code> (optional, default <code>12</code>)</li>
+</ul>
+<h3 id="process-flow-11" class="h h3"><a class="anchor" href="#process-flow-11" aria-label="Link to this section">#</a>Process Flow</h3>
+<ol>
+<li>Read <code>userId</code> from JWT.</li>
+<li>Resolve <code>limit</code> from query (default <code>12</code>).</li>
+<li>Load base home payload from catalog service using same query (<code>lang</code>, <code>limit</code>):</li>
+</ol>
+<ul>
+<li><code>newArrivals</code></li>
+<li><code>bestSeller</code></li>
+<li><code>topRated</code></li>
+</ul>
+<ol start="4">
+<li>Build personalized <code>recommend</code> cards from UserEvent + order co-buy graph.</li>
+<li>Map recommend cards to the same card format used by catalog home.</li>
+<li>Return merged home-shaped payload:</li>
+</ol>
+<ul>
+<li><code>newArrivals</code></li>
+<li><code>bestSeller</code></li>
+<li><code>topRated</code></li>
+<li><code>recommend</code></li>
+<li><code>generatedAt</code></li>
+</ul>
+<h3 id="files-changed-12" class="h h3"><a class="anchor" href="#files-changed-12" aria-label="Link to this section">#</a>Files Changed</h3>
+<ul>
+<li><code>src/modules/user-event/user-event.controller.ts</code></li>
+<li><code>src/modules/user-event/user-event.service.ts</code></li>
+</ul>
+<h3 id="verification-15" class="h h3"><a class="anchor" href="#verification-15" aria-label="Link to this section">#</a>Verification</h3>
+<ul>
+<li><p>Build:</p>
+</li>
+<li><p><code>npm run build</code></p>
+</li>
+<li><p>Manual checks:</p>
+</li>
+<li><p><code>GET /api/v1/user-events/hyper-recommend/books?lang=vi&amp;limit=12</code> returns same top-level shape as catalog home.</p>
+</li>
+<li><p><code>recommend</code> item fields match <code>CatalogBookCardDto</code>.</p>
+</li>
+</ul>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#task-catalog-categories-endpoint-with-cache-first-tree-response">Task: Catalog categories endpoint with cache-first tree response</a></li><li class="lvl3"><a href="#task">Task</a></li><li class="lvl3"><a href="#endpoint">Endpoint</a></li><li class="lvl3"><a href="#input">Input</a></li><li class="lvl3"><a href="#process-flow">Process Flow</a></li><li class="lvl3"><a href="#db-tables">DB Tables</a></li><li class="lvl3"><a href="#cache-keys-ttl">Cache Keys + TTL</a></li><li class="lvl3"><a href="#response-shape">Response Shape</a></li><li class="lvl3"><a href="#files-changed">Files Changed</a></li><li class="lvl3"><a href="#verification">Verification</a></li><li class="lvl2"><a href="#task-catalog-books-list-with-language-filter-and-cheapest-variant">Task: Catalog books list with language filter and cheapest variant</a></li><li class="lvl3"><a href="#task-1">Task</a></li><li class="lvl3"><a href="#endpoint-1">Endpoint</a></li><li class="lvl3"><a href="#input-1">Input</a></li><li class="lvl3"><a href="#process-flow-1">Process Flow</a></li><li class="lvl3"><a href="#db-tables-1">DB Tables</a></li><li class="lvl3"><a href="#cache-keys-ttl-1">Cache Keys + TTL</a></li><li class="lvl3"><a href="#response-shape-1">Response Shape</a></li><li class="lvl3"><a href="#files-changed-1">Files Changed</a></li><li class="lvl3"><a href="#verification-1">Verification</a></li><li class="lvl2"><a href="#task-catalog-book-detail-by-slug-no-min-max-price">Task: Catalog book detail by slug (no min/max price)</a></li><li class="lvl3"><a href="#task-2">Task</a></li><li class="lvl3"><a href="#endpoint-2">Endpoint</a></li><li class="lvl3"><a href="#input-2">Input</a></li><li class="lvl3"><a href="#process-flow-2">Process Flow</a></li><li class="lvl3"><a href="#db-tables-2">DB Tables</a></li><li class="lvl3"><a href="#cache-keys-ttl-2">Cache Keys + TTL</a></li><li class="lvl3"><a href="#files-changed-2">Files Changed</a></li><li class="lvl3"><a href="#verification-2">Verification</a></li><li class="lvl2"><a href="#task-review-publisher-author-modules-with-internal-bookauthor">Task: Review + Publisher + Author modules (with internal BookAuthor)</a></li><li class="lvl3"><a href="#task-3">Task</a></li><li class="lvl3"><a href="#endpoints">Endpoints</a></li><li class="lvl3"><a href="#input-rules">Input rules</a></li><li class="lvl3"><a href="#process-flow-summary">Process Flow (Summary)</a></li><li class="lvl3"><a href="#db-tables-used">DB Tables used</a></li><li class="lvl3"><a href="#files-added">Files Added</a></li><li class="lvl3"><a href="#files-updated">Files Updated</a></li><li class="lvl3"><a href="#verification-3">Verification</a></li><li class="lvl2"><a href="#task-cart-guard-with-guest-session-fallback">Task: Cart guard with guest-session fallback</a></li><li class="lvl3"><a href="#task-4">Task</a></li><li class="lvl3"><a href="#scope">Scope</a></li><li class="lvl3"><a href="#endpoints-affected">Endpoints (affected)</a></li><li class="lvl3"><a href="#process-flow-3">Process Flow</a></li><li class="lvl3"><a href="#db-tables-3">DB Tables</a></li><li class="lvl3"><a href="#files-changed-3">Files Changed</a></li><li class="lvl3"><a href="#verification-4">Verification</a></li><li class="lvl2"><a href="#task-post-cart-items-with-guest-db-user-db-flow-with-cleanup">Task: POST /cart/items with guest-db + user-db flow (with cleanup)</a></li><li class="lvl3"><a href="#task-5">Task</a></li><li class="lvl3"><a href="#endpoint-3">Endpoint</a></li><li class="lvl3"><a href="#process-flow-4">Process Flow</a></li><li class="lvl3"><a href="#db-tables-4">DB Tables</a></li><li class="lvl3"><a href="#files-changed-4">Files Changed</a></li><li class="lvl3"><a href="#verification-5">Verification</a></li><li class="lvl2"><a href="#task-guest-session-touch-daily-cleanup-cron">Task: Guest session touch + daily cleanup cron</a></li><li class="lvl3"><a href="#task-6">Task</a></li><li class="lvl3"><a href="#process-flow-5">Process Flow</a></li><li class="lvl3"><a href="#files-changed-5">Files Changed</a></li><li class="lvl3"><a href="#verification-6">Verification</a></li><li class="lvl2"><a href="#task-cart-quantity-delta-api-and-remove-direct-patch-api">Task: Cart quantity-delta API and remove direct patch API</a></li><li class="lvl3"><a href="#task-7">Task</a></li><li class="lvl3"><a href="#endpoint-contract">Endpoint Contract</a></li><li class="lvl3"><a href="#process-flow-6">Process Flow</a></li><li class="lvl3"><a href="#notes">Notes</a></li><li class="lvl3"><a href="#files-changed-6">Files Changed</a></li><li class="lvl3"><a href="#verification-7">Verification</a></li><li class="lvl2"><a href="#task-register-converts-guest-session-to-user">Task: Register converts guest session to user</a></li><li class="lvl3"><a href="#task-8">Task</a></li><li class="lvl3"><a href="#endpoint-4">Endpoint</a></li><li class="lvl3"><a href="#process-flow-7">Process Flow</a></li><li class="lvl3"><a href="#db-tables-5">DB Tables</a></li><li class="lvl3"><a href="#files-changed-7">Files Changed</a></li><li class="lvl3"><a href="#verification-8">Verification</a></li><li class="lvl2"><a href="#task-review-routes-workflow-ai-draft-create-review-list-review">Task: Review routes workflow (AI draft + create review + list review)</a></li><li class="lvl3"><a href="#task-9">Task</a></li><li class="lvl3"><a href="#endpoints-1">Endpoints</a></li><li class="lvl3"><a href="#input-contract">Input Contract</a></li><li class="lvl3"><a href="#process-flow-8">Process Flow</a></li><li class="lvl3"><a href="#error-behavior">Error Behavior</a></li><li class="lvl3"><a href="#db-tables-used-1">DB Tables Used</a></li><li class="lvl3"><a href="#ai-integration-notes">AI Integration Notes</a></li><li class="lvl3"><a href="#files-changed-8">Files Changed</a></li><li class="lvl3"><a href="#verification-9">Verification</a></li><li class="lvl2"><a href="#task-add-orderitem-module-and-wire-into-userevent-module">Task: Add OrderItem module and wire into UserEvent module</a></li><li class="lvl3"><a href="#task-10">Task</a></li><li class="lvl3"><a href="#process-flow-9">Process Flow</a></li><li class="lvl3"><a href="#files-changed-9">Files Changed</a></li><li class="lvl3"><a href="#verification-10">Verification</a></li><li class="lvl2"><a href="#task-userevent-service-add-create-event-business-service-repository-only">Task: UserEvent service add create-event business (service/repository only)</a></li><li class="lvl3"><a href="#task-11">Task</a></li><li class="lvl3"><a href="#change-history">Change History</a></li><li class="lvl3"><a href="#business-flow">Business Flow</a></li><li class="lvl3"><a href="#db-table">DB Table</a></li><li class="lvl3"><a href="#files-changed-10">Files Changed</a></li><li class="lvl3"><a href="#verification-11">Verification</a></li><li class="lvl2"><a href="#task-userevent-sequence-ready-workflow-service-first-endpoint-ready">Task: UserEvent sequence-ready workflow (service-first, endpoint-ready)</a></li><li class="lvl3"><a href="#task-12">Task</a></li><li class="lvl3"><a href="#endpoints-2">Endpoints</a></li><li class="lvl3"><a href="#input-contract-1">Input Contract</a></li><li class="lvl3"><a href="#output-contract">Output Contract</a></li><li class="lvl3"><a href="#modules-classes-involved-must-be-explicit">Modules / Classes Involved (MUST be explicit)</a></li><li class="lvl3"><a href="#process-flow-step-by-step-sequence-ready">Process Flow (Step-by-step, sequence-ready)</a></li><li class="lvl3"><a href="#cache-keys-ttl-if-used">Cache Keys + TTL (if used)</a></li><li class="lvl3"><a href="#db-tables-used-2">DB Tables Used</a></li><li class="lvl3"><a href="#error-behavior-http-mapping">Error Behavior (HTTP mapping)</a></li><li class="lvl3"><a href="#files-added-changed">Files Added / Changed</a></li><li class="lvl3"><a href="#verification-12">Verification</a></li><li class="lvl2"><a href="#task-hyper-recommend-merge-2-event-streams-variant-order">Task: Hyper recommend merge 2 event streams (variant + order)</a></li><li class="lvl3"><a href="#task-13">Task</a></li><li class="lvl3"><a href="#endpoint-5">Endpoint</a></li><li class="lvl3"><a href="#business-goal">Business Goal</a></li><li class="lvl3"><a href="#business-scope">Business Scope</a></li><li class="lvl3"><a href="#business-workflow-domain-view">Business Workflow (Domain View)</a></li><li class="lvl3"><a href="#business-rules">Business Rules</a></li><li class="lvl3"><a href="#business-inputs-and-semantics">Business Inputs and Semantics</a></li><li class="lvl3"><a href="#business-output-contract">Business Output Contract</a></li><li class="lvl3"><a href="#business-acceptance-criteria">Business Acceptance Criteria</a></li><li class="lvl3"><a href="#input-contract-2">Input Contract</a></li><li class="lvl3"><a href="#modules-classes-involved">Modules / Classes Involved</a></li><li class="lvl3"><a href="#process-flow-step-by-step">Process Flow (Step-by-step)</a></li><li class="lvl3"><a href="#score-ranking-notes">Score + Ranking Notes</a></li><li class="lvl3"><a href="#db-tables-used-3">DB Tables Used</a></li><li class="lvl3"><a href="#output-characteristics">Output Characteristics</a></li><li class="lvl3"><a href="#failure-edge-cases">Failure / Edge Cases</a></li><li class="lvl3"><a href="#verification-13">Verification</a></li><li class="lvl2"><a href="#task-catalog-detail-add-specs-object-and-badges-enum-array">Task: Catalog detail add specs object and badges enum array</a></li><li class="lvl3"><a href="#task-14">Task</a></li><li class="lvl3"><a href="#endpoints-3">Endpoints</a></li><li class="lvl3"><a href="#response-changes">Response changes</a></li><li class="lvl3"><a href="#process-flow-10">Process Flow</a></li><li class="lvl3"><a href="#db-tables-used-4">DB Tables used</a></li><li class="lvl3"><a href="#files-changed-11">Files Changed</a></li><li class="lvl3"><a href="#verification-14">Verification</a></li><li class="lvl2"><a href="#task-userevent-hyper-recommend-response-aligned-to-catalog-home-format">Task: UserEvent hyper-recommend response aligned to catalog home format</a></li><li class="lvl3"><a href="#task-15">Task</a></li><li class="lvl3"><a href="#input-3">Input</a></li><li class="lvl3"><a href="#process-flow-11">Process Flow</a></li><li class="lvl3"><a href="#files-changed-12">Files Changed</a></li><li class="lvl3"><a href="#verification-15">Verification</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/workflow-docs.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

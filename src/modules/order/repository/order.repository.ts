@@ -1,0 +1,386 @@
+import { SHIPPING_FEE } from '@/common';
+import { ORDER_EXPIRED_SECONDS } from '@/common/constants/expired-constant';
+import { PrismaClientTransaction, PrismaService } from '@/database';
+import { PAYMENT_INTENT_EXPIRES_IN_MS } from '@/modules/payment/service/payment-intent.service';
+import { generateOrderCode } from '@/utils/generateOrderCode.util';
+import { Injectable } from '@nestjs/common';
+import {
+  CurrencyCode,
+  OrderStatus,
+  PaymentStatus,
+  Prisma,
+} from '@prisma/client';
+
+export type OrderByUserRow = {
+  quantity: number;
+  bookVariantSnapshotId: number | null;
+  bookVariantId: number | null;
+  bookId: number | null;
+};
+
+export type OrderWithItemsRow = {
+  id: number;
+  items: {
+    id: number;
+    bookVariantSnapshotId: number | null;
+    quantity: number;
+    createdAt: Date;
+  }[];
+};
+
+const orderListSelect = Prisma.validator<Prisma.OrderSelect>()({
+  id: true,
+  orderCode: true,
+  status: true,
+  subtotal: true,
+  discountAmount: true,
+  shippingFee: true,
+  totalAmount: true,
+  placedAt: true,
+  createdAt: true,
+});
+
+export type OrderListRow = Prisma.OrderGetPayload<{
+  select: typeof orderListSelect;
+}>;
+
+@Injectable()
+export class OrderRepository {
+  constructor(private readonly prisma: PrismaService) { }
+
+  async deleteById(orderId: number) {
+    return this.prisma.order.delete({
+      where: {
+        id: orderId
+      }
+    })
+  }
+
+  async findOrderItemsByOrderId(
+    orderIds: number[],
+  ): Promise<OrderWithItemsRow[]> {
+    if (!orderIds.length) {
+      return [];
+    }
+
+    return this.prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: {
+        id: true,
+        items: {
+          select: {
+            id: true,
+            bookVariantSnapshotId: true,
+            quantity: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updateStatusByOrderId(orderId: number, status: OrderStatus) {
+    return this.prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
+  }
+
+  async findOrderItemWWithParentVariantByOrderId(
+    orderId: number,
+    tx?: PrismaClientTransaction,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.order.findFirst({
+      where: { id: orderId },
+      select: {
+        id: true,
+        items: {
+          select: {
+            id: true,
+            bookVariantSnapshot: {
+              select: {
+                bookVariant: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+            quantity: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
+
+  createOrdersByUserId(userId: number) {
+    const orderCode = generateOrderCode();
+    return this.prisma.order.create({
+      data: {
+        userId: userId,
+        orderCode: orderCode,
+        paymentStatus: PaymentStatus.PENDING,
+        shippingFee: SHIPPING_FEE,
+        expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+      },
+    });
+  }
+
+  upsertOrdersByGuestId(
+    guestId: string,
+    idempotencyKey: string,
+    totalAmount: number,
+  ) {
+    const orderCode = generateOrderCode();
+    return this.prisma.order.upsert({
+      where: { idempotencyKey },
+      create: {
+        idempotencyKey,
+        totalAmount,
+        guestSessionId: guestId,
+        orderCode: orderCode,
+        paymentStatus: PaymentStatus.PENDING,
+        shippingFee: SHIPPING_FEE,
+        expiredAt: new Date(Date.now() + ORDER_EXPIRED_SECONDS * 1000),
+      },
+      update: {},
+    });
+  }
+
+  findOrderBySessionGuestId(guestId: string, page: number, limit: number) {
+    return this.prisma.order.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      where: { guestSessionId: guestId },
+      orderBy: { createdAt: 'desc' },
+      select: orderListSelect,
+    });
+  }
+
+  findOrderByUserId(userId: number, page: number, limit: number) {
+    return this.prisma.order.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      where: { userId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: orderListSelect,
+    });
+  }
+
+  findOrderDetailByUserId(userId: number, page: number, limit: number) {
+    return this.prisma.order.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      where: { userId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        items: true,
+      },
+    });
+  }
+
+  findOrderIsExpire() {
+    return this.prisma.order.findMany({
+      where: {
+        expiredAt: { lt: new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS) },
+        status: OrderStatus.PENDING_PAYMENT,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+      select: {
+        items: {
+          select: {
+            quantity: true,
+            bookVariantSnapshot: {
+              select: {
+                bookVariantId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  clearOrder(variantMap: Map<string, number>) {
+    return this.prisma.$transaction(async (tx) => {
+      for (const [key, value] of variantMap) {
+        await tx.bookVariant.updateMany({
+          where: { id: Number(key) },
+          data: {
+            stock: { increment: value },
+            reserved: { decrement: value },
+          },
+        });
+      }
+      await tx.order.updateMany({
+        where: {
+          expiredAt: { lt: new Date(Date.now() + PAYMENT_INTENT_EXPIRES_IN_MS) },
+          status: OrderStatus.PENDING_PAYMENT,
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          paymentStatus: PaymentStatus.EXPIRED,
+        },
+      });
+    });
+  }
+
+  decrementVariantsStock(
+    variantKeys: string[],
+    variantMap: Map<string, number>,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    if (variantKeys.length === 0) return Promise.resolve(0);
+
+    const stockCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN stock - ${quantity}`;
+    });
+
+    const reservedCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN reserved - ${quantity}`;
+    });
+
+    const ids = variantKeys.map(Number);
+
+    return tx.$executeRaw(Prisma.sql`
+    UPDATE book_variants
+    SET
+      stock = CASE id
+        ${Prisma.join(stockCases, ' ')}
+        ELSE stock
+      END,
+      reserved = CASE id
+        ${Prisma.join(reservedCases, ' ')}
+        ELSE reserved
+      END
+    WHERE id IN (${Prisma.join(ids)})
+  `);
+  }
+
+  incrementVariantsStock(
+    variantKeys: string[],
+    variantMap: Map<string, number>,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    if (variantKeys.length === 0) return Promise.resolve(0);
+
+    const stockCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN stock + ${quantity}`;
+    });
+
+    const reservedCases = variantKeys.map((v) => {
+      const quantity = variantMap.get(v);
+      if (!quantity) {
+        throw new Error(`Missing quantity for variant id ${v}`);
+      }
+
+      return Prisma.sql`WHEN ${Number(v)} THEN reserved + ${quantity}`;
+    });
+
+    const ids = variantKeys.map(Number);
+
+    return tx.$executeRaw(Prisma.sql`
+    UPDATE book_variants
+    SET
+      stock = CASE id
+        ${Prisma.join(stockCases, ' ')}
+        ELSE stock
+      END,
+      reserved = CASE id
+        ${Prisma.join(reservedCases, ' ')}
+        ELSE reserved
+      END
+    WHERE id IN (${Prisma.join(ids)})
+  `);
+  }
+
+  findByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+    return tx.order.findFirst({
+      where: { cartHash },
+      include: {
+        payments: {
+          where: { status: PaymentStatus.PENDING },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+  }
+
+  findOrderNotSuccessByCartHash(cartHash: string, tx: PrismaClientTransaction) {
+    return tx.order.findFirst({
+      where: { cartHash },
+      include: {
+        payments: {
+          where: {
+            status: {
+              in: [
+                PaymentStatus.PENDING,
+                PaymentStatus.PAYMENT_OVERAGE,
+                PaymentStatus.PAYMENT_SHORTFALL,
+              ],
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+  }
+
+  create(data: Prisma.OrderUncheckedCreateInput, tx: PrismaClientTransaction = this.prisma) {
+    return tx.order.create({ data });
+  }
+
+  createWithGuest(
+    data: {
+      guestSessionId: string;
+      cartHash: string;
+      orderCode: string;
+      status: OrderStatus;
+      paymentStatus: PaymentStatus;
+      currencyCode: CurrencyCode;
+      shippingFee: number;
+      expiredAt: Date;
+    },
+    tx: PrismaClientTransaction,
+  ) {
+    return tx.order.create({ data });
+  }
+
+  updateById(
+    id: number,
+    data: Prisma.OrderUncheckedUpdateInput,
+    tx: PrismaClientTransaction,
+  ) {
+    return tx.order.update({ where: { id }, data });
+  }
+
+  updateOrderStatusById(
+    orderId: number,
+    status: OrderStatus,
+    tx: PrismaClientTransaction = this.prisma,
+  ) {
+    return tx.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
+  }
+}

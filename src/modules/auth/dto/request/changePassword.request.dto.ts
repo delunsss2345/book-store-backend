@@ -7,19 +7,19 @@ export class ChangePasswordRequestDto {
     @IsNotEmpty()
     @MinLength(8)
     @MaxLength(72)
-    oldPassword: string;
+    oldPassword!: string;
 
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
     @MinLength(8)
     @MaxLength(72)
-    newPassword: string;
+    newPassword!: string;
 
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
     @MinLength(8)
     @MaxLength(72)
-    confirmNewPassword: string;
+    confirmNewPassword!: string;
 }

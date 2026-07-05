@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    container_name: bookstore-mysql
+    env_file:
+      - .env
+    volumes:
+      - ./docker/mysql_data:/var/lib/mysql
+    ports:
+      - '127.0.0.1:3308:3306'
+    networks:
+      - book-store-network
+
+  redis:
+    image: redis:8.6.2-alpine
+    restart: unless-stopped
+    container_name: bookstore-redis
+    env_file:
+      - .env
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - ./docker/redis_data:/data
+    networks:
+      - book-store-network
+  redisinsight:
+    image: redislabs/redisinsight:3.4
+    container_name: bookstore-redisinsight
+    ports:
+      - '8001:8001'
+    depends_on:
+      - redis
+    networks:
+      - book-store-network
+  # qdrant:
+  #   image: qdrant/qdrant:v1.9.2
+  #   container_name: qdrant
+  #   depends_on:
+  #     - mysql
+  #   ports:
+  #     - '6333:6333'
+  #   volumes:
+  #     - ./docker/qdrant_storage:/qdrant/storage
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  qdrant_storage:
+networks:
+  book-store-network:
+    driver: bridge

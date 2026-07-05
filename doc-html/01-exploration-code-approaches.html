@@ -1,0 +1,467 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Per-request authorization — three approaches</title>
+  <style>
+    :root {
+      --ivory:    #FAF9F5;
+      --slate:    #141413;
+      --clay:     #D97757;
+      --oat:      #E3DACC;
+      --olive:    #788C5D;
+      --gray-150: #F0EEE6;
+      --gray-300: #D1CFC5;
+      --gray-500: #87867F;
+      --gray-700: #3D3D3A;
+      --white:    #FFFFFF;
+
+      --serif: ui-serif, Georgia, 'Times New Roman', serif;
+      --sans:  system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --mono:  ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--ivory);
+      color: var(--gray-700);
+      line-height: 1.55;
+      padding: 56px 32px 96px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    /* ---------- header ---------- */
+
+    header.page-head {
+      margin-bottom: 48px;
+      max-width: 820px;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 38px;
+      line-height: 1.15;
+      color: var(--slate);
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+    }
+
+    .prompt-box {
+      background: var(--gray-150);
+      border: 1.5px solid var(--gray-300);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 14.5px;
+      color: var(--gray-700);
+    }
+
+    .prompt-box .label {
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-500);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .prompt-box code { font-family: var(--mono); font-size: 0.92em; }
+
+    /* ---------- approach grid ---------- */
+
+    .approaches {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      margin-bottom: 56px;
+    }
+
+    @media (max-width: 1100px) {
+      .approaches { grid-template-columns: 1fr; }
+    }
+
+    .approach {
+      background: var(--white);
+      border: 1.5px solid var(--gray-300);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .approach.current { border-color: var(--clay); }
+
+    .approach-head h2 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 21px;
+      color: var(--slate);
+      margin-bottom: 6px;
+    }
+
+    .approach-head .num {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--oat);
+      color: var(--slate);
+      padding: 2px 8px;
+      border-radius: 8px;
+      margin-right: 8px;
+      vertical-align: 3px;
+    }
+    .approach.current .approach-head .num { background: var(--clay); color: var(--white); }
+
+    .approach-head .here {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--clay);
+      margin-left: 6px;
+      vertical-align: 3px;
+    }
+
+    .approach-head p {
+      font-size: 14px;
+      color: var(--gray-500);
+    }
+
+    /* ---------- code panel ---------- */
+
+    .code {
+      background: var(--slate);
+      border-radius: 12px;
+      padding: 18px 20px;
+      overflow-x: auto;
+    }
+
+    .code pre {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #E8E6DE;
+      white-space: pre;
+    }
+
+    .code .kw  { color: var(--clay); }
+    .code .str { color: var(--olive); }
+    .code .cm  { color: var(--gray-500); }
+    .code .fn  { color: #C9B98A; }
+
+    /* ---------- tradeoffs table ---------- */
+
+    .tradeoffs {
+      border: 1.5px solid var(--gray-300);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    .tradeoffs .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .tradeoffs .row + .row {
+      border-top: 1.5px solid var(--gray-300);
+    }
+
+    .tradeoffs .cell {
+      padding: 10px 14px;
+    }
+
+    .tradeoffs .cell:first-child {
+      border-right: 1.5px solid var(--gray-300);
+    }
+
+    .tradeoffs .head {
+      background: var(--gray-150);
+      font-weight: 600;
+      color: var(--slate);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tradeoffs .pro::before,
+    .tradeoffs .con::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 8px;
+      vertical-align: 2px;
+    }
+    .tradeoffs .pro::before { background: var(--olive); }
+    .tradeoffs .con::before { background: var(--clay); }
+
+    /* ---------- chip footer ---------- */
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      background: var(--gray-150);
+      border: 1.5px solid var(--gray-300);
+      color: var(--gray-700);
+      padding: 5px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .chip strong { color: var(--slate); font-weight: 600; }
+
+    /* ---------- recommendation ---------- */
+
+    .reco {
+      border-left: 4px solid var(--clay);
+      background: var(--white);
+      border-radius: 0 12px 12px 0;
+      padding: 24px 28px;
+      max-width: 980px;
+    }
+
+    .reco h2 {
+      font-family: var(--serif);
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--slate);
+      margin-bottom: 10px;
+    }
+
+    .reco p {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    .reco code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      background: var(--gray-150);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .reco .bug {
+      margin-top: 14px;
+      font-size: 13.5px;
+      background: rgba(217,119,87,0.08);
+      border: 1.5px solid rgba(217,119,87,0.4);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--gray-700);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="page-head">
+      <div class="eyebrow">Exploration · Bookstore Backend · NestJS</div>
+      <h1>Three ways to authorize a request</h1>
+      <div class="prompt-box">
+        <span class="label">Prompt</span>
+        The app guards every protected route with a global <code>PermissionsGuard</code>.
+        Show me three different ways to resolve a user's permission set on each request,
+        with the tradeoffs for each — and tell me which one this codebase should keep.
+      </div>
+    </header>
+
+    <!-- ============================================================= -->
+
+    <section class="approaches">
+
+      <!-- ---------- Approach 1 ---------- -->
+      <article class="approach">
+        <header class="approach-head">
+          <h2><span class="num">01</span>Join straight to the database</h2>
+          <p>Resolve role &rarr; permission rows from Prisma on every guarded request, no cache.</p>
+        </header>
+
+        <div class="code"><pre><span class="cm">// permission.guard.ts — naive form</span>
+<span class="kw">const</span> { user } = ctx.switchToHttp().<span class="fn">getRequest</span>();
+<span class="kw">const</span> roleIds =
+  <span class="kw">await</span> userRoleService.<span class="fn">getRoleIdsByUserId</span>(user.sub);
+
+<span class="kw">const</span> perms = <span class="kw">await</span> Promise.<span class="fn">all</span>(
+  roleIds.<span class="fn">map</span>((id) <span class="kw">=&gt;</span>
+    rolePermissionService.<span class="fn">getByRoleId</span>(id)),
+);
+
+<span class="kw">if</span> (!<span class="kw">new</span> Set(perms.<span class="fn">flat</span>()).<span class="fn">has</span>(required))
+  <span class="kw">throw new</span> <span class="fn">ForbiddenException</span>();</pre></div>
+
+        <div class="tradeoffs">
+          <div class="row head">
+            <div class="cell">Pro</div>
+            <div class="cell">Con</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Always fresh — a revoked grant takes effect instantly</div>
+            <div class="cell con">Two queries on the hot path of every admin request</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">No cache-invalidation logic to get wrong</div>
+            <div class="cell con">Load scales with traffic, not with the role table</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Trivial to read and reason about</div>
+            <div class="cell con">Redis sits idle while the DB absorbs the reads</div>
+          </div>
+        </div>
+
+        <div class="chips">
+          <span class="chip">Reads/req: <strong>2 DB</strong></span>
+          <span class="chip">Staleness: <strong>0 s</strong></span>
+          <span class="chip">Complexity: <strong>low</strong></span>
+        </div>
+      </article>
+
+      <!-- ---------- Approach 2 ---------- -->
+      <article class="approach current">
+        <header class="approach-head">
+          <h2><span class="num">02</span>Cache per-role permissions in Redis<span class="here">in use</span></h2>
+          <p>Look each <code style="font-family:var(--mono)">role_id</code> up in the cache; on a miss, read the DB and back-fill with a TTL.</p>
+        </header>
+
+        <div class="code"><pre><span class="cm">// permission.guard.ts:34-51 (current)</span>
+<span class="kw">const</span> keyOf = (id) <span class="kw">=&gt;</span> <span class="str">`role_user:${id}:perms`</span>;
+<span class="kw">const</span> keys  = roleIds.<span class="fn">map</span>((id) <span class="kw">=&gt;</span>
+  <span class="str">`role_per:${id}:perms`</span>);
+<span class="kw">const</span> cached = <span class="kw">await</span> Promise.<span class="fn">all</span>(
+  keys.<span class="fn">map</span>((k) <span class="kw">=&gt;</span> cache.<span class="fn">get</span>(k)));
+
+<span class="kw">const</span> perms = <span class="kw">await</span> Promise.<span class="fn">all</span>(roleIds.<span class="fn">map</span>(
+  <span class="kw">async</span> (roleId, i) <span class="kw">=&gt;</span> {
+    <span class="kw">if</span> (cached[i]) <span class="kw">return</span> cached[i];
+    <span class="kw">const</span> p = <span class="kw">await</span> svc.<span class="fn">getByRoleId</span>(roleId);
+    <span class="kw">await</span> cache.<span class="fn">set</span>(<span class="fn">keyOf</span>(roleId), p, TTL);
+    <span class="kw">return</span> p;
+  }));</pre></div>
+
+        <div class="tradeoffs">
+          <div class="row head">
+            <div class="cell">Pro</div>
+            <div class="cell">Con</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Warm path touches Redis only, not MariaDB</div>
+            <div class="cell con">Write key &ne; read key — <code style="font-family:var(--mono)">role_user:</code> vs <code style="font-family:var(--mono)">role_per:</code></div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Per-role keys are shared across all users of that role</div>
+            <div class="cell con">No invalidation on grant change; waits for TTL</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">TTL bounds the staleness window</div>
+            <div class="cell con">TTL is <code style="font-family:var(--mono)">36000</code> ms — the comment says "1h"</div>
+          </div>
+        </div>
+
+        <div class="chips">
+          <span class="chip">Reads/req: <strong>~0 DB (warm)</strong></span>
+          <span class="chip">Staleness: <strong>&le; 36 s</strong></span>
+          <span class="chip">Complexity: <strong>medium</strong></span>
+        </div>
+      </article>
+
+      <!-- ---------- Approach 3 ---------- -->
+      <article class="approach">
+        <header class="approach-head">
+          <h2><span class="num">03</span>Bake permissions into the JWT</h2>
+          <p>Embed the resolved permission codes as a claim at login; the guard reads them off the token.</p>
+        </header>
+
+        <div class="code"><pre><span class="cm">// auth.service.ts — at sign-in</span>
+<span class="kw">const</span> perms =
+  <span class="kw">await</span> resolvePermissions(user.id);
+<span class="kw">const</span> accessToken = jwt.<span class="fn">sign</span>({
+  sub: user.id.<span class="fn">toString</span>(),
+  roles,
+  perms,                  <span class="cm">// new claim</span>
+});
+
+<span class="cm">// permission.guard.ts — zero I/O</span>
+<span class="kw">if</span> (!user.perms?.<span class="fn">includes</span>(required))
+  <span class="kw">throw new</span> <span class="fn">ForbiddenException</span>();</pre></div>
+
+        <div class="tradeoffs">
+          <div class="row head">
+            <div class="cell">Pro</div>
+            <div class="cell">Con</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Authorization needs zero round-trips at all</div>
+            <div class="cell con">Stale until the token expires or is rotated</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Horizontally scales with no shared state</div>
+            <div class="cell con">Fat tokens; sent on every request header</div>
+          </div>
+          <div class="row">
+            <div class="cell pro">Pairs with the existing refresh rotation</div>
+            <div class="cell con">Revoking a permission means revoking sessions</div>
+          </div>
+        </div>
+
+        <div class="chips">
+          <span class="chip">Reads/req: <strong>0</strong></span>
+          <span class="chip">Staleness: <strong>token life</strong></span>
+          <span class="chip">Complexity: <strong>medium</strong></span>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- ============================================================= -->
+
+    <aside class="reco">
+      <h2>Recommendation</h2>
+      <p>
+        Keep <strong>approach 02, the Redis per-role cache</strong> — it is the right shape for an
+        admin surface where many operators share a handful of roles, and per-role keys mean one
+        cached entry serves every user of that role. But it needs two fixes before it can be trusted.
+      </p>
+      <div class="bug">
+        <strong>Bug to fix first.</strong> The back-fill writes with <code>keyOf(roleId)</code> &rarr;
+        <code>role_user:{id}:perms</code>, but the read builds <code>role_per:{id}:perms</code>. The
+        keys never match, so the cache <em>never hits</em> — every request silently falls through to
+        the database, making this approach behave like approach&nbsp;01 at approach&nbsp;02's cost.
+        Align both on one prefix, then make <code>PERMISSION_CACHE_TTL</code> match its "1h" comment
+        (it is currently <code>36000</code>&nbsp;ms&nbsp;=&nbsp;36&nbsp;s), and drop the leftover
+        <code>console.log(userPerms)</code>.
+      </p>
+      <p style="margin-top:14px">
+        Revisit approach 03 only once permission changes must propagate without a DB read at all —
+        and only after wiring active invalidation, so a grant edit busts <code>role_per:{id}:perms</code>
+        instead of waiting out the TTL.
+      </p>
+    </aside>
+
+  </div>
+</body>
+</html>

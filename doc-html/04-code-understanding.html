@@ -1,0 +1,506 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How authentication flows through the bookstore backend</title>
+<style>
+  :root {
+    --ivory: #FAF9F5;
+    --slate: #141413;
+    --clay: #D97757;
+    --oat: #E3DACC;
+    --olive: #788C5D;
+    --rust: #B04A3F;
+    --gray-150: #F0EEE6;
+    --gray-300: #D1CFC5;
+    --gray-500: #87867F;
+    --gray-700: #3D3D3A;
+    --serif: ui-serif, Georgia, 'Times New Roman', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ivory);
+    color: var(--gray-700);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    padding: 48px 24px 80px;
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 40px;
+  }
+
+  @media (max-width: 960px) {
+    .page { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+  }
+
+  .repo-line {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--gray-500);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 32px;
+    line-height: 1.25;
+    color: var(--slate);
+    margin-bottom: 16px;
+  }
+
+  .summary {
+    max-width: 780px;
+    font-size: 15.5px;
+  }
+  .summary code { font-family: var(--mono); font-size: 13px; }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--slate);
+    margin: 36px 0 16px;
+  }
+
+  /* ---------- Diagram ---------- */
+  .diagram-panel {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    background: #fff;
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  svg.flow { display: block; max-width: 100%; }
+  .flow text {
+    font-family: var(--mono);
+    font-size: 12px;
+    fill: var(--slate);
+  }
+  .flow .sub { font-size: 10px; fill: var(--gray-500); }
+  .flow .box { fill: #fff; stroke: var(--gray-300); stroke-width: 1.5; }
+  .flow .box.hot { fill: rgba(217,119,87,0.10); stroke: var(--clay); }
+  .flow .arrow { stroke: var(--gray-500); stroke-width: 1.5; fill: none; }
+
+  /* ---------- Walkthrough ---------- */
+  .step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 18px;
+    padding: 20px 0;
+    border-bottom: 1.5px solid var(--gray-150);
+  }
+  .step:last-of-type { border-bottom: none; }
+
+  .badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--oat);
+    border: 1.5px solid var(--gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--slate);
+    font-size: 14px;
+  }
+  .step.hot .badge {
+    background: rgba(217,119,87,0.14);
+    border-color: var(--clay);
+    color: var(--clay);
+  }
+
+  .step-loc {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--slate);
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+  .step-loc .range { color: var(--gray-500); }
+
+  .step-body p { margin-bottom: 10px; }
+  .step-body code { font-family: var(--mono); font-size: 12.5px; }
+
+  details.snippet { margin-top: 6px; }
+  details.snippet summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--gray-500);
+    font-family: var(--mono);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    user-select: none;
+  }
+  details.snippet summary::-webkit-details-marker { display: none; }
+  details.snippet summary::before {
+    content: "\25B8";
+    font-size: 10px;
+    transition: transform 0.15s ease;
+  }
+  details.snippet[open] summary::before { transform: rotate(90deg); }
+
+  pre.code {
+    background: var(--slate);
+    color: #E8E6DC;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+  pre.code .dim { color: var(--gray-500); }
+  pre.code .kw  { color: #C9B98A; }
+  pre.code .str { color: #A8BC8C; }
+
+  /* ---------- Sidebar ---------- */
+  aside {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+
+  .panel {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    background: #fff;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel h3 {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gray-500);
+    margin-bottom: 12px;
+  }
+
+  .key-files { list-style: none; padding: 0; }
+  .key-files li { margin-bottom: 12px; }
+  .key-files li:last-child { margin-bottom: 0; }
+  .key-files .path {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--slate);
+    display: block;
+    margin-bottom: 2px;
+    word-break: break-all;
+  }
+  .key-files .desc {
+    font-size: 12.5px;
+    color: var(--gray-500);
+    line-height: 1.45;
+  }
+
+  .gotchas {
+    border: 1.5px solid var(--clay);
+    border-radius: 12px;
+    background: rgba(217,119,87,0.06);
+    padding: 18px 20px;
+  }
+  .gotchas h3 {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--clay);
+    margin-bottom: 10px;
+  }
+  .gotchas ul { list-style: none; padding: 0; }
+  .gotchas li {
+    position: relative;
+    padding-left: 16px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .gotchas li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 8px;
+    width: 5px; height: 5px;
+    background: var(--clay);
+    border-radius: 2px;
+  }
+  .gotchas code { font-family: var(--mono); font-size: 11.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="repo-line">book-store-be &middot; architecture note</div>
+    <h1>How authentication flows through the codebase</h1>
+    <p class="summary">
+      The API uses stateless JWT access tokens with hashed, rotating refresh tokens. Two guards run
+      globally on every request via <code>APP_GUARD</code>: <code>AuthGuard</code> verifies the bearer
+      token and checks a revocation list, then <code>PermissionsGuard</code> resolves the caller's
+      permission set. Raw tokens are never stored — only their SHA-256 hashes — so the
+      <code>revoked_token</code> and <code>user_session</code> tables can be read without ever exposing
+      a usable credential. That makes the guard pair the single trust boundary for the whole app.
+    </p>
+  </header>
+
+  <main>
+    <h2 style="margin-top:0">Request path</h2>
+    <div class="diagram-panel">
+      <svg class="flow" viewBox="0 0 720 300" width="720" height="300" role="img" aria-label="Authentication flow diagram">
+        <defs>
+          <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#87867F"></path>
+          </marker>
+        </defs>
+
+        <!-- Row 1 -->
+        <g>
+          <rect class="box" x="24"  y="40" width="150" height="64" rx="10"></rect>
+          <text x="99" y="68" text-anchor="middle">Client</text>
+          <text class="sub" x="99" y="84" text-anchor="middle">Bearer token</text>
+        </g>
+        <g>
+          <rect class="box hot" x="245" y="40" width="180" height="64" rx="10"></rect>
+          <text x="335" y="68" text-anchor="middle">AuthGuard</text>
+          <text class="sub" x="335" y="84" text-anchor="middle">guard/auth.guard.ts</text>
+        </g>
+        <g>
+          <rect class="box hot" x="490" y="40" width="180" height="64" rx="10"></rect>
+          <text x="580" y="64" text-anchor="middle">Permissions</text>
+          <text x="580" y="80" text-anchor="middle">Guard</text>
+          <text class="sub" x="580" y="96" text-anchor="middle">guard/permission.guard.ts</text>
+        </g>
+
+        <!-- Row 2 -->
+        <g>
+          <rect class="box" x="490" y="200" width="180" height="64" rx="10"></rect>
+          <text x="580" y="228" text-anchor="middle">Redis / MariaDB</text>
+          <text class="sub" x="580" y="244" text-anchor="middle">role_per:{id}:perms</text>
+        </g>
+        <g>
+          <rect class="box" x="245" y="200" width="180" height="64" rx="10"></rect>
+          <text x="335" y="228" text-anchor="middle">revoked_token</text>
+          <text class="sub" x="335" y="244" text-anchor="middle">isRevoked(hash)</text>
+        </g>
+        <g>
+          <rect class="box" x="24" y="200" width="150" height="64" rx="10"></rect>
+          <text x="99" y="228" text-anchor="middle">Controller</text>
+          <text class="sub" x="99" y="244" text-anchor="middle">@RequirePermissions</text>
+        </g>
+
+        <!-- Arrows -->
+        <line class="arrow" x1="174" y1="72" x2="245" y2="72" marker-end="url(#arrowHead)"></line>
+        <line class="arrow" x1="425" y1="72" x2="490" y2="72" marker-end="url(#arrowHead)"></line>
+        <line class="arrow" x1="335" y1="104" x2="335" y2="200" marker-end="url(#arrowHead)"></line>
+        <line class="arrow" x1="580" y1="104" x2="580" y2="200" marker-end="url(#arrowHead)"></line>
+        <line class="arrow" x1="490" y1="232" x2="174" y2="232" marker-end="url(#arrowHead)"></line>
+
+        <text class="sub" x="210" y="62" text-anchor="middle">verify</text>
+        <text class="sub" x="345" y="160" text-anchor="start">revoked?</text>
+        <text class="sub" x="590" y="160" text-anchor="start">perms?</text>
+        <text class="sub" x="330" y="192" text-anchor="middle">pass &rarr; handler</text>
+      </svg>
+    </div>
+
+    <h2>Callstack walkthrough</h2>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="badge">1</div>
+      <div class="step-body">
+        <div class="step-loc">src/common/security/security.module.ts<span class="range"> :8-14</span></div>
+        <p>Both guards are registered as <code>APP_GUARD</code> with <code>useExisting</code>, so every controller in the app is protected by default. Order matters: <code>AuthGuard</code> runs first and attaches <code>request.user</code>; <code>PermissionsGuard</code> runs second and reads it.</p>
+        <details class="snippet">
+          <summary>show source</summary>
+<pre class="code"><span class="dim">// security.module.ts</span>
+@Module({
+  imports: [AuthGuardModule, PermissionGuardModule],
+  providers: [
+    { provide: APP_GUARD, useExisting: AuthGuard },
+    { provide: APP_GUARD, useExisting: PermissionsGuard },
+  ],
+})
+<span class="kw">export class</span> SecurityModule {}</pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step hot">
+      <div class="badge">2</div>
+      <div class="step-body">
+        <div class="step-loc">src/common/security/guard/auth.guard.ts<span class="range"> :24-57</span></div>
+        <p>The trust boundary. Routes flagged <code>@Public()</code> or <code>@Refresh()</code> bypass it. Otherwise it pulls the <code>Bearer</code> token, verifies the signature, hashes it, and asks <code>RevokedTokenService</code> whether that hash is on the deny-list — logout writes the hash there, so a logged-out token fails here even though its signature is still valid.</p>
+        <details class="snippet" open>
+          <summary>show source</summary>
+<pre class="code"><span class="dim">// auth.guard.ts</span>
+<span class="kw">const</span> isPublic  = reflector.getAllAndOverride(IS_PUBLIC_KEY, [...]);
+<span class="kw">const</span> isRefresh = reflector.getAllAndOverride(IS_REFRESH_KEY, [...]);
+<span class="kw">if</span> (isPublic || isRefresh) <span class="kw">return</span> true;
+
+<span class="kw">const</span> token = this.extractTokenFromHeader(request);
+<span class="kw">if</span> (!token) <span class="kw">throw new</span> UnauthorizedException();
+<span class="kw">try</span> {
+  <span class="kw">const</span> payload = <span class="kw">await</span> jwtService.verifyAsync(token);
+  <span class="kw">const</span> hashedToken = tokenHash(token);
+  <span class="kw">if</span> (<span class="kw">await</span> revokedTokenService.isRevoked(hashedToken))
+    <span class="kw">throw new</span> UnauthorizedException(SecurityMessage.SESSION_REVOKED);
+  request[<span class="str">'user'</span>] = payload;
+} <span class="kw">catch</span> { <span class="kw">throw new</span> UnauthorizedException(); }</pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step hot">
+      <div class="badge">3</div>
+      <div class="step-body">
+        <div class="step-loc">src/common/security/guard/permission.guard.ts<span class="range"> :19-55</span></div>
+        <p>If the handler carries no <code>@RequirePermissions(...)</code> metadata, the guard returns early. Otherwise it loads the user's role IDs, then tries to read each role's permission list from Redis, falling back to the database on a miss and writing the result back with a TTL. The required code must be present in the flattened set or it throws <code>ForbiddenException</code>.</p>
+        <details class="snippet">
+          <summary>show source</summary>
+<pre class="code"><span class="dim">// permission.guard.ts</span>
+<span class="kw">const</span> roleIds = <span class="kw">await</span> userRoleService.getRoleIdsByUserId(user.sub);
+<span class="kw">const</span> keyOf = (id) =&gt; <span class="str">`role_user:${id}:perms`</span>;        <span class="dim">// write key</span>
+<span class="kw">const</span> keys  = roleIds.map((id) =&gt; <span class="str">`role_per:${id}:perms`</span>);  <span class="dim">// read key</span>
+<span class="kw">const</span> cached = <span class="kw">await</span> Promise.all(keys.map((k) =&gt; cache.get(k)));
+
+<span class="kw">const</span> permsByRole = <span class="kw">await</span> Promise.all(roleIds.map(<span class="kw">async</span> (id, i) =&gt; {
+  <span class="kw">if</span> (cached[i]) <span class="kw">return</span> cached[i];
+  <span class="kw">const</span> p = <span class="kw">await</span> rolePermissionService.getByRoleId(id);
+  <span class="kw">await</span> cache.set(keyOf(id), p, PERMISSION_CACHE_TTL);
+  <span class="kw">return</span> p;
+}));
+<span class="kw">if</span> (!<span class="kw">new</span> Set(permsByRole.flat()).has(required))
+  <span class="kw">throw new</span> ForbiddenException();</pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="badge">4</div>
+      <div class="step-body">
+        <div class="step-loc">src/utils/hashToken.util.ts<span class="range"> :1-6</span></div>
+        <p>Both the access-token deny-list and the refresh-token sessions store hashes, not raw tokens. <code>tokenHash</code> is just an alias of <code>hashToken</code> — a single SHA-256 over the token. A database dump therefore leaks no usable credentials.</p>
+        <details class="snippet">
+          <summary>show source</summary>
+<pre class="code"><span class="dim">// hashToken.util.ts</span>
+<span class="kw">export const</span> hashToken = (token: string) =&gt;
+  createHash(<span class="str">'sha256'</span>).update(token).digest(<span class="str">'hex'</span>);
+
+<span class="kw">export const</span> tokenHash = hashToken;</pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="badge">5</div>
+      <div class="step-body">
+        <div class="step-loc">src/modules/auth/auth.service.ts<span class="range"> · refreshToken()</span></div>
+        <p>On refresh, the <code>RefreshGuard</code> validates the hashed refresh token against an <code>ACTIVE</code>, non-expired session and attaches it. The service then re-reads the user's roles from the DB, signs a fresh token pair, and rotates the session — so a refreshed access token always reflects the current role set, even if the cached permissions lag behind.</p>
+        <details class="snippet">
+          <summary>show source</summary>
+<pre class="code"><span class="dim">// auth.service.ts — refreshToken()</span>
+<span class="kw">const</span> roles = <span class="kw">await</span> userRoleService.getRolesByUserId(user.id);
+<span class="kw">const</span> signature = this.signTokenPair({
+  sub: user.id.toString(),
+  isEmailVerified: user.isEmailVerified,
+  roles,
+});
+<span class="kw">await</span> userSessionService.rotateSession({
+  sessionId: session.id,
+  refreshToken: signature.refreshToken,
+  userAgent,
+});</pre>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <aside>
+    <div class="panel">
+      <h3>Key files</h3>
+      <ul class="key-files">
+        <li>
+          <span class="path">security/guard/auth.guard.ts</span>
+          <span class="desc">Verifies JWT + checks the revocation deny-list.</span>
+        </li>
+        <li>
+          <span class="path">security/guard/permission.guard.ts</span>
+          <span class="desc">Resolves per-role permissions, Redis-cached.</span>
+        </li>
+        <li>
+          <span class="path">security/security.module.ts</span>
+          <span class="desc">Wires both guards globally as APP_GUARD.</span>
+        </li>
+        <li>
+          <span class="path">modules/auth/auth.service.ts</span>
+          <span class="desc">Login, refresh rotation, logout/revoke.</span>
+        </li>
+        <li>
+          <span class="path">modules/revoked-token/*</span>
+          <span class="desc">Hash deny-list for logged-out access tokens.</span>
+        </li>
+        <li>
+          <span class="path">utils/hashToken.util.ts</span>
+          <span class="desc">SHA-256 used for every stored token.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="gotchas">
+      <h3>Gotchas</h3>
+      <ul>
+        <li>The permission cache write key (<code>role_user:</code>) does not match the read key (<code>role_per:</code>), so the cache never hits and every guarded request falls through to the DB.</li>
+        <li><code>PERMISSION_CACHE_TTL</code> is <code>36000</code> ms (36 s), although the inline comment says "1h". Permission changes can lag up to that window once the keys are fixed.</li>
+        <li>A leftover <code>console.log(userPerms)</code> sits on the hot path in <code>permission.guard.ts</code>.</li>
+        <li>Revocation is enforced for access tokens only via hash lookup; there is no <code>jti</code> claim, so tokens are revoked by hash, not by id.</li>
+      </ul>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  // Keep at most one snippet open at a time so the walkthrough stays scannable.
+  var snippets = document.querySelectorAll('details.snippet');
+  snippets.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (!d.open) return;
+      snippets.forEach(function (other) {
+        if (other !== d) other.open = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

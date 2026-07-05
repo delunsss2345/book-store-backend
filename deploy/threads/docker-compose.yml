@@ -1,0 +1,87 @@
+services:
+  api:
+    image: ${IMAGE_URL}
+    container_name: threads-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - '3302:3302'
+    networks:
+      - proxy-net
+      - app-net
+      - threads-network
+
+  worker:
+    image: ${IMAGE_URL}
+    container_name: threads-worker
+    restart: unless-stopped
+    command: npm run start:worker
+    env_file:
+      - .env
+    depends_on:
+      - api
+    networks:
+      - app-net
+      - threads-network
+
+  backup:
+    build: ./backup
+    container_name: threads-backup
+    restart: unless-stopped
+    volumes:
+      - ./docker/rclone:/config/rclone
+      - ./docker/backup:/backup
+    environment:
+      DB_ROOT_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    entrypoint: ['/bin/sh', '-c']
+    command: >
+      "
+      echo 'Đã vào Rclone Backup Container, bắt đầu quá trình backup...' ;
+      until mysqladmin ping -h mysql -u root -p$$DB_ROOT_PASSWORD --silent; do
+          echo 'Chờ MySQL sẵn sàng...' ;
+          sleep 5 ;
+      done ;
+      echo 'MySQL đã sẵn sàng, bắt đầu backup định kỳ...' ;
+
+      while true; do
+          DUMP_FILE=/backup/dump_\$$(date +%Y%m%d_%H%M%S).sql ;
+          mysqldump -h mysql -u root -p$$DB_ROOT_PASSWORD $$DB_NAME > $$DUMP_FILE ;
+          if [ -s $$DUMP_FILE ]; then
+              rclone copy /backup gdrive:threads-backups/mysql --config /config/rclone/rclone.conf ;
+          else
+              echo 'Backup failed.' ;
+          fi ;
+          rm -f /backup/*.sql ;
+          sleep 30 ;
+      done
+      "
+    networks:
+      - app-net
+      - threads-network
+
+  soketi:
+    image: quay.io/soketi/soketi:1.6.1-16-alpine
+    container_name: threads-soketi
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SOKETI_DEFAULT_APP_ID: ${PUSHER_APP_ID}
+      SOKETI_DEFAULT_APP_KEY: ${PUSHER_KEY}
+      SOKETI_DEFAULT_APP_SECRET: ${PUSHER_SECRET}
+      SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES: 'true'
+    ports:
+      - '6001:6001'
+    networks:
+      - proxy-net
+      - threads-network
+
+networks:
+  threads-network:
+    driver: bridge
+  proxy-net:
+    external: true
+  app-net:
+    external: true

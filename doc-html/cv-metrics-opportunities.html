@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend — CV Metrics Opportunities
+  Style adapted from the existing doc-html report format.
+-->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookstore Backend · CV Metrics Opportunities</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --red:#B04A3F; --blue:#4A6FA5; --gold:#C98A2B;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--slate); font-family:var(--sans); line-height:1.55; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+  header.masthead{padding:64px 0 36px; border-bottom:1px solid var(--g200)}
+  .back{font-family:var(--mono); font-size:12px; color:var(--clay-d); text-decoration:none; display:inline-block; margin-bottom:24px}
+  .back:hover{text-decoration:underline}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--clay-d); margin:0 0 18px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.05; font-size:clamp(36px,5vw,58px); margin:0 0 20px; letter-spacing:-.01em}
+  .lede{font-size:clamp(16px,1.6vw,19px); max-width:78ch; color:var(--g700); margin:0}
+  .scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; margin:32px 0 8px}
+  .score{background:var(--paper); border:1px solid var(--g200); border-radius:14px; padding:18px 20px}
+  .score .n{font-family:var(--serif); font-size:34px; font-weight:600; line-height:1}
+  .score .n small{font-size:16px; color:var(--g500)}
+  .score .l{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500); margin-top:8px}
+  .score.hot .n{color:var(--clay-d)}
+  .score.ol .n{color:var(--olive)}
+  nav.toc{display:flex; flex-wrap:wrap; gap:10px; padding:28px 0; border-bottom:1px solid var(--g200)}
+  nav.toc a{text-decoration:none; font-size:13px; padding:8px 15px; border-radius:999px; border:1px solid var(--g300); background:var(--paper); color:var(--g700); transition:all .15s ease}
+  nav.toc a:hover{background:var(--clay); color:var(--paper); border-color:var(--clay); transform:translateY(-1px)}
+  section{padding:54px 0; border-bottom:1px solid var(--g200)}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:8px}
+  .sec-num{font-family:var(--mono); font-size:13px; color:var(--clay-d); padding-top:6px}
+  section h2{font-family:var(--serif); font-weight:600; font-size:clamp(25px,3.2vw,34px); margin:0; letter-spacing:-.01em}
+  .sec-sub{color:var(--g500); font-size:15px; margin:6px 0 30px; max-width:84ch}
+  .callout{border-left:3px solid var(--clay); background:var(--g100); padding:16px 20px; border-radius:0 10px 10px 0; margin:24px 0 0; font-size:14.5px; color:var(--g700)}
+  .callout.why{border-left-color:var(--olive)}
+  .callout.warn{border-left-color:var(--red)}
+  .callout b{color:var(--slate)}
+  .table-wrap{overflow:auto; background:var(--paper); border:1px solid var(--g200); border-radius:14px}
+  table{width:100%; min-width:1180px; border-collapse:collapse; font-size:13.2px}
+  th,td{text-align:left; vertical-align:top; padding:13px 14px; border-bottom:1px solid var(--g200)}
+  th{position:sticky; top:0; background:var(--paper); z-index:1; font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500)}
+  tr:hover td{background:var(--g100)}
+  td:first-child{font-family:var(--mono); color:var(--clay-d); width:44px}
+  code{font-family:var(--mono); font-size:.88em; background:var(--g100); padding:2px 6px; border-radius:5px; color:var(--clay-d)}
+  .tag{display:inline-block; font-family:var(--mono); font-size:10.5px; padding:3px 8px; border-radius:999px; margin:0 5px 6px 0; white-space:nowrap}
+  .t-now{background:#EAF0E2; color:#4F6138; border:1px solid #CBD9B6}
+  .t-setup{background:#FDF3D9; color:#8A6D1F; border:1px solid #ECD89C}
+  .t-gap{background:#F7E4DC; color:#A24A2E; border:1px solid #E8C2B2}
+  .rank{font-family:var(--mono); color:var(--g500); font-size:12px; display:block; margin-top:5px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px}
+  .card{background:var(--paper); border:1px solid var(--g200); border-radius:14px; padding:22px}
+  .card h3{font-family:var(--serif); font-size:20px; font-weight:600; margin:0 0 8px}
+  .card p{margin:8px 0 0; color:var(--g700); font-size:14.5px}
+  .card ul{margin:10px 0 0; padding-left:18px; font-size:14px; color:var(--g700)}
+  .card li{margin:6px 0}
+  .mono{font-family:var(--mono)}
+  footer{padding:46px 0 64px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:center}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:18px}
+  footer .mono{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  @media(max-width:640px){ section{padding:40px 0} .sec-head{flex-direction:column; gap:4px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <a class="back" href="./index.html">&larr; Documentation index</a>
+    <p class="eyebrow">CV Metrics · Hiring-manager scan</p>
+    <h1>Những chỗ có thể biến thành con số trên CV</h1>
+    <p class="lede">
+      Báo cáo này không khen tính năng. Mục tiêu là chỉ ra các hạng mục trong codebase có thể tạo dòng CV dạng
+      <b>vấn đề &rarr; giải pháp kỹ thuật &rarr; kết quả đo được</b>. Mỗi đề xuất bên dưới đều neo vào file/hàm cụ thể.
+      Chỗ nào chưa có dữ liệu chạy thật hoặc benchmark thì ghi rõ <b>chưa đủ dữ kiện</b>.
+    </p>
+    <div class="scoreboard">
+      <div class="score"><div class="n">35</div><div class="l">Controllers</div></div>
+      <div class="score"><div class="n">95</div><div class="l">Route handlers</div></div>
+      <div class="score"><div class="n">44</div><div class="l">Prisma models</div></div>
+      <div class="score ol"><div class="n">57</div><div class="l">Index/unique directives</div></div>
+      <div class="score hot"><div class="n">0</div><div class="l">Unit specs in src</div></div>
+      <div class="score"><div class="n">112<small>s</small></div><div class="l">Measured build baseline</div></div>
+    </div>
+    <div class="callout warn">
+      <b>Nguyên tắc đọc bảng:</b> "Đo ngay" nghĩa là có thể lấy số bằng code/static commands hoặc dữ liệu DB nếu bạn cung cấp DB đang chạy.
+      "Cần thiết lập" nghĩa là phải thêm benchmark, instrumentation, load test, test concurrency hoặc log trước-sau. Không có dòng nào bên dưới tự bịa kết quả.
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#ranking">① Bảng xếp hạng</a>
+    <a href="#top3">② Top 3 nên làm trước</a>
+    <a href="#proof">③ Số dễ bị nghi ngờ fake</a>
+    <a href="#missing">④ Dữ kiện còn thiếu</a>
+  </nav>
+
+  <section id="ranking">
+    <div class="sec-head"><span class="sec-num">①</span><h2>Bảng xếp hạng cơ hội tạo metric</h2></div>
+    <p class="sec-sub">
+      Xếp theo tiềm năng gây ấn tượng trên CV: ưu tiên hệ thống có rủi ro thật, đo được bằng benchmark/log, và có câu chuyện hệ thống rõ ràng.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Hạng mục</th>
+            <th>Bằng chứng trong code (file/hàm)</th>
+            <th>Metric có thể tạo</th>
+            <th>Cách đo (đo ngay / cần thiết lập)</th>
+            <th>Cách đo cụ thể (công cụ/script)</th>
+            <th>Mẫu câu CV (before&rarr;after)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><b>Payment webhook idempotency + atomic update</b><span class="rank">Rủi ro tiền thật, CV value rất cao</span></td>
+            <td>
+              <code>src/modules/hooks/service/hooks.service.ts</code>: <code>handleSepayWebhook</code>, <code>handleSepayWebhookMarkDone</code>.<br>
+              <code>src/modules/hooks/repository/hooks.repository.ts</code>: <code>saveSepayWebhook</code> dùng <code>upsert</code>, <code>markOrderAndPaymentSuccess</code>.<br>
+              <code>prisma/schema.prisma</code>: <code>WebhookInbox @@unique([gateway, providerEventId])</code>, <code>PaymentTransaction @@index([gateway, providerTxnId])</code>.
+            </td>
+            <td>
+              Duplicate webhook accepted exactly once; tỉ lệ webhook duplicate bị skip; số order/payment bị update lệch; thời gian xử lý webhook p50/p95; tỉ lệ mismatch amount được phát hiện.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Chưa đủ dữ kiện production</span></td>
+            <td>
+              Viết e2e/integration test bắn cùng <code>providerEventId</code> 10-100 lần song song; query <code>webhook_inbox</code>, <code>payment_transactions</code>, <code>orders</code> sau test. Dùng <code>autocannon</code> hoặc Jest + <code>Promise.all</code>; bật Prisma query log để kiểm tra transaction.
+            </td>
+            <td>
+              Hardened Sepay webhook flow from non-measured retry behavior to idempotent processing, proving <b>[N]</b> duplicate callbacks produced <b>1</b> order transition and <b>0</b> double-payment side effects.
+            </td>
+          </tr>
+
+          <tr>
+            <td>2</td>
+            <td><b>Inventory correctness: reserved stock, cleanup, overselling</b><span class="rank">Metric đúng/sai rất mạnh khi phỏng vấn backend</span></td>
+            <td>
+              <code>src/modules/order/service/order.service.ts</code>: <code>processOrderItems</code> kiểm tra <code>stock - reserved</code>, tạo snapshot, tăng reserved.<br>
+              <code>src/modules/order/repository/order.repository.ts</code>: <code>updateOrderDone</code>, <code>clearOrder</code> cập nhật stock/reserved.<br>
+              <code>src/modules/order/job/order.cleanup.job.ts</code>: cron mỗi 10 phút.<br>
+              <code>prisma/schema.prisma</code>: <code>BookVariant.stock</code>, <code>reserved</code>, <code>available</code>, <code>Order.expiredAt</code>.
+            </td>
+            <td>
+              Oversell rate dưới concurrent checkout; inventory drift count; số order hết hạn được giải phóng; số reserved âm hoặc lớn hơn stock; query/write count theo số item trong cart.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Chưa đủ dữ kiện concurrency</span></td>
+            <td>
+              Seed 1 variant stock thấp, chạy 50 checkout đồng thời bằng Jest hoặc k6; sau đó query <code>book_variants</code>, <code>orders</code>, <code>order_items</code>.
+              Thêm SQL audit: <code>reserved &lt; 0 OR reserved &gt; stock OR available != stock - reserved</code>.
+            </td>
+            <td>
+              Reduced overselling risk by replacing unmeasured checkout inventory updates with transaction-backed stock reservation, validating <b>[N]</b> concurrent checkout attempts with <b>0</b> negative inventory records.
+            </td>
+          </tr>
+
+          <tr>
+            <td>3</td>
+            <td><b>RBAC cache hit-rate: key mismatch đang làm cache có khả năng luôn miss</b><span class="rank">Bug thật, fix nhỏ, số đẹp</span></td>
+            <td>
+              <code>src/common/security/guard/permission.guard.ts</code>: đọc key <code>role_per:${id}:perms</code> nhưng set bằng <code>keyOf(roleId)</code> trả <code>role_user:${id}:perms</code>.<br>
+              <code>src/common/constants/enum-ttl.constant.ts</code>: <code>PERMISSION_CACHE_TTL</code>.
+            </td>
+            <td>
+              Cache hit rate trước/sau; số DB query tới <code>role_permissions</code> trên mỗi protected request; p95 latency của protected endpoints; Redis key cardinality.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Chưa đủ log hit/miss</span></td>
+            <td>
+              Thêm counter tạm trong guard hoặc dùng Prisma query log + Redis monitor; bắn 1,000 request tới endpoint có <code>@RequirePermissions</code> trước/sau fix. Kiểm tra key bằng <code>redis-cli KEYS role_*:perms</code>.
+            </td>
+            <td>
+              Fixed RBAC cache-key mismatch and improved protected-route authorization from <b>[Q]</b> DB permission reads/request to <b>[Q2]</b>, raising cache hit rate from <b>[H1]%</b> to <b>[H2]%</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>4</td>
+            <td><b>Semantic search cost/latency: cache read có nhưng chưa set</b><span class="rank">External API cost + latency, rất dễ kể chuyện</span></td>
+            <td>
+              <code>src/modules/search/service/search.service.ts</code>: <code>searchBooks</code> tạo <code>cacheKey</code> và <code>cache.get</code>, nhưng không thấy <code>cache.set</code> trước khi return.<br>
+              <code>src/modules/pinecone/service/pinecone.service.ts</code>: <code>queryBooks</code> gọi Gemini embedding rồi Pinecone query.<br>
+              <code>src/modules/search/search.module.ts</code>: import <code>CacheProvider</code>.
+            </td>
+            <td>
+              Số lần gọi Gemini/Pinecone giảm; chi phí external call/query giảm; search p50/p95; cache hit rate; error rate khi dependency AI chậm.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Chưa đủ dữ kiện traffic/cost</span></td>
+            <td>
+              Wrap <code>GeminiService.embedText</code> và <code>PineconeService.queryBooks</code> bằng counter; benchmark 100 truy vấn lặp lại cùng <code>q/lang/page/limit</code>; so sánh trước/sau thêm <code>cache.set(cacheKey, response, ttl)</code>.
+            </td>
+            <td>
+              Eliminated redundant semantic-search external calls by completing Redis caching, reducing repeated Gemini/Pinecone calls by <b>[X]%</b> and p95 search latency from <b>[A]ms</b> to <b>[B]ms</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>5</td>
+            <td><b>Catalog caching: home/list/detail/category</b><span class="rank">Nhiều endpoint đọc, dễ benchmark p95</span></td>
+            <td>
+              <code>src/modules/book/catalog/service/catalog.service.ts</code>: <code>withCache</code>, <code>getCatalogHome</code>, <code>getCategories</code>, <code>listBooks</code>, <code>getBookDetailBySlug</code>.<br>
+              <code>src/common/constants/enum-ttl.constant.ts</code>: TTL home/category/list/detail.<br>
+              <code>src/modules/book/catalog/repository/catalog.repository.ts</code>: nhiều <code>findMany</code>, <code>count</code>, nested <code>select</code>.
+            </td>
+            <td>
+              p50/p95 API latency cache miss vs hit; DB query count/request; throughput request/second; Redis hit ratio; số query tránh được trên trang catalog.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-now">Code path đã có</span></td>
+            <td>
+              Bật Prisma query logging; dùng <code>autocannon -c 50 -d 30</code> vào <code>/catalog</code>, <code>/catalog/books</code>, detail slug. Chạy cold cache, warm cache, sau invalidation. Ghi p95 và query count.
+            </td>
+            <td>
+              Tuned Redis caching for catalog read paths, cutting warm-cache DB reads by <b>[X]%</b> and improving p95 product-list latency from <b>[A]ms</b> to <b>[B]ms</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>6</td>
+            <td><b>Order creation query scaling: claim "N+1 to 5 queries" cần đo lại</b><span class="rank">Có comment rõ, nhưng code vẫn có per-item writes</span></td>
+            <td>
+              <code>src/modules/order/service/order.service.ts</code>: comment <code>Optimize from N + 1 queries to 5 queries</code> trong <code>processOrderItems</code>.<br>
+              Trong cùng hàm: bulk đọc variant bằng <code>findBookVariantByIds</code>, nhưng mỗi cart item vẫn <code>upsertByContentHash</code>, <code>orderItemService.create</code>, <code>updateReservedById</code>.
+            </td>
+            <td>
+              Query count theo cart size 1/5/20/100; checkout latency theo cart size; transaction duration; lock wait/deadlock rate.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Chưa đủ query trace</span></td>
+            <td>
+              Bật <code>DEBUG=prisma:query</code> hoặc Prisma event log; seed cart size tăng dần; gọi checkout trong integration test; đếm SQL statements và transaction duration. Sau đó thử bulk create/update strategy.
+            </td>
+            <td>
+              Reworked checkout item processing from <b>[3N+K]</b> SQL operations to <b>[M]</b> batched operations, reducing checkout p95 for <b>[N]</b>-item carts from <b>[A]ms</b> to <b>[B]ms</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>7</td>
+            <td><b>Recommendation engine quality: hit-rate@K, coverage, conversion</b><span class="rank">Rất hấp dẫn nếu có event/order data</span></td>
+            <td>
+              <code>src/modules/user-event/service/user-event.service.ts</code>: <code>getRecommend</code>, <code>buildScoreWithRecommendVariant</code>, <code>buildScoreWithRecommendOrder</code>, co-purchase expansion.<br>
+              <code>src/common/constants/event-type.constant.ts</code>: <code>EVENT_WEIGHT</code>, <code>timeDecay</code>, <code>scoreEvent</code>.<br>
+              <code>prisma/schema.prisma</code>: <code>UserEvent @@index([userId, createdAt])</code>, <code>OrderItem</code>.
+            </td>
+            <td>
+              hit-rate@5/@10; coverage; novelty/diversity; click-through rate; add-to-cart uplift; conversion uplift; latency recommendation p95.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Cần event/order history</span></td>
+            <td>
+              Offline evaluator: split user history by time, train on older events, predict next purchase/cart event. Script <code>tsx scripts/evaluate-recommendation.ts</code> đọc <code>user_events</code> + <code>order_items</code>, xuất hit-rate@K và coverage.
+            </td>
+            <td>
+              Built and evaluated deterministic recommendation ranking, improving offline hit-rate@10 from <b>[A]%</b> baseline popularity to <b>[B]%</b> while keeping p95 generation under <b>[T]ms</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>8</td>
+            <td><b>Pinecone reindex throughput + data-quality skip rate</b><span class="rank">Đã trả về số trong code</span></td>
+            <td>
+              <code>src/modules/pinecone/service/pinecone.service.ts</code>: <code>fullReindexBooks</code> batch size 200, trả <code>totalSource</code>, <code>indexed</code>, <code>skipped</code>, <code>durationMs</code>.<br>
+              <code>src/utils/generateVector.util.ts</code>: build embedding text.
+            </td>
+            <td>
+              records/minute; skip rate; batch failure rate; reindex duration; embedding payload size; Pinecone upsert throughput.
+            </td>
+            <td><span class="tag t-now">Đo ngay nếu có API keys + DB</span><span class="tag t-gap">Chưa có output chạy thật</span></td>
+            <td>
+              Gọi endpoint hoặc service <code>reindexBooks()</code>; lưu JSON output; chạy với batch 50/100/200; so sánh <code>durationMs</code>, <code>indexed</code>, <code>skipped</code>. Bổ sung log theo chunk nếu cần.
+            </td>
+            <td>
+              Optimized vector-search reindexing to process <b>[R]</b> book records in <b>[T]</b>, with <b>[S]%</b> invalid records skipped safely instead of failing the full batch.
+            </td>
+          </tr>
+
+          <tr>
+            <td>9</td>
+            <td><b>Email outbox + BullMQ reliability</b><span class="rank">Có bảng trạng thái, retry, jobId idempotent</span></td>
+            <td>
+              <code>src/modules/jobs/producers/email.producer.ts</code>: <code>attempts: 3</code>, exponential backoff, <code>jobId</code> theo outbox id.<br>
+              <code>src/modules/jobs/processors/email.processor.ts</code>: chuyển <code>PENDING/SENDING/SENT/FAILED</code>.<br>
+              <code>src/modules/email-outbox/repository/email-outbox.repository.ts</code>: create/find/count/cancel outbox.<br>
+              <code>prisma/schema.prisma</code>: <code>EmailOutbox @@index([status, scheduledAt])</code>.
+            </td>
+            <td>
+              Email success rate; retry recovery rate; duplicate job prevented; queue latency createdAt&rarr;sentAt; failed email backlog; OTP send cost giảm.
+            </td>
+            <td><span class="tag t-now">Đo ngay nếu DB queue có dữ liệu</span><span class="tag t-setup">Cần thêm sentAt/attempt update chuẩn</span></td>
+            <td>
+              SQL group by <code>email_outbox.status</code>; instrument processor để set <code>sentAt</code>, <code>attempts</code>, <code>lastError</code>; dùng BullMQ metrics hoặc Redis queue stats; test duplicate enqueue cùng outboxId.
+            </td>
+            <td>
+              Introduced outbox-backed email delivery with BullMQ retries, improving send success rate from <b>[A]%</b> to <b>[B]%</b> and preventing <b>[N]</b> duplicate email jobs via stable job IDs.
+            </td>
+          </tr>
+
+          <tr>
+            <td>10</td>
+            <td><b>Image optimization + R2 upload path</b><span class="rank">Bandwidth/asset-size metric dễ hiểu</span></td>
+            <td>
+              <code>src/utils/upload.util.ts</code>: <code>optimizeProductImage</code> resize 1600x1600, WebP quality 80.<br>
+              <code>src/modules/uploads/service/uploads.service.ts</code>: upload buffer đã optimize, presigned URL.<br>
+              <code>src/modules/r2-service/service/r2-service.service.ts</code>: S3-compatible R2 <code>PutObject</code>, presigned URL expires 60s.<br>
+              <code>src/modules/book/asset/service/book-asset.service.ts</code>: giới hạn 5 asset/book.
+            </td>
+            <td>
+              File-size reduction %; bandwidth saved/upload; upload latency backend proxy vs presigned direct upload; memory peak under 10MB upload; CDN image load time.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Cần tập ảnh mẫu</span></td>
+            <td>
+              Script Node đọc thư mục ảnh mẫu, chạy <code>optimizeProductImage</code>, ghi before/after bytes và duration. Benchmark upload backend vs presigned direct bằng k6 hoặc autocannon multipart.
+            </td>
+            <td>
+              Reduced product-image payload size by <b>[X]%</b> using Sharp WebP optimization and R2 upload flow, cutting median upload bandwidth from <b>[A]MB</b> to <b>[B]MB</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>11</td>
+            <td><b>OTP resend abuse control</b><span class="rank">Security + cost metric</span></td>
+            <td>
+              <code>src/modules/auth/service/auth.service.ts</code>: <code>RESEND_MAX_ATTEMPTS_PER_DAY = 5</code>, <code>RESEND_BLOCK_WINDOW_IN_MS = 5h</code>, <code>resendEmail</code> count/latest check.<br>
+              <code>src/modules/email-outbox/repository/email-outbox.repository.ts</code>: <code>countOtpRegisterByEmailSince</code>, <code>cancelOtpRegisterInProgressByEmail</code>.
+            </td>
+            <td>
+              OTP abuse attempts blocked; email-send cost reduction; resend 429 rate; stale OTP cancelled; verification success rate.
+            </td>
+            <td><span class="tag t-now">Đo ngay nếu có email_outbox data</span><span class="tag t-gap">Chưa đủ dữ kiện traffic</span></td>
+            <td>
+              Query outbox theo email/template trong 24h; thêm counter khi throw <code>TOO_MANY_REQUESTS</code>; simulate resend 6 lần trong e2e để chứng minh HTTP 429 và số outbox bị cancel.
+            </td>
+            <td>
+              Added resend quota enforcement for verification emails, blocking <b>[N]</b> abusive resend attempts/day and reducing duplicate OTP outbox records by <b>[X]%</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>12</td>
+            <td><b>Guest session cleanup + cart merge retention</b><span class="rank">Có thể ra số storage và conversion</span></td>
+            <td>
+              <code>src/modules/guest-session/job/guest-session.cleanup.job.ts</code>: daily cleanup inactive 3 days.<br>
+              <code>src/modules/guest-session/repository/guest-session.repository.ts</code>: transaction trả <code>deletedCartItems</code>, <code>deletedCarts</code>, <code>deletedSessions</code>.<br>
+              <code>src/modules/cart/service/cart.service.ts</code>: <code>mergeCart</code> trả <code>mergeCount</code>.
+            </td>
+            <td>
+              Số stale sessions/carts/items xóa mỗi ngày; DB rows/storage saved; cart items retained after login; guest-to-user conversion preservation.
+            </td>
+            <td><span class="tag t-now">Đo ngay qua job output nếu DB chạy</span><span class="tag t-gap">Chưa có log lịch sử</span></td>
+            <td>
+              Chạy cleanup trong staging; lưu JSON result theo ngày; query count rows trước/sau; thêm log metric cho <code>mergeCount</code> và tỉ lệ guest cart được preserve khi register/login.
+            </td>
+            <td>
+              Automated guest-session cleanup and cart merge, deleting <b>[N]</b> stale records/day while preserving <b>[M]</b> cart items during guest-to-user conversion.
+            </td>
+          </tr>
+
+          <tr>
+            <td>13</td>
+            <td><b>Order status polling cache</b><span class="rank">Payment UI thường poll nhiều</span></td>
+            <td>
+              <code>src/modules/hooks/service/hooks.service.ts</code>: <code>getOrderStatus</code> cache key <code>order:status:${orderCode}</code>, update cache khi webhook paid nếu key tồn tại.<br>
+              <code>src/common/constants/enum-ttl.constant.ts</code>: <code>ORDER_STATUS_TTL</code>.
+            </td>
+            <td>
+              DB calls avoided during payment polling; p95 status endpoint; stale-cache incidents; cache hit rate.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-now">Code path đã có</span></td>
+            <td>
+              Simulate FE polling mỗi 2s trong 5 phút cho 100 order; log Prisma queries trước/sau cache; assert webhook updates cached status when paid.
+            </td>
+            <td>
+              Reduced payment-status polling DB load by <b>[X]%</b> with Redis-backed order status cache while keeping webhook-paid transitions visible within <b>[T]s</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>14</td>
+            <td><b>Full-text search index vs fallback query</b><span class="rank">DB performance metric rõ nhưng cần endpoint dùng index</span></td>
+            <td>
+              <code>prisma/migrations/20260621151522_create_full_text_title/migration.sql</code>: <code>CREATE FULLTEXT INDEX idx_book_translation_fulltext ON book_translations(title, description)</code>.<br>
+              <code>src/modules/book/catalog/repository/catalog.repository.ts</code>: list/search repository paths có <code>searchPhrase</code> ở admin book.
+            </td>
+            <td>
+              Query latency before/after FULLTEXT; rows examined; EXPLAIN plan; CPU time; admin search p95.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-gap">Cần DB + EXPLAIN</span></td>
+            <td>
+              Seed 10k/100k translations; chạy <code>EXPLAIN ANALYZE</code> với LIKE vs MATCH AGAINST; benchmark endpoint admin search; xác nhận index thật sự được dùng.
+            </td>
+            <td>
+              Replaced LIKE-based book search with MySQL FULLTEXT indexing, lowering admin search p95 from <b>[A]ms</b> to <b>[B]ms</b> on <b>[N]</b> translations.
+            </td>
+          </tr>
+
+          <tr>
+            <td>15</td>
+            <td><b>Admin dashboard stats cache</b><span class="rank">Số vừa phải, dễ đo</span></td>
+            <td>
+              <code>src/modules/admin/book/admin-book.service.ts</code>: <code>getStats</code> cache <code>admin:stats</code> 86,400,000 ms.<br>
+              <code>src/modules/admin/user/admin-user.service.ts</code>: <code>admin:users:stats</code>.<br>
+              <code>src/modules/admin/categories/admin-category.service.ts</code>: <code>admin:categories:stats</code>.
+            </td>
+            <td>
+              Count queries avoided/dashboard load; p95 admin stats latency; cache staleness; cold vs warm response time.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-now">Code path đã có</span></td>
+            <td>
+              Bật Prisma query log, gọi 3 endpoint stats 100 lần; so sánh cold/warm. Sau mutation admin, đo stale window và thêm invalidation nếu cần.
+            </td>
+            <td>
+              Cached admin dashboard aggregates, reducing repeated count queries by <b>[X]%</b> and improving warm stats latency from <b>[A]ms</b> to <b>[B]ms</b>.
+            </td>
+          </tr>
+
+          <tr>
+            <td>16</td>
+            <td><b>Audit-log coverage for admin mutations</b><span class="rank">Đúng đắn/traceability, không chỉ performance</span></td>
+            <td>
+              <code>src/modules/admin/book/admin-book.service.ts</code>: <code>createBookTranslation</code>, <code>updateBook</code>, <code>deleteBook</code> gọi <code>auditLogService.createAuditLog</code> với before/after.<br>
+              <code>src/modules/audit-log/service/audit-log.service.ts</code>, <code>repository/audit-log.repository.ts</code>.<br>
+              <code>prisma/schema.prisma</code>: <code>AuditLog</code> có index actor/time và entity/id.
+            </td>
+            <td>
+              % admin mutation có audit log; incident trace lookup time; số change có before/after; số missing audit paths.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-now">Có thể static scan một phần</span></td>
+            <td>
+              Static scan các controller mutation <code>@Post/@Patch/@Delete</code> trong admin; map sang service method có/không có audit call. E2E test assert mỗi mutation tạo đúng 1 audit row.
+            </td>
+            <td>
+              Expanded admin audit coverage from <b>[A]%</b> to <b>[B]%</b> of mutation endpoints, capturing before/after JSON for faster incident investigation.
+            </td>
+          </tr>
+
+          <tr>
+            <td>17</td>
+            <td><b>Test coverage baseline</b><span class="rank">Đo ngay, nhưng CV value phụ thuộc test chất lượng</span></td>
+            <td>
+              <code>package.json</code>: Jest rootDir <code>src</code>, <code>test:cov</code> script.<br>
+              Repo scan: <code>0</code> <code>*.spec.ts</code> trong <code>src</code>, <code>1</code> e2e spec trong <code>test/app.e2e-spec.ts</code>.<br>
+              Lệnh đã chạy: <code>npm test -- --coverage --runInBand</code> báo <code>No tests found</code> trong <code>src</code>.
+            </td>
+            <td>
+              Unit coverage % before/after; số service critical được test; số bug/race phát hiện qua test; e2e coverage payment/auth/order.
+            </td>
+            <td><span class="tag t-now">Đo ngay: baseline 0 unit specs</span><span class="tag t-setup">Cần viết test để có after</span></td>
+            <td>
+              Thêm unit/integration tests cho <code>PermissionsGuard</code>, <code>handleSepayWebhook</code>, <code>processOrderItems</code>, recommendation scoring. Chạy <code>npm run test:cov</code> và lưu coverage report.
+            </td>
+            <td>
+              Raised backend unit coverage from <b>0 measured service specs</b> to <b>[C]%</b> across auth, payment webhook, inventory, and RBAC guard logic.
+            </td>
+          </tr>
+
+          <tr>
+            <td>18</td>
+            <td><b>Build time / dist size baseline</b><span class="rank">Đo được ngay, nhưng ít ấn tượng hơn reliability</span></td>
+            <td>
+              <code>package.json</code>: <code>build: nest build</code>.<br>
+              <code>nest-cli.json</code>: <code>deleteOutDir: true</code>.<br>
+              Lệnh đã chạy trong repo: <code>Measure-Command { npm run build }</code> = <code>112,248.51 ms</code>; <code>dist</code> = <code>1,468</code> files, khoảng <code>2,759,508</code> bytes.
+            </td>
+            <td>
+              Build duration; dist file count/size; largest emitted files; CI time; incremental build benefit.
+            </td>
+            <td><span class="tag t-now">Đo ngay</span></td>
+            <td>
+              Chạy <code>Measure-Command { npm run build }</code>; đo <code>Get-ChildItem dist -Recurse -File | Measure-Object Length -Sum</code>; so sánh sau khi tối ưu tsconfig/Nest build.
+            </td>
+            <td>
+              Reduced NestJS production build time from <b>112s</b> to <b>[T]s</b> and trimmed emitted artifacts from <b>1,468</b> files to <b>[N]</b> files by optimizing build configuration.
+            </td>
+          </tr>
+
+          <tr>
+            <td>19</td>
+            <td><b>API surface / documentation coverage</b><span class="rank">Hữu ích cho portfolio, không phải metric backend mạnh nhất</span></td>
+            <td>
+              <code>src/main.ts</code>: Swagger setup tại <code>${globalPrefix}/docs</code>.<br>
+              Static scan hiện tại: <code>35</code> controller và <code>95</code> HTTP route decorators trong <code>src/modules</code>.<br>
+              Nhiều controller có <code>@ApiOkResponse</code>, <code>@ApiBearerAuth</code>, nhưng chưa có script đo coverage docs.
+            </td>
+            <td>
+              % route có Swagger response DTO; % protected route có auth docs; contract drift count; thời gian export API contract.
+            </td>
+            <td><span class="tag t-now">Đo ngay một phần bằng static scan</span><span class="tag t-setup">Cần script contract coverage</span></td>
+            <td>
+              Viết TS AST/static script: đếm route method decorators và route có <code>@ApiOkResponse/@ApiResponse</code>; export OpenAPI JSON rồi so với expected route list.
+            </td>
+            <td>
+              Increased API documentation coverage from <b>[A]%</b> to <b>[B]%</b> across <b>95</b> backend routes, reducing contract drift found during integration testing.
+            </td>
+          </tr>
+
+          <tr>
+            <td>20</td>
+            <td><b>Pagination list endpoints: count/find parallelization</b><span class="rank">Nhiều nơi dùng, nhưng số thường nhỏ hơn cache/payment</span></td>
+            <td>
+              <code>src/common/pagination/base-pagination.util.ts</code>: pagination helper.<br>
+              <code>src/modules/category/service/category.service.ts</code>, <code>src/modules/admin/user/admin-user.service.ts</code>, <code>src/modules/admin/order/admin-order.service.ts</code>, <code>src/modules/stock-import/service/*</code>: pattern <code>Promise.all([count, findMany])</code>.
+            </td>
+            <td>
+              List endpoint latency serial vs parallel; DB time per list; p95 admin list latency; throughput under concurrent admin browse.
+            </td>
+            <td><span class="tag t-setup">Cần thiết lập</span><span class="tag t-now">Pattern code đã có</span></td>
+            <td>
+              Benchmark one endpoint with serial implementation branch vs current <code>Promise.all</code>; use autocannon and Prisma query timing; report p95 improvement.
+            </td>
+            <td>
+              Standardized paginated list queries with parallel count/data fetch, reducing admin list p95 latency by <b>[X]%</b> across <b>[N]</b> endpoints.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="top3">
+    <div class="sec-head"><span class="sec-num">②</span><h2>Top 3 nên làm trước</h2></div>
+    <p class="sec-sub">Ba hạng mục này cho số đẹp nhất, đáng tin nhất, và dễ chứng minh trong phỏng vấn.</p>
+    <div class="grid3">
+      <div class="card">
+        <h3>1. RBAC cache key mismatch</h3>
+        <p>Fix nhỏ, bằng chứng rất rõ: đọc <code>role_per</code> nhưng ghi <code>role_user</code>. Dễ benchmark trước/sau bằng DB query count và cache hit-rate.</p>
+        <ul>
+          <li>Con số đẹp: DB permission reads/request, hit-rate, p95 latency.</li>
+          <li>Đáng tin: có thể demo Redis keys và Prisma query log ngay trong phỏng vấn.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>2. Payment webhook idempotency</h3>
+        <p>Đây là câu chuyện backend mạnh nhất vì liên quan tiền, retry callback, transaction và duplicate processing.</p>
+        <ul>
+          <li>Con số đẹp: 100 duplicate callbacks &rarr; 1 transition, 0 duplicate side effects.</li>
+          <li>Đáng tin: có thể có integration test bắn song song cùng <code>providerEventId</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>3. Semantic search cache hoàn chỉnh</h3>
+        <p>Code hiện đã có <code>cache.get</code> nhưng thiếu <code>cache.set</code> trong <code>searchBooks</code>. Sau khi fix, số giảm external calls thường rất dễ nhìn.</p>
+        <ul>
+          <li>Con số đẹp: Gemini/Pinecone calls giảm, cost/query giảm, p95 latency giảm.</li>
+          <li>Đáng tin: mock/counter service là đủ chứng minh trước khi có billing thật.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="proof">
+    <div class="sec-head"><span class="sec-num">③</span><h2>Những con số dễ bị nghi ngờ fake</h2></div>
+    <p class="sec-sub">Các số dưới đây vẫn dùng được, nhưng phải có bằng chứng đi kèm nếu đưa vào CV.</p>
+    <div class="grid3">
+      <div class="card">
+        <h3>"Giảm latency X%"</h3>
+        <p>Dễ bị hỏi vì latency phụ thuộc máy, DB size, network, Redis, warm/cold cache.</p>
+        <ul>
+          <li>Chứng minh bằng script benchmark commit vào repo.</li>
+          <li>Lưu output thô: p50/p95, concurrency, dataset size, env.</li>
+          <li>Demo chạy lại được bằng Docker Compose hoặc staging DB.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>"0 overselling / exactly once"</h3>
+        <p>Đây là số mạnh nhưng phải là concurrency test, không phải test tuần tự.</p>
+        <ul>
+          <li>Commit test dùng <code>Promise.all</code> hoặc k6 với cùng variant stock thấp.</li>
+          <li>Log SQL/query sau test: stock, reserved, orders, order_items.</li>
+          <li>Giữ seed data và câu lệnh chạy lại.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>"Tăng hit-rate recommendation"</h3>
+        <p>Rất dễ bị nghi nếu không nói rõ offline evaluation protocol.</p>
+        <ul>
+          <li>Tách train/test theo thời gian, không random leakage.</li>
+          <li>So với baseline popularity hoặc newest books.</li>
+          <li>Report hit-rate@K, coverage và số user/event dùng để đo.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>"Giảm cost AI/search"</h3>
+        <p>Nếu chưa có billing thật, chỉ nên ghi số calls avoided hoặc estimated cost.</p>
+        <ul>
+          <li>Instrument counter cho Gemini/Pinecone calls.</li>
+          <li>Ghi rõ workload: số query lặp, unique query, cache TTL.</li>
+          <li>Nếu dùng estimate, tách khỏi số billing thật.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>"Coverage tăng lên C%"</h3>
+        <p>Coverage tự thân không chứng minh chất lượng nếu test chỉ cover mapper/dto.</p>
+        <ul>
+          <li>Ưu tiên test payment webhook, RBAC guard, inventory race, auth token.</li>
+          <li>Đính kèm coverage report và danh sách critical paths covered.</li>
+          <li>Nhắc rõ baseline hiện tại: Jest root <code>src</code> không có unit specs.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>"Giảm ảnh X%"</h3>
+        <p>Phụ thuộc tập ảnh. Không được lấy một ảnh đẹp nhất làm đại diện.</p>
+        <ul>
+          <li>Dùng ít nhất 30-100 ảnh đại diện: JPG/PNG/WebP, cover lớn/nhỏ.</li>
+          <li>Báo median, p90, min/max, không chỉ average.</li>
+          <li>Lưu manifest trước/sau bytes và thời gian optimize.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="missing">
+    <div class="sec-head"><span class="sec-num">④</span><h2>Dữ kiện còn thiếu</h2></div>
+    <p class="sec-sub">Cần các dữ kiện này để biến cơ hội thành con số CV thật, có thể bảo vệ khi phỏng vấn.</p>
+    <div class="grid3">
+      <div class="card">
+        <h3>Dữ liệu chạy thật</h3>
+        <ul>
+          <li>DB snapshot hoặc seed lớn: users, books, variants, events, orders, email_outbox, webhook_inbox.</li>
+          <li>Redis/BullMQ metrics nếu có: queue wait time, retries, failed jobs.</li>
+          <li>Traffic/log thực tế: request rate, slow endpoints, payment polling pattern.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Môi trường đo</h3>
+        <ul>
+          <li>Docker Compose/staging chạy được đủ MariaDB, Redis, app.</li>
+          <li>Thông số máy đo: CPU/RAM, Node version, DB version, network local/staging.</li>
+          <li>API keys hoặc mock cho Gemini/Pinecone/R2 để tách latency nội bộ và external.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Benchmark scripts</h3>
+        <ul>
+          <li>Load test: autocannon/k6 cho catalog, search, webhook, order status.</li>
+          <li>Concurrency test: checkout stock thấp, duplicate webhook, refresh/logout token.</li>
+          <li>Offline evaluator: recommendation hit-rate@K và search relevance test set.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Observability</h3>
+        <ul>
+          <li>Structured log có request id, route, status, duration, user/session id khi an toàn.</li>
+          <li>Prisma query timing/query count per request trong benchmark.</li>
+          <li>Metrics counters: cache hit/miss, external API calls, webhook duplicate, queue retries.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Commit history</h3>
+        <ul>
+          <li>Commit trước fix, commit benchmark baseline, commit implementation, commit after benchmark.</li>
+          <li>Không sửa benchmark sau khi có số đẹp nếu không có lý do rõ.</li>
+          <li>Giữ raw output trong <code>docs/benchmarks/</code> hoặc CI artifacts.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Ranh giới chưa được bịa</h3>
+        <ul>
+          <li>Chưa có số production latency, error rate, cost AI thật.</li>
+          <li>Chưa có coverage report hợp lệ vì hiện tại không có unit specs trong <code>src</code>.</li>
+          <li>Chưa có dataset để claim recommendation/search quality.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="acc">Use the metrics only after measurement.</div>
+    <div class="mono">Generated from source scan · Bookstore Backend</div>
+  </footer>
+</div>
+</body>
+</html>

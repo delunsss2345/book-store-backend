@@ -1,0 +1,104 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+    IsArray,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Max,
+    Min,
+    ValidateNested
+} from 'class-validator';
+
+export class CreatePurchaseOrderItemRequestDto {
+    @ApiProperty({
+        example: 1,
+        description: 'ID của biến thể sách',
+        type: Number,
+    })
+    @Type(() => Number)
+    @IsNumber()
+    bookVariantId: number;
+
+    @ApiProperty({
+        example: 10,
+        description: 'Số lượng',
+        type: Number,
+    })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    quantity: number;
+
+    @ApiProperty({
+        example: 120000,
+        description: 'Giá mỗi đơn vị chưa chiết khấu',
+        type: Number,
+    })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    unitPrice: number;
+
+    @ApiProperty({
+        example: 10,
+        description: 'Tỷ lệ chiết khấu (0–100), ví dụ 10 = 10%',
+        type: Number,
+        format: 'float',
+    })
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    @Max(100)
+    discountPrice: number;
+}
+
+export class CreatePurchaseOrderRequestDto {
+    @ApiProperty({
+        example: 1,
+        description: 'ID nhà cung cấp',
+        type: Number,
+    })
+    @Type(() => Number)
+    @IsNumber()
+    supplierId: number;
+
+
+    @ApiProperty({
+        example: 'PO-20260312-001',
+        description: 'Mã đơn nhập',
+    })
+    @IsString()
+    code: string;
+
+    @ApiProperty({
+        example: 'Nhập hàng tháng 3',
+        description: 'Ghi chú',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    note?: string;
+
+    @ApiProperty({
+        example: 150000,
+        description: 'Tiền thuế',
+        type: Number,
+        required: false,
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    taxAmount?: number;
+
+    @ApiProperty({
+        type: [CreatePurchaseOrderItemRequestDto],
+        description: 'Danh sách sản phẩm',
+    })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreatePurchaseOrderItemRequestDto)
+    items: CreatePurchaseOrderItemRequestDto[];
+}
+

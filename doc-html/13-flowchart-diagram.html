@@ -1,0 +1,413 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout &amp; payment webhook — annotated flowchart</title>
+<style>
+  :root {
+    --ivory:   #FAF9F5;
+    --slate:   #141413;
+    --clay:    #D97757;
+    --oat:     #E3DACC;
+    --olive:   #788C5D;
+    --rust:    #B04A3F;
+    --gray-150:#F0EEE6;
+    --gray-300:#D1CFC5;
+    --gray-500:#87867F;
+    --gray-700:#3D3D3A;
+    --serif: ui-serif, Georgia, "Times New Roman", serif;
+    --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ivory);
+    color: var(--slate);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    padding: 56px 24px 96px;
+  }
+  .sheet { max-width: 980px; margin: 0 auto; }
+
+  header { margin-bottom: 40px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+  .lead {
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--gray-700);
+    max-width: 680px;
+  }
+  .lead code { font-family: var(--mono); font-size: 13px; }
+
+  /* layout */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 920px) { .layout { grid-template-columns: 1fr; } }
+
+  /* chart */
+  .canvas {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 14px;
+    background: #fff;
+    padding: 28px;
+    overflow-x: auto;
+  }
+  svg.flow { display: block; width: 100%; height: auto; }
+
+  .flow text {
+    font-family: var(--mono);
+    font-size: 12px;
+    fill: var(--slate);
+    pointer-events: none;
+  }
+  .flow .sub { font-size: 10px; fill: var(--gray-500); }
+  .flow .lbl { font-size: 10px; fill: var(--gray-500); }
+
+  .node rect       { fill: #fff; stroke: var(--gray-300); stroke-width: 1.5; rx: 8; }
+  .node.term rect  { fill: var(--gray-150); rx: 22; }
+  .node.gate path  { fill: #fff; stroke: var(--gray-300); stroke-width: 1.5; }
+  .node.ok rect    { fill: rgba(120,140,93,0.12); stroke: var(--olive); }
+  .node.bad rect   { fill: rgba(176,74,63,0.10); stroke: var(--rust); }
+
+  .node { cursor: pointer; transition: transform 120ms ease; }
+  .node:hover { transform: translateY(-1px); }
+  .node.active rect,
+  .node.active path { stroke: var(--clay); stroke-width: 2; }
+
+  .edge       { stroke: var(--gray-500); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+  .edge.no    { stroke: var(--rust); stroke-dasharray: 4 4; marker-end: url(#arrow-rust); }
+  .edge.yes   { stroke: var(--olive); marker-end: url(#arrow-olive); }
+
+  /* side panel */
+  aside {
+    position: sticky;
+    top: 24px;
+    border: 1.5px solid var(--gray-300);
+    border-radius: 14px;
+    background: #fff;
+    padding: 20px 20px 22px;
+  }
+  aside .hint {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 14px;
+  }
+  aside h3 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 19px;
+    margin-bottom: 6px;
+  }
+  aside .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-bottom: 14px;
+  }
+  aside p {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--gray-700);
+    margin-bottom: 12px;
+  }
+  aside p code, aside .meta code { font-family: var(--mono); }
+  aside pre {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.55;
+    background: var(--gray-150);
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    color: var(--slate);
+  }
+
+  /* legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--gray-700);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .chip { width: 22px; height: 14px; border: 1.5px solid var(--gray-300); border-radius: 4px; background: #fff; }
+  .chip.gate { transform: rotate(45deg); width: 12px; height: 12px; border-radius: 2px; }
+  .chip.ok   { background: rgba(120,140,93,0.12); border-color: var(--olive); }
+  .chip.bad  { background: rgba(176,74,63,0.10); border-color: var(--rust); }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div class="eyebrow">Illustrations &amp; Diagrams &middot; Flowchart</div>
+    <h1>What happens when a guest checks out</h1>
+    <p class="lead">
+      The order &rarr; payment &rarr; webhook pipeline for <code>book-store-be</code>, drawn from
+      <code>order.service.ts</code>, <code>hooks.service.ts</code> and the Sepay integration. Stock is
+      <em>reserved</em> at checkout and only <em>decremented</em> once a bank webhook confirms the exact
+      amount. Click any step to see what runs, the file it lives in, and where it can short-circuit.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <div>
+      <div class="canvas">
+        <svg class="flow" viewBox="0 0 620 980">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#87867F"/>
+            </marker>
+            <marker id="arrow-rust" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#B04A3F"/>
+            </marker>
+            <marker id="arrow-olive" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#788C5D"/>
+            </marker>
+          </defs>
+
+          <!-- edges -->
+          <path class="edge" d="M310,56 L310,92"/>
+          <path class="edge" d="M310,140 L310,176"/>
+          <path class="edge" d="M310,224 L310,262"/>
+          <path class="edge yes" d="M310,326 L310,368"/>
+          <text class="lbl" x="320" y="350">in stock</text>
+          <path class="edge no" d="M268,294 C170,294 150,250 150,212 L150,200"/>
+          <text class="lbl" x="120" y="270" fill="#B04A3F">out of stock</text>
+          <path class="edge" d="M310,416 L310,452"/>
+          <path class="edge" d="M310,500 L310,538"/>
+          <path class="edge yes" d="M310,602 L310,644"/>
+          <text class="lbl" x="320" y="626">match</text>
+          <path class="edge no" d="M352,570 C470,570 470,690 392,724"/>
+          <text class="lbl" x="452" y="640" fill="#B04A3F">expired / mismatch</text>
+          <path class="edge" d="M310,692 L310,730"/>
+          <path class="edge" d="M310,778 L310,816"/>
+          <path class="edge no" d="M250,754 C120,754 110,870 230,886"/>
+          <text class="lbl" x="96" y="820" fill="#B04A3F">no webhook · 10 min cron</text>
+
+          <!-- nodes -->
+          <g class="node term" data-k="checkout">
+            <rect x="222" y="12" width="176" height="44"/>
+            <text x="310" y="38" text-anchor="middle">POST /orders/checkout</text>
+          </g>
+
+          <g class="node" data-k="cart">
+            <rect x="210" y="92" width="200" height="48"/>
+            <text x="310" y="112" text-anchor="middle">Load cart + cartHash</text>
+            <text class="sub" x="310" y="128" text-anchor="middle">idempotency key</text>
+          </g>
+
+          <g class="node" data-k="items">
+            <rect x="210" y="176" width="200" height="48"/>
+            <text x="310" y="196" text-anchor="middle">Process order items</text>
+            <text class="sub" x="310" y="212" text-anchor="middle">snapshot + reserve</text>
+          </g>
+
+          <g class="node gate" data-k="gate-stock">
+            <path d="M310,262 L352,294 L310,326 L268,294 Z"/>
+            <text x="310" y="298" text-anchor="middle">stock?</text>
+          </g>
+
+          <g class="node bad" data-k="oos">
+            <rect x="60" y="176" width="180" height="48"/>
+            <text x="150" y="196" text-anchor="middle">Throw 403</text>
+            <text class="sub" x="150" y="212" text-anchor="middle">BOOK_OUT_OF_STOCK</text>
+          </g>
+
+          <g class="node" data-k="intent">
+            <rect x="210" y="368" width="200" height="48"/>
+            <text x="310" y="388" text-anchor="middle">Create payment intent</text>
+            <text class="sub" x="310" y="404" text-anchor="middle">SePay QR · content</text>
+          </g>
+
+          <g class="node" data-k="webhook">
+            <rect x="210" y="452" width="200" height="48"/>
+            <text x="310" y="472" text-anchor="middle">Sepay webhook in</text>
+            <text class="sub" x="310" y="488" text-anchor="middle">upsert webhook_inbox</text>
+          </g>
+
+          <g class="node gate" data-k="gate-verify">
+            <path d="M310,538 L352,570 L310,602 L268,570 Z"/>
+            <text x="310" y="568" text-anchor="middle">valid?</text>
+            <text class="sub" x="310" y="582" text-anchor="middle">amt+time</text>
+          </g>
+
+          <g class="node" data-k="markpaid">
+            <rect x="210" y="644" width="200" height="48"/>
+            <text x="310" y="664" text-anchor="middle">Mark order PAID (tx)</text>
+            <text class="sub" x="310" y="680" text-anchor="middle">stock-- · reserved--</text>
+          </g>
+
+          <g class="node bad" data-k="fail">
+            <rect x="392" y="704" width="170" height="48"/>
+            <text x="477" y="724" text-anchor="middle">Record + park</text>
+            <text class="sub" x="477" y="740" text-anchor="middle">SHORTFALL / EXPIRED</text>
+          </g>
+
+          <g class="node" data-k="email">
+            <rect x="210" y="730" width="200" height="48"/>
+            <text x="310" y="750" text-anchor="middle">Enqueue email (COD)</text>
+            <text class="sub" x="310" y="766" text-anchor="middle">BullMQ · outbox</text>
+          </g>
+
+          <g class="node bad" data-k="cancel">
+            <rect x="150" y="862" width="180" height="48"/>
+            <text x="240" y="882" text-anchor="middle">Cancel + release</text>
+            <text class="sub" x="240" y="898" text-anchor="middle">cron · stock++</text>
+          </g>
+
+          <g class="node ok term" data-k="done">
+            <rect x="222" y="816" width="176" height="44"/>
+            <text x="310" y="843" text-anchor="middle">&#10003; Order complete</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="legend">
+        <span><i class="chip"></i> process step</span>
+        <span><i class="chip gate"></i> decision</span>
+        <span><i class="chip ok"></i> terminal success</span>
+        <span><i class="chip bad"></i> failure path</span>
+      </div>
+    </div>
+
+    <aside id="panel">
+      <div class="hint">Click a step in the chart &rarr;</div>
+      <h3 id="p-title">POST /orders/checkout</h3>
+      <div class="meta" id="p-meta">entry &middot; order.controller.ts</div>
+      <p id="p-body">A guest or user posts their cart to check out. The whole creation path runs inside a single <code>prisma.$transaction</code>, so a failure anywhere rolls back the order, its items, and the stock reservation together.</p>
+      <pre id="p-code">@Post('guest/checkout')
+createOrders(@Body() dto) { ... }</pre>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+const DETAIL = {
+  checkout: {
+    title: "POST /orders/checkout",
+    meta: "entry · order.controller.ts",
+    body: "A guest or user posts their cart to check out. The whole creation path runs inside a single <code>prisma.$transaction</code>, so a failure anywhere rolls back the order, its items, and the stock reservation together.",
+    code: "@Post('guest/checkout')\ncreateOrders(@Body() dto) { ... }"
+  },
+  cart: {
+    title: "Load cart + compute cartHash",
+    meta: "order.service.ts · ~:210",
+    body: "The cart is loaded with its items, then hashed into <code>cartHash</code> (sorted variant:quantity pairs + cart id). If an order with the same hash already exists, the existing order is returned instead of creating a duplicate — the checkout idempotency key.",
+    code: "const cartHash = getCartHash(cart.items, cart.id);\nconst existing = await tx.order.findFirst({ where: { cartHash } });\nif (existing) return existing;"
+  },
+  items: {
+    title: "Process order items",
+    meta: "order.service.ts · processOrderItems()",
+    body: "For each line it upserts a <code>bookVariantSnapshot</code> by <code>contentHash</code> (freezing price/format at order time) and increments the variant's <code>reserved</code> counter. Stock is held, not yet sold.",
+    code: "await tx.bookVariant.update({\n  where: { id },\n  data: { reserved: { increment: qty } },\n});"
+  },
+  "gate-stock": {
+    title: "Enough stock?",
+    meta: "decision",
+    body: "Availability is <code>stock - reserved</code>. If a requested quantity exceeds it, the transaction throws and nothing is persisted.",
+    code: "const available = variant.stock - variant.reserved;\nif (available < qty)\n  throw new ForbiddenException(OrderMessage.BOOK_OUT_OF_STOCK);"
+  },
+  oos: {
+    title: "Out of stock → 403",
+    meta: "failure · rollback",
+    body: "A <code>ForbiddenException</code> aborts the transaction. The reservation increments already applied in this tx are rolled back, so no stock is leaked.",
+    code: "throw new ForbiddenException(\n  OrderMessage.BOOK_OUT_OF_STOCK(title));"
+  },
+  intent: {
+    title: "Create payment intent",
+    meta: "payment-intent.service.ts",
+    body: "For a gateway order, a SePay QR URL is built and a <code>paymentIntent</code> row is written with a unique transfer <code>content</code> (“taschen …”) and an <code>expiredAt</code>. The content string is how the later webhook finds this order. COD orders skip straight to email.",
+    code: "createPaymentIntent({\n  orderId, orderCode, content,\n  gateway: 'SEPAY', tokenUrl, paymentUrl,\n  status: PENDING, expiredAt,\n}, tx);"
+  },
+  webhook: {
+    title: "Sepay webhook arrives",
+    meta: "hooks.service.ts · handleSepayWebhook()",
+    body: "The bank POSTs to <code>/hooks/sepay-payment</code>, guarded by an API key (<code>@Payment()</code>). The handler upserts <code>webhook_inbox</code> on <code>(gateway, providerEventId)</code> — a duplicate webhook short-circuits if its status is already <code>DONE</code>.",
+    code: "if (inbox.status === JobStatus.DONE)\n  return { ok: true, message: ALREADY_PROCESSED };"
+  },
+  "gate-verify": {
+    title: "Intent valid? amount + time",
+    meta: "decision · 3 checks",
+    body: "The transfer <code>content</code> must resolve to a payment intent, the intent must not be expired, and <code>transferAmount</code> must equal <code>order.totalAmount</code> exactly. Any failure routes to the failure path with a specific status.",
+    code: "if (intent.expiredAt < new Date())            → EXPIRED\nif (transferAmount < total)                   → SHORTFALL\nif (transferAmount > total)                   → OVERAGE"
+  },
+  markpaid: {
+    title: "Mark order PAID (transaction)",
+    meta: "hooks.repository.ts · $transaction",
+    body: "Inside one transaction: order → <code>PAID</code>, payment transaction → <code>SUCCESS</code>, webhook_inbox → <code>DONE</code>, and for every line <code>stock</code> and <code>reserved</code> are both decremented — the reservation becomes a real sale.",
+    code: "data: { status: OrderStatus.PAID,\n        paymentStatus: PaymentStatus.SUCCESS }\n// then: stock--, reserved-- per variant"
+  },
+  fail: {
+    title: "Record failure + park",
+    meta: "failure · no stock change",
+    body: "A mismatch or expiry writes a payment transaction with the precise status (<code>EXPIRED</code>, <code>PAYMENT_SHORTFALL</code>, <code>PAYMENT_OVERAGE</code>, <code>NOT_FOUND_ORDER_CODE</code>) and marks the webhook <code>FAILED</code> for reconciliation. The order stays <code>PENDING_PAYMENT</code>.",
+    code: "await markPaymentNotSuccess(order.id, ev, body, status);\nawait updateWebhookStatus(inbox.id, FAILED, attempts);"
+  },
+  email: {
+    title: "Enqueue confirmation email",
+    meta: "email.producer.ts · BullMQ",
+    body: "COD orders insert an outbox row and enqueue <code>send-order-email</code> with 3 attempts and exponential backoff. <strong>Gap:</strong> the webhook PAID path does not enqueue this job, so card-paid customers currently get no confirmation email.",
+    code: "emailQueue.add('send-order-email', { outboxId }, {\n  attempts: 3,\n  backoff: { type: 'exponential', delay: 3000 },\n  jobId: `order-email-${outboxId}`,\n});"
+  },
+  cancel: {
+    title: "Cancel expired order",
+    meta: "order.cleanup.job.ts · every 10 min",
+    body: "A cron sweeps orders still <code>PENDING_PAYMENT</code> past <code>ORDER_EXPIRED_SECONDS</code> (30 s). It releases each reservation (<code>stock++</code>, <code>reserved--</code>) and sets the order <code>CANCELLED</code> / payment <code>EXPIRED</code>.",
+    code: "@Cron(CronExpression.EVERY_10_MINUTES)\ncleanupOrderSessionsMinutes() {\n  this.orderService.cleanOrder(ORDER_EXPIRED_SECONDS);\n}"
+  },
+  done: {
+    title: "Order complete",
+    meta: "terminal",
+    body: "The order is <code>PAID</code>, stock is committed, the webhook is <code>DONE</code>, and the cached order status (<code>order:status:{code}</code>) is refreshed if present. The QR/intent window is short — 30 s — so this all happens fast or the cron reclaims it.",
+    code: "✓ order OD-260616-XXXXXX → PAID"
+  }
+};
+
+const nodes = document.querySelectorAll(".node");
+const T = document.getElementById("p-title");
+const M = document.getElementById("p-meta");
+const B = document.getElementById("p-body");
+const C = document.getElementById("p-code");
+
+nodes.forEach(n => {
+  n.addEventListener("click", () => {
+    nodes.forEach(x => x.classList.remove("active"));
+    n.classList.add("active");
+    const d = DETAIL[n.dataset.k];
+    if (!d) return;
+    T.textContent = d.title;
+    M.innerHTML = d.meta;
+    B.innerHTML = d.body;
+    C.textContent = d.code;
+  });
+});
+document.querySelector('.node[data-k="checkout"]').classList.add("active");
+</script>
+</body>
+</html>

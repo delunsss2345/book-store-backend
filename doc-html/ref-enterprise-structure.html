@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/enterprise-structure-complete.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enterprise NestJS Architecture Guide · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>overall architecture</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Architecture</p>
+    <h1>Enterprise NestJS Architecture Guide</h1>
+    <p class="lede">Tài liệu toàn diện về cấu trúc dự án NestJS khi scale lên enterprise level.</p>
+  </header>
+
+  <main>
+<hr>
+<h2 id="muc-luc" class="h h2"><a class="anchor" href="#muc-luc" aria-label="Link to this section">#</a>Mục lục</h2>
+<ol>
+<li><a href="#1-cấu-trúc-thư-mục-hoàn-chỉnh">Cấu trúc thư mục hoàn chỉnh</a></li>
+<li><a href="#2-dtos---requestresponse-pattern">DTOs - Request/Response Pattern</a></li>
+<li><a href="#3-entities--models">Entities &amp; Models</a></li>
+<li><a href="#4-repository-pattern">Repository Pattern</a></li>
+<li><a href="#5-config-management">Config Management</a></li>
+<li><a href="#6-middleware-guards-interceptors-pipes-filters">Middleware, Guards, Interceptors, Pipes, Filters</a></li>
+<li><a href="#7-event-driven-architecture">Event-Driven Architecture</a></li>
+<li><a href="#8-jobs--queues">Jobs &amp; Queues</a></li>
+<li><a href="#9-caching-layer">Caching Layer</a></li>
+<li><a href="#10-external-services--integrations">External Services &amp; Integrations</a></li>
+<li><a href="#11-health-checks--monitoring">Health Checks &amp; Monitoring</a></li>
+<li><a href="#12-testing-structure">Testing Structure</a></li>
+<li><a href="#13-shared-libraries-libs">Shared Libraries (Libs)</a></li>
+<li><a href="#14-path-aliases-complete">Path Aliases Complete</a></li>
+</ol>
+<hr>
+<h2 id="1-cau-truc-thu-muc-hoan-chinh" class="h h2"><a class="anchor" href="#1-cau-truc-thu-muc-hoan-chinh" aria-label="Link to this section">#</a>1. Cấu trúc thư mục hoàn chỉnh</h2>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>src/
+├── main.ts
+├── app.module.ts
+├── app.controller.ts
+├── app.service.ts
+│
+├── modules/                        # Feature modules
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── dto/
+│   │   │   ├── request/
+│   │   │   │   ├── login.request.dto.ts
+│   │   │   │   ├── register.request.dto.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── response/
+│   │   │   │   ├── auth.response.dto.ts
+│   │   │   │   ├── token.response.dto.ts
+│   │   │   │   └── index.ts
+│   │   │   └── index.ts
+│   │   ├── entities/               # Prisma generated types hoặc custom entities
+│   │   │   └── user.entity.ts
+│   │   ├── interfaces/
+│   │   │   └── auth-payload.interface.ts
+│   │   ├── strategies/             # Passport strategies
+│   │   │   ├── jwt.strategy.ts
+│   │   │   ├── local.strategy.ts
+│   │   │   └── index.ts
+│   │   ├── guards/                 # Module-specific guards
+│   │   │   └── roles.guard.ts
+│   │   ├── decorators/             # Module-specific decorators
+│   │   │   └── current-user.decorator.ts
+│   │   ├── events/                 # Domain events
+│   │   │   ├── user-registered.event.ts
+│   │   │   └── index.ts
+│   │   ├── listeners/              # Event listeners
+│   │   │   └── send-welcome-email.listener.ts
+│   │   ├── __tests__/              # Unit tests
+│   │   │   ├── auth.service.spec.ts
+│   │   │   └── auth.controller.spec.ts
+│   │   └── index.ts
+│   │
+│   ├── users/
+│   │   ├── users.module.ts
+│   │   ├── users.controller.ts
+│   │   ├── users.service.ts
+│   │   ├── users.repository.ts     # Repository pattern
+│   │   ├── dto/
+│   │   ├── entities/
+│   │   └── index.ts
+│   │
+│   └── [other-modules]/
+│
+├── common/                          # Shared across ALL modules
+│   ├── constants/
+│   │   ├── enum.constant.ts
+│   │   ├── http-message.constant.ts
+│   │   ├── cache-keys.constant.ts
+│   │   └── index.ts
+│   │
+│   ├── decorators/
+│   │   ├── public.decorator.ts     # @Public() route
+│   │   ├── roles.decorator.ts      # @Roles(&#39;admin&#39;)
+│   │   ├── api-response.decorator.ts
+│   │   └── index.ts
+│   │
+│   ├── dto/
+│   │   ├── request/
+│   │   │   ├── pagination.request.dto.ts
+│   │   │   └── index.ts
+│   │   ├── response/
+│   │   │   ├── base-response.dto.ts
+│   │   │   ├── pagination.response.dto.ts
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   │
+│   ├── filters/
+│   │   ├── http-exception.filter.ts
+│   │   ├── all-exceptions.filter.ts
+│   │   ├── prisma-exception.filter.ts
+│   │   └── index.ts
+│   │
+│   ├── guards/
+│   │   ├── jwt-auth.guard.ts
+│   │   ├── roles.guard.ts
+│   │   ├── throttler.guard.ts
+│   │   └── index.ts
+│   │
+│   ├── interceptors/
+│   │   ├── transform.interceptor.ts
+│   │   ├── logging.interceptor.ts
+│   │   ├── timeout.interceptor.ts
+│   │   ├── cache.interceptor.ts
+│   │   └── index.ts
+│   │
+│   ├── middlewares/
+│   │   ├── logger.middleware.ts
+│   │   ├── cors.middleware.ts
+│   │   └── index.ts
+│   │
+│   ├── pipes/
+│   │   ├── validation.pipe.ts
+│   │   ├── parse-object-id.pipe.ts
+│   │   └── index.ts
+│   │
+│   ├── interfaces/
+│   │   ├── pagination.interface.ts
+│   │   ├── jwt-payload.interface.ts
+│   │   └── index.ts
+│   │
+│   ├── types/
+│   │   ├── express.d.ts           # Extend Express Request
+│   │   └── index.ts
+│   │
+│   └── index.ts
+│
+├── config/                          # Configuration
+│   ├── app.config.ts
+│   ├── database.config.ts
+│   ├── jwt.config.ts
+│   ├── redis.config.ts
+│   ├── mail.config.ts
+│   ├── aws.config.ts
+│   ├── validation.schema.ts        # Joi/Zod schema validation
+│   └── index.ts
+│
+├── database/                        # Database layer
+│   ├── database.module.ts
+│   ├── prisma.service.ts
+│   ├── prisma.extension.ts          # Prisma extensions
+│   ├── seeds/                       # Database seeders
+│   │   ├── user.seed.ts
+│   │   └── index.ts
+│   ├── migrations/                  # Custom migrations (if needed)
+│   └── index.ts
+│
+├── jobs/                            # Background jobs &amp; Queues
+│   ├── jobs.module.ts
+│   ├── processors/
+│   │   ├── email.processor.ts
+│   │   ├── notification.processor.ts
+│   │   └── index.ts
+│   ├── producers/
+│   │   ├── email.producer.ts
+│   │   └── index.ts
+│   └── index.ts
+│
+├── events/                          # Global event handling
+│   ├── events.module.ts
+│   ├── handlers/
+│   │   └── global-error.handler.ts
+│   └── index.ts
+│
+├── cache/                           # Caching layer
+│   ├── cache.module.ts
+│   ├── cache.service.ts
+│   ├── strategies/
+│   │   ├── redis.strategy.ts
+│   │   └── memory.strategy.ts
+│   └── index.ts
+│
+├── integrations/                    # External services
+│   ├── mail/
+│   │   ├── mail.module.ts
+│   │   ├── mail.service.ts
+│   │   ├── templates/
+│   │   │   ├── welcome.hbs
+│   │   │   └── reset-password.hbs
+│   │   └── index.ts
+│   │
+│   ├── storage/                     # S3, Cloudinary, etc.
+│   │   ├── storage.module.ts
+│   │   ├── storage.service.ts
+│   │   ├── strategies/
+│   │   │   ├── s3.strategy.ts
+│   │   │   └── local.strategy.ts
+│   │   └── index.ts
+│   │
+│   ├── payment/                     # Stripe, PayPal, etc.
+│   │   ├── payment.module.ts
+│   │   ├── payment.service.ts
+│   │   └── index.ts
+│   │
+│   └── notification/                # Push notifications
+│       ├── notification.module.ts
+│       ├── notification.service.ts
+│       └── index.ts
+│
+├── health/                          # Health checks
+│   ├── health.module.ts
+│   ├── health.controller.ts
+│   ├── indicators/
+│   │   ├── database.health.ts
+│   │   ├── redis.health.ts
+│   │   └── index.ts
+│   └── index.ts
+│
+├── libs/                            # Shared utilities
+│   ├── crypto/
+│   │   ├── crypto.service.ts
+│   │   └── index.ts
+│   ├── logger/
+│   │   ├── logger.service.ts
+│   │   ├── logger.module.ts
+│   │   └── index.ts
+│   ├── utils/
+│   │   ├── string.util.ts
+│   │   ├── date.util.ts
+│   │   ├── file.util.ts
+│   │   └── index.ts
+│   └── index.ts
+│
+└── shared/                          # Cross-cutting concerns (legacy, use libs instead)
+    └── index.ts
+
+test/                                # E2E tests
+├── app.e2e-spec.ts
+├── auth.e2e-spec.ts
+├── jest-e2e.json
+└── setup.ts</code></pre></figure>
+<hr>
+<h2 id="2-dtos-request-response-pattern" class="h h2"><a class="anchor" href="#2-dtos-request-response-pattern" aria-label="Link to this section">#</a>2. DTOs - Request/Response Pattern</h2>
+<h3 id="tai-sao-phai-tach" class="h h3"><a class="anchor" href="#tai-sao-phai-tach" aria-label="Link to this section">#</a>Tại sao phải tách?</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Request DTO</th>
+<th>Response DTO</th>
+</tr>
+</thead><tbody><tr>
+<td>Validation decorators (<code>@IsEmail</code>, <code>@MinLength</code>)</td>
+<td>Serialization decorators (<code>@Expose</code>, <code>@Exclude</code>)</td>
+</tr>
+<tr>
+<td>Nhận data từ client</td>
+<td>Format data trả về client</td>
+</tr>
+<tr>
+<td>Chứa tất cả input fields</td>
+<td>Loại bỏ sensitive fields</td>
+</tr>
+<tr>
+<td>Dùng với <code>ValidationPipe</code></td>
+<td>Dùng với <code>ClassSerializerInterceptor</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="cau-truc-files" class="h h3"><a class="anchor" href="#cau-truc-files" aria-label="Link to this section">#</a>Cấu trúc files</h3>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>modules/users/dto/
+├── request/
+│   ├── create-user.request.dto.ts
+│   ├── update-user.request.dto.ts
+│   ├── query-user.request.dto.ts    # Query params
+│   └── index.ts
+├── response/
+│   ├── user.response.dto.ts
+│   ├── user-profile.response.dto.ts
+│   └── index.ts
+└── index.ts</code></pre></figure>
+<h3 id="vi-du-request-dto" class="h h3"><a class="anchor" href="#vi-du-request-dto" aria-label="Link to this section">#</a>Ví dụ Request DTO</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// create-user.request.dto.ts
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from &#39;class-validator&#39;;
+import { ApiProperty, ApiPropertyOptional } from &#39;@nestjs/swagger&#39;;
+import { Transform } from &#39;class-transformer&#39;;
+import { UserRole } from &#39;@common/constants&#39;;
+
+export class CreateUserRequestDto {
+    @ApiProperty({ example: &#39;john@example.com&#39; })
+    @IsEmail()
+    @IsNotEmpty()
+    @Transform(({ value }) =&gt; value.toLowerCase().trim())
+    email: string;
+
+    @ApiProperty({ example: &#39;StrongP@ss123&#39; })
+    @IsString()
+    @MinLength(8)
+    password: string;
+
+    @ApiPropertyOptional({ example: &#39;John Doe&#39; })
+    @IsString()
+    @IsOptional()
+    name?: string;
+
+    @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
+    @IsEnum(UserRole)
+    @IsOptional()
+    role?: UserRole;
+}</code></pre></figure>
+<h3 id="vi-du-response-dto" class="h h3"><a class="anchor" href="#vi-du-response-dto" aria-label="Link to this section">#</a>Ví dụ Response DTO</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// user.response.dto.ts
+import { Expose, Exclude, Type } from &#39;class-transformer&#39;;
+import { ApiProperty } from &#39;@nestjs/swagger&#39;;
+
+export class UserResponseDto {
+    @Expose()
+    @ApiProperty()
+    id: string;
+
+    @Expose()
+    @ApiProperty()
+    email: string;
+
+    @Expose()
+    @ApiProperty()
+    name: string;
+
+    @Expose()
+    @ApiProperty()
+    role: string;
+
+    @Expose()
+    @ApiProperty()
+    createdAt: Date;
+
+    @Exclude()
+    password: string;
+
+    @Exclude()
+    refreshToken: string;
+
+    constructor(partial: Partial&lt;UserResponseDto&gt;) {
+        Object.assign(this, partial);
+    }
+}
+
+// Nested response
+export class UserProfileResponseDto {
+    @Expose()
+    user: UserResponseDto;
+
+    @Expose()
+    @Type(() =&gt; AddressResponseDto)
+    addresses: AddressResponseDto[];
+}</code></pre></figure>
+<h3 id="su-dung-trong-controller" class="h h3"><a class="anchor" href="#su-dung-trong-controller" aria-label="Link to this section">#</a>Sử dụng trong Controller</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>@Controller(&#39;users&#39;)
+@UseInterceptors(ClassSerializerInterceptor)
+export class UsersController {
+    @Post()
+    @ApiResponse({ type: UserResponseDto })
+    async create(@Body() dto: CreateUserRequestDto): Promise&lt;UserResponseDto&gt; {
+        const user = await this.usersService.create(dto);
+        return new UserResponseDto(user);
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="3-entities-models" class="h h2"><a class="anchor" href="#3-entities-models" aria-label="Link to this section">#</a>3. Entities &amp; Models</h2>
+<h3 id="khi-nao-dung-entity" class="h h3"><a class="anchor" href="#khi-nao-dung-entity" aria-label="Link to this section">#</a>Khi nào dùng Entity?</h3>
+<ul>
+<li>Khi cần thêm methods, computed properties</li>
+<li>Khi Prisma generated types không đủ</li>
+<li>Khi cần domain logic riêng</li>
+</ul>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// entities/user.entity.ts
+import { User as PrismaUser } from &#39;@prisma/client&#39;;
+
+export class UserEntity implements PrismaUser {
+    id: string;
+    email: string;
+    password: string;
+    name: string | null;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
+
+    constructor(partial: Partial&lt;UserEntity&gt;) {
+        Object.assign(this, partial);
+    }
+
+    // Computed property
+    get displayName(): string {
+        return this.name || this.email.split(&#39;@&#39;)[0];
+    }
+
+    // Domain method
+    isAdmin(): boolean {
+        return this.role === &#39;ADMIN&#39;;
+    }
+
+    // Factory method
+    static fromPrisma(prismaUser: PrismaUser): UserEntity {
+        return new UserEntity(prismaUser);
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="4-repository-pattern" class="h h2"><a class="anchor" href="#4-repository-pattern" aria-label="Link to this section">#</a>4. Repository Pattern</h2>
+<h3 id="tai-sao-can-repository" class="h h3"><a class="anchor" href="#tai-sao-can-repository" aria-label="Link to this section">#</a>Tại sao cần Repository?</h3>
+<ul>
+<li>Abstract database operations</li>
+<li>Dễ mock trong testing</li>
+<li>Switch database dễ dàng hơn</li>
+<li>Centralize query logic</li>
+</ul>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// users.repository.ts
+import { Injectable } from &#39;@nestjs/common&#39;;
+import { PrismaService } from &#39;@database/prisma.service&#39;;
+import { Prisma, User } from &#39;@prisma/client&#39;;
+
+@Injectable()
+export class UsersRepository {
+    constructor(private prisma: PrismaService) {}
+
+    async create(data: Prisma.UserCreateInput): Promise&lt;User&gt; {
+        return this.prisma.user.create({ data });
+    }
+
+    async findById(id: string): Promise&lt;User | null&gt; {
+        return this.prisma.user.findUnique({ where: { id } });
+    }
+
+    async findByEmail(email: string): Promise&lt;User | null&gt; {
+        return this.prisma.user.findUnique({ where: { email } });
+    }
+
+    async findMany(params: {
+        skip?: number;
+        take?: number;
+        where?: Prisma.UserWhereInput;
+        orderBy?: Prisma.UserOrderByWithRelationInput;
+    }): Promise&lt;User[]&gt; {
+        return this.prisma.user.findMany(params);
+    }
+
+    async update(id: string, data: Prisma.UserUpdateInput): Promise&lt;User&gt; {
+        return this.prisma.user.update({ where: { id }, data });
+    }
+
+    async delete(id: string): Promise&lt;User&gt; {
+        return this.prisma.user.delete({ where: { id } });
+    }
+
+    // Custom queries
+    async findActiveUsers(): Promise&lt;User[]&gt; {
+        return this.prisma.user.findMany({
+            where: { isActive: true, deletedAt: null },
+        });
+    }
+}</code></pre></figure>
+<h3 id="service-su-dung-repository" class="h h3"><a class="anchor" href="#service-su-dung-repository" aria-label="Link to this section">#</a>Service sử dụng Repository</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// users.service.ts
+@Injectable()
+export class UsersService {
+    constructor(
+        private usersRepository: UsersRepository,
+        private cacheService: CacheService,
+    ) {}
+
+    async findById(id: string): Promise&lt;UserEntity | null&gt; {
+        // Check cache first
+        const cached = await this.cacheService.get&lt;User&gt;(`user:${id}`);
+        if (cached) return UserEntity.fromPrisma(cached);
+
+        const user = await this.usersRepository.findById(id);
+        if (user) {
+            await this.cacheService.set(`user:${id}`, user, 3600);
+            return UserEntity.fromPrisma(user);
+        }
+        return null;
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="5-config-management" class="h h2"><a class="anchor" href="#5-config-management" aria-label="Link to this section">#</a>5. Config Management</h2>
+<h3 id="config-structure" class="h h3"><a class="anchor" href="#config-structure" aria-label="Link to this section">#</a>Config Structure</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// config/app.config.ts
+import { registerAs } from &#39;@nestjs/config&#39;;
+
+export default registerAs(&#39;app&#39;, () =&gt; ({
+    name: process.env.APP_NAME || &#39;NestJS App&#39;,
+    env: process.env.NODE_ENV || &#39;development&#39;,
+    port: parseInt(process.env.PORT, 10) || 3000,
+    apiPrefix: process.env.API_PREFIX || &#39;api/v1&#39;,
+    frontendUrl: process.env.FRONTEND_URL,
+}));
+
+// config/database.config.ts
+export default registerAs(&#39;database&#39;, () =&gt; ({
+    url: process.env.DATABASE_URL,
+    logging: process.env.NODE_ENV === &#39;development&#39;,
+}));
+
+// config/jwt.config.ts
+export default registerAs(&#39;jwt&#39;, () =&gt; ({
+    secret: process.env.JWT_SECRET,
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || &#39;15m&#39;,
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || &#39;7d&#39;,
+}));
+
+// config/redis.config.ts
+export default registerAs(&#39;redis&#39;, () =&gt; ({
+    host: process.env.REDIS_HOST || &#39;localhost&#39;,
+    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+    password: process.env.REDIS_PASSWORD,
+    ttl: parseInt(process.env.CACHE_TTL, 10) || 3600,
+}));</code></pre></figure>
+<h3 id="validation-schema" class="h h3"><a class="anchor" href="#validation-schema" aria-label="Link to this section">#</a>Validation Schema</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// config/validation.schema.ts
+import * as Joi from &#39;joi&#39;;
+
+export const validationSchema = Joi.object({
+    NODE_ENV: Joi.string()
+        .valid(&#39;development&#39;, &#39;production&#39;, &#39;test&#39;)
+        .default(&#39;development&#39;),
+    PORT: Joi.number().default(3000),
+    DATABASE_URL: Joi.string().required(),
+    JWT_SECRET: Joi.string().required().min(32),
+    JWT_ACCESS_EXPIRES_IN: Joi.string().default(&#39;15m&#39;),
+    JWT_REFRESH_EXPIRES_IN: Joi.string().default(&#39;7d&#39;),
+    REDIS_HOST: Joi.string().default(&#39;localhost&#39;),
+    REDIS_PORT: Joi.number().default(6379),
+});</code></pre></figure>
+<h3 id="app-module-setup" class="h h3"><a class="anchor" href="#app-module-setup" aria-label="Link to this section">#</a>App Module Setup</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// app.module.ts
+import { ConfigModule } from &#39;@nestjs/config&#39;;
+import appConfig from &#39;@config/app.config&#39;;
+import databaseConfig from &#39;@config/database.config&#39;;
+import jwtConfig from &#39;@config/jwt.config&#39;;
+import redisConfig from &#39;@config/redis.config&#39;;
+import { validationSchema } from &#39;@config/validation.schema&#39;;
+
+@Module({
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            load: [appConfig, databaseConfig, jwtConfig, redisConfig],
+            validationSchema,
+            validationOptions: {
+                abortEarly: true,
+            },
+        }),
+        // ...other modules
+    ],
+})
+export class AppModule {}</code></pre></figure>
+<h3 id="type-safe-config-service" class="h h3"><a class="anchor" href="#type-safe-config-service" aria-label="Link to this section">#</a>Type-safe Config Service</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// config/config.types.ts
+export interface AppConfig {
+    name: string;
+    env: string;
+    port: number;
+    apiPrefix: string;
+}
+
+export interface JwtConfig {
+    secret: string;
+    accessExpiresIn: string;
+    refreshExpiresIn: string;
+}
+
+// Sử dụng
+@Injectable()
+export class AuthService {
+    constructor(private configService: ConfigService) {}
+
+    getJwtConfig(): JwtConfig {
+        return this.configService.get&lt;JwtConfig&gt;(&#39;jwt&#39;);
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="6-middleware-guards-interceptors-pipes-filters" class="h h2"><a class="anchor" href="#6-middleware-guards-interceptors-pipes-filters" aria-label="Link to this section">#</a>6. Middleware, Guards, Interceptors, Pipes, Filters</h2>
+<h3 id="thu-tu-thuc-thi-request-lifecycle" class="h h3"><a class="anchor" href="#thu-tu-thuc-thi-request-lifecycle" aria-label="Link to this section">#</a>Thứ tự thực thi (Request Lifecycle)</h3>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>Request
+    ↓
+Middleware (global → route)
+    ↓
+Guards (global → controller → route)
+    ↓
+Interceptors (global → controller → route) - before
+    ↓
+Pipes (global → controller → route → param)
+    ↓
+Controller Handler
+    ↓
+Interceptors (route → controller → global) - after
+    ↓
+Exception Filters (route → controller → global)
+    ↓
+Response</code></pre></figure>
+<h3 id="khi-nao-dung-gi" class="h h3"><a class="anchor" href="#khi-nao-dung-gi" aria-label="Link to this section">#</a>Khi nào dùng gì?</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th>
+<th>Use Case</th>
+<th>Ví dụ</th>
+</tr>
+</thead><tbody><tr>
+<td><strong>Middleware</strong></td>
+<td>Logging, CORS, Body parsing</td>
+<td><code>LoggerMiddleware</code></td>
+</tr>
+<tr>
+<td><strong>Guards</strong></td>
+<td>Authentication, Authorization</td>
+<td><code>JwtAuthGuard</code>, <code>RolesGuard</code></td>
+</tr>
+<tr>
+<td><strong>Interceptors</strong></td>
+<td>Transform response, Caching, Logging, Timeout</td>
+<td><code>TransformInterceptor</code></td>
+</tr>
+<tr>
+<td><strong>Pipes</strong></td>
+<td>Validation, Transformation</td>
+<td><code>ValidationPipe</code>, <code>ParseIntPipe</code></td>
+</tr>
+<tr>
+<td><strong>Filters</strong></td>
+<td>Exception handling</td>
+<td><code>HttpExceptionFilter</code></td>
+</tr>
+</tbody></table></div>
+<h3 id="vi-du-tung-loai" class="h h3"><a class="anchor" href="#vi-du-tung-loai" aria-label="Link to this section">#</a>Ví dụ từng loại</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// middlewares/logger.middleware.ts
+@Injectable()
+export class LoggerMiddleware implements NestMiddleware {
+    use(req: Request, res: Response, next: NextFunction) {
+        console.log(`[${req.method}] ${req.originalUrl}`);
+        next();
+    }
+}
+
+// guards/roles.guard.ts
+@Injectable()
+export class RolesGuard implements CanActivate {
+    constructor(private reflector: Reflector) {}
+
+    canActivate(context: ExecutionContext): boolean {
+        const requiredRoles = this.reflector.getAllAndOverride&lt;Role[]&gt;(&#39;roles&#39;, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!requiredRoles) return true;
+        
+        const { user } = context.switchToHttp().getRequest();
+        return requiredRoles.some((role) =&gt; user.roles?.includes(role));
+    }
+}
+
+// interceptors/timeout.interceptor.ts
+@Injectable()
+export class TimeoutInterceptor implements NestInterceptor {
+    intercept(context: ExecutionContext, next: CallHandler): Observable&lt;any&gt; {
+        return next.handle().pipe(timeout(5000));
+    }
+}
+
+// pipes/parse-object-id.pipe.ts
+@Injectable()
+export class ParseObjectIdPipe implements PipeTransform&lt;string&gt; {
+    transform(value: string): string {
+        if (!Types.ObjectId.isValid(value)) {
+            throw new BadRequestException(&#39;Invalid ObjectId&#39;);
+        }
+        return value;
+    }
+}
+
+// filters/prisma-exception.filter.ts
+@Catch(Prisma.PrismaClientKnownRequestError)
+export class PrismaExceptionFilter implements ExceptionFilter {
+    catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
+        const ctx = host.switchToHttp();
+        const response = ctx.getResponse&lt;Response&gt;();
+
+        let status = HttpStatus.INTERNAL_SERVER_ERROR;
+        let message = &#39;Database error&#39;;
+
+        if (exception.code === &#39;P2002&#39;) {
+            status = HttpStatus.CONFLICT;
+            message = &#39;Unique constraint violation&#39;;
+        }
+
+        response.status(status).json({
+            statusCode: status,
+            message,
+            error: exception.code,
+        });
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="7-event-driven-architecture" class="h h2"><a class="anchor" href="#7-event-driven-architecture" aria-label="Link to this section">#</a>7. Event-Driven Architecture</h2>
+<h3 id="nestjs-eventemitter" class="h h3"><a class="anchor" href="#nestjs-eventemitter" aria-label="Link to this section">#</a>NestJS EventEmitter</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// events/user-registered.event.ts
+export class UserRegisteredEvent {
+    constructor(
+        public readonly userId: string,
+        public readonly email: string,
+        public readonly name: string,
+    ) {}
+}
+
+// listeners/send-welcome-email.listener.ts
+@Injectable()
+export class SendWelcomeEmailListener {
+    constructor(private mailService: MailService) {}
+
+    @OnEvent(&#39;user.registered&#39;)
+    async handleUserRegistered(event: UserRegisteredEvent) {
+        await this.mailService.sendWelcomeEmail(event.email, event.name);
+    }
+}
+
+// auth.service.ts
+@Injectable()
+export class AuthService {
+    constructor(private eventEmitter: EventEmitter2) {}
+
+    async register(dto: RegisterDto) {
+        const user = await this.usersRepository.create(dto);
+        
+        // Emit event
+        this.eventEmitter.emit(
+            &#39;user.registered&#39;,
+            new UserRegisteredEvent(user.id, user.email, user.name),
+        );
+
+        return user;
+    }
+}</code></pre></figure>
+<h3 id="setup-module" class="h h3"><a class="anchor" href="#setup-module" aria-label="Link to this section">#</a>Setup Module</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// events/events.module.ts
+import { EventEmitterModule } from &#39;@nestjs/event-emitter&#39;;
+
+@Module({
+    imports: [
+        EventEmitterModule.forRoot({
+            wildcard: true,
+            delimiter: &#39;.&#39;,
+            maxListeners: 10,
+        }),
+    ],
+})
+export class EventsModule {}</code></pre></figure>
+<hr>
+<h2 id="8-jobs-queues" class="h h2"><a class="anchor" href="#8-jobs-queues" aria-label="Link to this section">#</a>8. Jobs &amp; Queues</h2>
+<h3 id="bullmq-setup" class="h h3"><a class="anchor" href="#bullmq-setup" aria-label="Link to this section">#</a>BullMQ Setup</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// jobs/jobs.module.ts
+import { BullModule } from &#39;@nestjs/bullmq&#39;;
+
+@Module({
+    imports: [
+        BullModule.forRootAsync({
+            useFactory: (configService: ConfigService) =&gt; ({
+                connection: {
+                    host: configService.get(&#39;redis.host&#39;),
+                    port: configService.get(&#39;redis.port&#39;),
+                },
+            }),
+            inject: [ConfigService],
+        }),
+        BullModule.registerQueue({ name: &#39;email&#39; }),
+        BullModule.registerQueue({ name: &#39;notification&#39; }),
+    ],
+    providers: [EmailProcessor, EmailProducer],
+    exports: [EmailProducer],
+})
+export class JobsModule {}
+
+// jobs/processors/email.processor.ts
+@Processor(&#39;email&#39;)
+export class EmailProcessor extends WorkerHost {
+    constructor(private mailService: MailService) {
+        super();
+    }
+
+    async process(job: Job&lt;EmailJobData&gt;): Promise&lt;void&gt; {
+        const { type, to, data } = job.data;
+
+        switch (type) {
+            case &#39;welcome&#39;:
+                await this.mailService.sendWelcomeEmail(to, data);
+                break;
+            case &#39;reset-password&#39;:
+                await this.mailService.sendResetPasswordEmail(to, data);
+                break;
+        }
+    }
+}
+
+// jobs/producers/email.producer.ts
+@Injectable()
+export class EmailProducer {
+    constructor(@InjectQueue(&#39;email&#39;) private emailQueue: Queue) {}
+
+    async sendWelcomeEmail(to: string, data: WelcomeEmailData) {
+        await this.emailQueue.add(&#39;welcome&#39;, { type: &#39;welcome&#39;, to, data }, {
+            attempts: 3,
+            backoff: { type: &#39;exponential&#39;, delay: 1000 },
+        });
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="9-caching-layer" class="h h2"><a class="anchor" href="#9-caching-layer" aria-label="Link to this section">#</a>9. Caching Layer</h2>
+<h3 id="redis-cache-module" class="h h3"><a class="anchor" href="#redis-cache-module" aria-label="Link to this section">#</a>Redis Cache Module</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// cache/cache.module.ts
+import { CacheModule } from &#39;@nestjs/cache-manager&#39;;
+import * as redisStore from &#39;cache-manager-redis-store&#39;;
+
+@Module({
+    imports: [
+        CacheModule.registerAsync({
+            isGlobal: true,
+            useFactory: (configService: ConfigService) =&gt; ({
+                store: redisStore,
+                host: configService.get(&#39;redis.host&#39;),
+                port: configService.get(&#39;redis.port&#39;),
+                ttl: configService.get(&#39;redis.ttl&#39;),
+            }),
+            inject: [ConfigService],
+        }),
+    ],
+})
+export class AppCacheModule {}
+
+// cache/cache.service.ts
+@Injectable()
+export class CacheService {
+    constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+
+    async get&lt;T&gt;(key: string): Promise&lt;T | null&gt; {
+        return this.cacheManager.get&lt;T&gt;(key);
+    }
+
+    async set&lt;T&gt;(key: string, value: T, ttl?: number): Promise&lt;void&gt; {
+        await this.cacheManager.set(key, value, ttl);
+    }
+
+    async del(key: string): Promise&lt;void&gt; {
+        await this.cacheManager.del(key);
+    }
+
+    async reset(): Promise&lt;void&gt; {
+        await this.cacheManager.reset();
+    }
+}</code></pre></figure>
+<h3 id="cache-constants" class="h h3"><a class="anchor" href="#cache-constants" aria-label="Link to this section">#</a>Cache Constants</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// common/constants/cache-keys.constant.ts
+export const CacheKeys = {
+    USER: (id: string) =&gt; `user:${id}`,
+    USER_PROFILE: (id: string) =&gt; `user:${id}:profile`,
+    USERS_LIST: &#39;users:list&#39;,
+    AUTH_TOKEN: (userId: string) =&gt; `auth:token:${userId}`,
+} as const;
+
+export const CacheTTL = {
+    SHORT: 60,          // 1 minute
+    MEDIUM: 300,        // 5 minutes
+    LONG: 3600,         // 1 hour
+    DAY: 86400,         // 24 hours
+} as const;</code></pre></figure>
+<hr>
+<h2 id="10-external-services-integrations" class="h h2"><a class="anchor" href="#10-external-services-integrations" aria-label="Link to this section">#</a>10. External Services &amp; Integrations</h2>
+<h3 id="cau-truc-integration" class="h h3"><a class="anchor" href="#cau-truc-integration" aria-label="Link to this section">#</a>Cấu trúc Integration</h3>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>integrations/
+├── mail/
+│   ├── mail.module.ts
+│   ├── mail.service.ts
+│   ├── interfaces/
+│   │   └── mail-options.interface.ts
+│   ├── templates/
+│   │   ├── welcome.hbs
+│   │   └── reset-password.hbs
+│   └── index.ts
+│
+├── storage/
+│   ├── storage.module.ts
+│   ├── storage.service.ts
+│   ├── interfaces/
+│   │   └── storage-provider.interface.ts
+│   ├── providers/
+│   │   ├── s3.provider.ts
+│   │   ├── cloudinary.provider.ts
+│   │   └── local.provider.ts
+│   └── index.ts</code></pre></figure>
+<h3 id="strategy-pattern-cho-external-services" class="h h3"><a class="anchor" href="#strategy-pattern-cho-external-services" aria-label="Link to this section">#</a>Strategy Pattern cho External Services</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// storage/interfaces/storage-provider.interface.ts
+export interface StorageProvider {
+    upload(file: Express.Multer.File, path: string): Promise&lt;string&gt;;
+    delete(path: string): Promise&lt;void&gt;;
+    getUrl(path: string): string;
+}
+
+// storage/providers/s3.provider.ts
+@Injectable()
+export class S3Provider implements StorageProvider {
+    // Implementation
+}
+
+// storage/storage.service.ts
+@Injectable()
+export class StorageService {
+    constructor(
+        @Inject(&#39;STORAGE_PROVIDER&#39;)
+        private provider: StorageProvider,
+    ) {}
+
+    async upload(file: Express.Multer.File, path: string): Promise&lt;string&gt; {
+        return this.provider.upload(file, path);
+    }
+}
+
+// storage/storage.module.ts
+@Module({
+    providers: [
+        {
+            provide: &#39;STORAGE_PROVIDER&#39;,
+            useFactory: (configService: ConfigService) =&gt; {
+                const provider = configService.get(&#39;storage.provider&#39;);
+                switch (provider) {
+                    case &#39;s3&#39;: return new S3Provider(configService);
+                    case &#39;cloudinary&#39;: return new CloudinaryProvider(configService);
+                    default: return new LocalProvider(configService);
+                }
+            },
+            inject: [ConfigService],
+        },
+        StorageService,
+    ],
+    exports: [StorageService],
+})
+export class StorageModule {}</code></pre></figure>
+<hr>
+<h2 id="11-health-checks-monitoring" class="h h2"><a class="anchor" href="#11-health-checks-monitoring" aria-label="Link to this section">#</a>11. Health Checks &amp; Monitoring</h2>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// health/health.module.ts
+import { TerminusModule } from &#39;@nestjs/terminus&#39;;
+import { HttpModule } from &#39;@nestjs/axios&#39;;
+
+@Module({
+    imports: [TerminusModule, HttpModule],
+    controllers: [HealthController],
+    providers: [DatabaseHealthIndicator, RedisHealthIndicator],
+})
+export class HealthModule {}
+
+// health/health.controller.ts
+@Controller(&#39;health&#39;)
+export class HealthController {
+    constructor(
+        private health: HealthCheckService,
+        private db: DatabaseHealthIndicator,
+        private redis: RedisHealthIndicator,
+    ) {}
+
+    @Get()
+    @HealthCheck()
+    check() {
+        return this.health.check([
+            () =&gt; this.db.isHealthy(&#39;database&#39;),
+            () =&gt; this.redis.isHealthy(&#39;redis&#39;),
+        ]);
+    }
+
+    @Get(&#39;liveness&#39;)
+    liveness() {
+        return { status: &#39;ok&#39; };
+    }
+
+    @Get(&#39;readiness&#39;)
+    @HealthCheck()
+    readiness() {
+        return this.health.check([
+            () =&gt; this.db.isHealthy(&#39;database&#39;),
+        ]);
+    }
+}
+
+// health/indicators/database.health.ts
+@Injectable()
+export class DatabaseHealthIndicator extends HealthIndicator {
+    constructor(private prisma: PrismaService) {
+        super();
+    }
+
+    async isHealthy(key: string): Promise&lt;HealthIndicatorResult&gt; {
+        try {
+            await this.prisma.$queryRaw`SELECT 1`;
+            return this.getStatus(key, true);
+        } catch (error) {
+            return this.getStatus(key, false, { message: error.message });
+        }
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="12-testing-structure" class="h h2"><a class="anchor" href="#12-testing-structure" aria-label="Link to this section">#</a>12. Testing Structure</h2>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>src/
+├── modules/
+│   └── auth/
+│       └── __tests__/              # Unit tests cùng module
+│           ├── auth.service.spec.ts
+│           └── auth.controller.spec.ts
+
+test/                                # E2E tests
+├── auth/
+│   └── auth.e2e-spec.ts
+├── jest-e2e.json
+├── setup.ts                         # Global setup
+└── utils/
+    ├── test-database.ts
+    └── test-utils.ts</code></pre></figure>
+<h3 id="test-utils" class="h h3"><a class="anchor" href="#test-utils" aria-label="Link to this section">#</a>Test Utils</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// test/utils/test-database.ts
+export class TestDatabase {
+    private prisma: PrismaService;
+
+    constructor() {
+        this.prisma = new PrismaService();
+    }
+
+    async cleanDatabase(): Promise&lt;void&gt; {
+        const tablenames = await this.prisma.$queryRaw&lt;{ tablename: string }[]&gt;`
+            SELECT tablename FROM pg_tables WHERE schemaname=&#39;public&#39;
+        `;
+
+        for (const { tablename } of tablenames) {
+            if (tablename !== &#39;_prisma_migrations&#39;) {
+                await this.prisma.$executeRawUnsafe(
+                    `TRUNCATE TABLE &quot;${tablename}&quot; CASCADE;`
+                );
+            }
+        }
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="13-shared-libraries-libs" class="h h2"><a class="anchor" href="#13-shared-libraries-libs" aria-label="Link to this section">#</a>13. Shared Libraries (Libs)</h2>
+<h3 id="utils" class="h h3"><a class="anchor" href="#utils" aria-label="Link to this section">#</a>Utils</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// libs/utils/string.util.ts
+export class StringUtil {
+    static slugify(text: string): string {
+        return text
+            .toLowerCase()
+            .replace(/[^\w ]+/g, &#39;&#39;)
+            .replace(/ +/g, &#39;-&#39;);
+    }
+
+    static generateRandomString(length: number): string {
+        return crypto.randomBytes(length).toString(&#39;hex&#39;).slice(0, length);
+    }
+}
+
+// libs/utils/date.util.ts
+export class DateUtil {
+    static addDays(date: Date, days: number): Date {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    static isExpired(date: Date): boolean {
+        return new Date() &gt; date;
+    }
+}</code></pre></figure>
+<h3 id="custom-logger" class="h h3"><a class="anchor" href="#custom-logger" aria-label="Link to this section">#</a>Custom Logger</h3>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// libs/logger/logger.service.ts
+import { Injectable, LoggerService } from &#39;@nestjs/common&#39;;
+import * as winston from &#39;winston&#39;;
+
+@Injectable()
+export class AppLogger implements LoggerService {
+    private logger: winston.Logger;
+
+    constructor() {
+        this.logger = winston.createLogger({
+            level: process.env.LOG_LEVEL || &#39;info&#39;,
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json(),
+            ),
+            transports: [
+                new winston.transports.Console(),
+                new winston.transports.File({ filename: &#39;error.log&#39;, level: &#39;error&#39; }),
+                new winston.transports.File({ filename: &#39;combined.log&#39; }),
+            ],
+        });
+    }
+
+    log(message: string, context?: string) {
+        this.logger.info(message, { context });
+    }
+
+    error(message: string, trace?: string, context?: string) {
+        this.logger.error(message, { trace, context });
+    }
+
+    warn(message: string, context?: string) {
+        this.logger.warn(message, { context });
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="14-path-aliases-complete" class="h h2"><a class="anchor" href="#14-path-aliases-complete" aria-label="Link to this section">#</a>14. Path Aliases Complete</h2>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>// tsconfig.json
+{
+    &quot;compilerOptions&quot;: {
+        &quot;baseUrl&quot;: &quot;./&quot;,
+        &quot;paths&quot;: {
+            &quot;@/*&quot;: [&quot;src/*&quot;],
+            &quot;@common/*&quot;: [&quot;src/common/*&quot;],
+            &quot;@modules/*&quot;: [&quot;src/modules/*&quot;],
+            &quot;@database/*&quot;: [&quot;src/database/*&quot;],
+            &quot;@config/*&quot;: [&quot;src/config/*&quot;],
+            &quot;@libs/*&quot;: [&quot;src/libs/*&quot;],
+            &quot;@integrations/*&quot;: [&quot;src/integrations/*&quot;],
+            &quot;@jobs/*&quot;: [&quot;src/jobs/*&quot;],
+            &quot;@cache/*&quot;: [&quot;src/cache/*&quot;],
+            &quot;@health/*&quot;: [&quot;src/health/*&quot;],
+            &quot;@events/*&quot;: [&quot;src/events/*&quot;],
+            &quot;@test/*&quot;: [&quot;test/*&quot;]
+        }
+    }
+}</code></pre></figure>
+<hr>
+<h2 id="module-dependencies-diagram" class="h h2"><a class="anchor" href="#module-dependencies-diagram" aria-label="Link to this section">#</a>Module Dependencies Diagram</h2>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>                           ┌─────────────────┐
+                           │   AppModule     │
+                           └────────┬────────┘
+           ┌────────────────────────┼────────────────────────┐
+           │                        │                        │
+    ┌──────▼──────┐         ┌──────▼──────┐         ┌──────▼──────┐
+    │ ConfigModule│         │DatabaseModule│         │ CacheModule │
+    │  (Global)   │         │   (Global)   │         │  (Global)   │
+    └──────┬──────┘         └──────┬──────┘         └──────┬──────┘
+           │                        │                        │
+           └────────────────────────┼────────────────────────┘
+                                    │
+    ┌───────────────────────────────┼───────────────────────────────┐
+    │               │               │               │               │
+┌───▼───┐     ┌────▼────┐     ┌────▼────┐     ┌────▼────┐    ┌────▼────┐
+│ Auth  │     │  Users  │     │  Jobs   │     │  Mail   │    │ Health  │
+│Module │────▶│ Module  │     │ Module  │     │ Module  │    │ Module  │
+└───────┘     └─────────┘     └─────────┘     └─────────┘    └─────────┘</code></pre></figure>
+<hr>
+<h2 id="tham-khao" class="h h2"><a class="anchor" href="#tham-khao" aria-label="Link to this section">#</a>Tham khảo</h2>
+<ul>
+<li><a href="https://docs.nestjs.com/" target="_blank" rel="noopener">NestJS Documentation</a></li>
+<li><a href="https://docs.nestjs.com/techniques/queues" target="_blank" rel="noopener">NestJS Techniques - Queues</a></li>
+<li><a href="https://docs.nestjs.com/techniques/caching" target="_blank" rel="noopener">NestJS Techniques - Caching</a></li>
+<li><a href="https://docs.nestjs.com/techniques/events" target="_blank" rel="noopener">NestJS Techniques - Events</a></li>
+<li><a href="https://docs.nestjs.com/recipes/terminus" target="_blank" rel="noopener">NestJS Recipes - Health Checks</a></li>
+<li><a href="https://docs.nestjs.com/recipes/prisma" target="_blank" rel="noopener">Prisma with NestJS</a></li>
+</ul>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#muc-luc">Mục lục</a></li><li class="lvl2"><a href="#1-cau-truc-thu-muc-hoan-chinh">1. Cấu trúc thư mục hoàn chỉnh</a></li><li class="lvl2"><a href="#2-dtos-request-response-pattern">2. DTOs - Request/Response Pattern</a></li><li class="lvl3"><a href="#tai-sao-phai-tach">Tại sao phải tách?</a></li><li class="lvl3"><a href="#cau-truc-files">Cấu trúc files</a></li><li class="lvl3"><a href="#vi-du-request-dto">Ví dụ Request DTO</a></li><li class="lvl3"><a href="#vi-du-response-dto">Ví dụ Response DTO</a></li><li class="lvl3"><a href="#su-dung-trong-controller">Sử dụng trong Controller</a></li><li class="lvl2"><a href="#3-entities-models">3. Entities &amp; Models</a></li><li class="lvl3"><a href="#khi-nao-dung-entity">Khi nào dùng Entity?</a></li><li class="lvl2"><a href="#4-repository-pattern">4. Repository Pattern</a></li><li class="lvl3"><a href="#tai-sao-can-repository">Tại sao cần Repository?</a></li><li class="lvl3"><a href="#service-su-dung-repository">Service sử dụng Repository</a></li><li class="lvl2"><a href="#5-config-management">5. Config Management</a></li><li class="lvl3"><a href="#config-structure">Config Structure</a></li><li class="lvl3"><a href="#validation-schema">Validation Schema</a></li><li class="lvl3"><a href="#app-module-setup">App Module Setup</a></li><li class="lvl3"><a href="#type-safe-config-service">Type-safe Config Service</a></li><li class="lvl2"><a href="#6-middleware-guards-interceptors-pipes-filters">6. Middleware, Guards, Interceptors, Pipes, Filters</a></li><li class="lvl3"><a href="#thu-tu-thuc-thi-request-lifecycle">Thứ tự thực thi (Request Lifecycle)</a></li><li class="lvl3"><a href="#khi-nao-dung-gi">Khi nào dùng gì?</a></li><li class="lvl3"><a href="#vi-du-tung-loai">Ví dụ từng loại</a></li><li class="lvl2"><a href="#7-event-driven-architecture">7. Event-Driven Architecture</a></li><li class="lvl3"><a href="#nestjs-eventemitter">NestJS EventEmitter</a></li><li class="lvl3"><a href="#setup-module">Setup Module</a></li><li class="lvl2"><a href="#8-jobs-queues">8. Jobs &amp; Queues</a></li><li class="lvl3"><a href="#bullmq-setup">BullMQ Setup</a></li><li class="lvl2"><a href="#9-caching-layer">9. Caching Layer</a></li><li class="lvl3"><a href="#redis-cache-module">Redis Cache Module</a></li><li class="lvl3"><a href="#cache-constants">Cache Constants</a></li><li class="lvl2"><a href="#10-external-services-integrations">10. External Services &amp; Integrations</a></li><li class="lvl3"><a href="#cau-truc-integration">Cấu trúc Integration</a></li><li class="lvl3"><a href="#strategy-pattern-cho-external-services">Strategy Pattern cho External Services</a></li><li class="lvl2"><a href="#11-health-checks-monitoring">11. Health Checks &amp; Monitoring</a></li><li class="lvl2"><a href="#12-testing-structure">12. Testing Structure</a></li><li class="lvl3"><a href="#test-utils">Test Utils</a></li><li class="lvl2"><a href="#13-shared-libraries-libs">13. Shared Libraries (Libs)</a></li><li class="lvl3"><a href="#utils">Utils</a></li><li class="lvl3"><a href="#custom-logger">Custom Logger</a></li><li class="lvl2"><a href="#14-path-aliases-complete">14. Path Aliases Complete</a></li><li class="lvl2"><a href="#module-dependencies-diagram">Module Dependencies Diagram</a></li><li class="lvl2"><a href="#tham-khao">Tham khảo</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/enterprise-structure-complete.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

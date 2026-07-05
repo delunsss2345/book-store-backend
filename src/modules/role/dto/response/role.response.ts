@@ -1,7 +1,7 @@
 import { RoleCode } from "@prisma/client";
 
 export type RoleDTO = {
-    id: bigint;
+    id: number;
     code: RoleCode;
     name: string;
 };

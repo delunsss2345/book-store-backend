@@ -1,4 +1,4 @@
-import { TransformInterceptor } from '@/common';
+import { LoggingInterceptor, TransformInterceptor } from '@/common';
 import { PrismaExceptionFilter } from '@/common/filters/prisma-exception.filter';
 import { HttpExceptionFilter } from '@common/filters';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -6,7 +6,6 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import 'dotenv/config';
-import "../polyfill";
 import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +15,7 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
@@ -25,10 +25,25 @@ async function bootstrap() {
     .setTitle('Book Store Api')
     .setVersion('1.0')
     .addTag('bookstore')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        in: 'header',
+        name: 'Authorization',
+        description: 'JWT access token',
+      },
+      'access-token',
+    )
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(`${globalPrefix}/docs`, app, documentFactory);
+  SwaggerModule.setup(`${globalPrefix}/docs`, app, documentFactory, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
   await app.listen(port);
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,

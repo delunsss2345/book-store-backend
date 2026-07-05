@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend — Hidden Potential Assessment
+  Style adapted from Anthropic's html-effectiveness gallery palette.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookstore Backend · Hidden Potential</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--slate); font-family:var(--sans); line-height:1.55; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+
+  header.masthead{padding:64px 0 36px; border-bottom:1px solid var(--g200)}
+  .back{font-family:var(--mono); font-size:12px; color:var(--clay-d); text-decoration:none; display:inline-block; margin-bottom:24px}
+  .back:hover{text-decoration:underline}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--clay-d); margin:0 0 18px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.05; font-size:clamp(36px,5vw,58px); margin:0 0 20px; letter-spacing:-.01em}
+  .lede{font-size:clamp(16px,1.6vw,19px); max-width:66ch; color:var(--g700); margin:0}
+
+  /* Score banner */
+  .scoreboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; margin:32px 0 8px}
+  .score{background:var(--paper); border:1px solid var(--g200); border-radius:14px; padding:18px 20px}
+  .score .n{font-family:var(--serif); font-size:34px; font-weight:600; line-height:1}
+  .score .n small{font-size:16px; color:var(--g500)}
+  .score .l{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500); margin-top:8px}
+  .score.hot .n{color:var(--clay-d)}
+  .score.ol .n{color:var(--olive)}
+
+  nav.toc{display:flex; flex-wrap:wrap; gap:10px; padding:28px 0; border-bottom:1px solid var(--g200)}
+  nav.toc a{text-decoration:none; font-size:13px; padding:8px 15px; border-radius:999px; border:1px solid var(--g300); background:var(--paper); color:var(--g700); transition:all .15s ease}
+  nav.toc a:hover{background:var(--clay); color:var(--paper); border-color:var(--clay); transform:translateY(-1px)}
+
+  section{padding:54px 0; border-bottom:1px solid var(--g200)}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:8px}
+  .sec-num{font-family:var(--mono); font-size:13px; color:var(--clay-d); padding-top:6px}
+  section h2{font-family:var(--serif); font-weight:600; font-size:clamp(25px,3.2vw,34px); margin:0; letter-spacing:-.01em}
+  .sec-sub{color:var(--g500); font-size:15px; margin:6px 0 30px; max-width:72ch}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px}
+
+  /* assessment card */
+  .acard{background:var(--paper); border:1px solid var(--g200); border-radius:14px; padding:22px; position:relative; transition:transform .15s ease, box-shadow .15s ease}
+  .acard:hover{transform:translateY(-2px); box-shadow:0 8px 28px rgba(20,20,19,.07)}
+  .acard h3{font-family:var(--serif); font-size:19px; font-weight:600; margin:0 0 4px; padding-right:64px}
+  .acard p{margin:8px 0 0; font-size:14.5px; color:var(--g700)}
+  .acard ul{margin:10px 0 0; padding-left:18px; font-size:14px; color:var(--g700)}
+  .acard ul li{margin:5px 0}
+  .path{font-family:var(--mono); font-size:11.5px; color:var(--g500); display:block; margin-top:12px; word-break:break-all}
+
+  /* tag badges */
+  .badge{position:absolute; top:20px; right:20px; font-family:var(--mono); font-size:10.5px; padding:4px 9px; border-radius:999px; letter-spacing:.04em; text-transform:uppercase}
+  .b-latent{background:#EAF0E2; color:#4F6138; border:1px solid #CBD9B6}     /* hidden asset */
+  .b-gap{background:#F7E4DC; color:#A24A2E; border:1px solid #E8C2B2}        /* gap */
+  .b-quick{background:#FDF3D9; color:#8A6D1F; border:1px solid #ECD89C}      /* quick win */
+
+  /* effort/impact bar */
+  .ei{display:flex; gap:16px; margin-top:14px; font-family:var(--mono); font-size:11px; color:var(--g500)}
+  .ei b{color:var(--slate)}
+  .dots{letter-spacing:2px}
+  .dots .on{color:var(--clay)}
+  .dots .onol{color:var(--olive)}
+
+  .callout{border-left:3px solid var(--clay); background:var(--g100); padding:16px 20px; border-radius:0 10px 10px 0; margin:24px 0 0; font-size:14.5px; color:var(--g700)}
+  .callout.why{border-left-color:var(--olive)}
+  .callout b{color:var(--slate)}
+  code.inl{font-family:var(--mono); font-size:.88em; background:var(--g100); padding:2px 6px; border-radius:5px; color:var(--clay-d)}
+
+  table{width:100%; border-collapse:collapse; margin:8px 0 0; font-size:13.5px}
+  th,td{text-align:left; padding:11px 12px; border-bottom:1px solid var(--g200)}
+  th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500)}
+  tr:hover td{background:var(--g100)}
+  .tag{font-family:var(--mono); font-size:10.5px; padding:3px 8px; border-radius:999px}
+  .t-now{background:#F7E4DC; color:#A24A2E}
+  .t-soon{background:#FDF3D9; color:#8A6D1F}
+  .t-later{background:var(--g100); color:var(--g500)}
+
+  footer{padding:46px 0 64px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:center}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:18px}
+  footer .mono{font-family:var(--mono); font-size:12px; color:var(--g500)}
+
+  @media(max-width:880px){ .grid2{grid-template-columns:1fr} }
+  @media(max-width:640px){ section{padding:40px 0} .sec-head{flex-direction:column; gap:4px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <a class="back" href="./index.html">← Documentation index</a>
+    <p class="eyebrow">Hidden Potential · Đánh giá tiềm ẩn</p>
+    <h1>Sleeping Assets &amp; Untapped Leverage</h1>
+    <p class="lede">
+      Báo cáo deep-dive cho thấy dự án <i>đã làm gì</i>. Tài liệu này nhìn theo hướng ngược lại:
+      đâu là những <b>nền tảng đã có sẵn nhưng chưa được khai thác</b>, đâu là <b>khoảng trống rủi ro</b>,
+      và mỗi điểm đó — nếu xử lý — sẽ nâng dự án lên một bậc giá trị như thế nào. Mọi nhận định dưới đây
+      đều dựa trên dữ kiện đọc trực tiếp từ codebase.
+    </p>
+
+    <div class="scoreboard">
+      <div class="score"><div class="n">47</div><div class="l">Prisma models</div></div>
+      <div class="score"><div class="n">51</div><div class="l">Migrations</div></div>
+      <div class="score hot"><div class="n">1<small>/89</small></div><div class="l">Service có test</div></div>
+      <div class="score ol"><div class="n">22<small>/38</small></div><div class="l">Controller có Swagger</div></div>
+      <div class="score"><div class="n">2</div><div class="l">Cron jobs</div></div>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#latent">① Tài sản đang ngủ</a>
+    <a href="#gaps">② Khoảng trống rủi ro</a>
+    <a href="#leverage">③ Đòn bẩy giá trị cao</a>
+    <a href="#roadmap">④ Roadmap ưu tiên</a>
+    <a href="#verdict">★ Kết luận</a>
+  </nav>
+
+  <!-- ============ 1. LATENT ASSETS ============ -->
+  <section id="latent">
+    <div class="sec-head"><span class="sec-num">①</span><h2>Tài sản đang ngủ — đã có hạ tầng, chưa bật công tắc</h2></div>
+    <p class="sec-sub">Những thứ này tốn rất ít công để kích hoạt vì nền móng đã nằm sẵn trong dự án.</p>
+
+    <div class="grid3">
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>Real-time đã cài, chưa dùng</h3>
+        <p><code class="inl">@nestjs/websockets</code> + <code class="inl">platform-socket.io</code> nằm trong dependencies, nhưng <b>không có gateway nào</b> trong <code class="inl">src/</code>.</p>
+        <ul>
+          <li>Thông báo đơn hàng / thanh toán real-time</li>
+          <li>Admin dashboard live (đơn mới, tồn kho)</li>
+          <li>Tận dụng luôn <code class="inl">UserEvent</code> stream sẵn có</li>
+        </ul>
+        <span class="path">package.json · chưa có *.gateway.ts</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>UserEvent = mỏ vàng analytics</h3>
+        <p>Mọi hành vi đã được ghi (<code class="inl">VIEW/CART/CHECKOUT/PAYMENT</code>) với IP, device, metadata JSON — nhưng mới dùng cho recommendation.</p>
+        <ul>
+          <li>Funnel conversion (view → cart → paid)</li>
+          <li>Phát hiện gian lận / bất thường</li>
+          <li>Cohort &amp; retention không cần thêm thu thập</li>
+        </ul>
+        <span class="path">prisma/models/engagement.prisma</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>Audit log chưa có UI</h3>
+        <p><code class="inl">AuditLog</code> lưu <code class="inl">before/after</code> JSON đầy đủ, nhưng chưa có màn hình tra cứu/diff timeline.</p>
+        <ul>
+          <li>Trang "lịch sử thay đổi" cho mỗi entity</li>
+          <li>Compliance &amp; truy vết nội bộ</li>
+        </ul>
+        <span class="path">modules/audit-log</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>Snapshot mở đường cho versioning</h3>
+        <p><code class="inl">BookVariantSnapshot.contentHash</code> đã chống trùng — nền tảng sẵn cho lịch sử giá &amp; rollback giá.</p>
+        <span class="path">prisma/models/commerce.prisma</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>Pinecone metadata chưa filter</h3>
+        <p>Index đã nhúng <code class="inl">categoryIds</code>, <code class="inl">langHints</code>, <code class="inl">price</code> — nhưng query chưa dùng <b>metadata filtering</b> để lọc giá/ngôn ngữ.</p>
+        <span class="path">modules/pinecone/pinecone.service.ts</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-latent">Latent</span>
+        <h3>Terraform chỉ một region</h3>
+        <p>Có sẵn <code class="inl">terraform/modules</code> + <code class="inl">singapore</code> — cấu trúc đã module hoá để nhân bản multi-region/staging.</p>
+        <span class="path">terraform/</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. GAPS ============ -->
+  <section id="gaps">
+    <div class="sec-head"><span class="sec-num">②</span><h2>Khoảng trống rủi ro — nơi dự án dễ bị "soi" khi phỏng vấn</h2></div>
+    <p class="sec-sub">Đây là những điểm một interviewer senior sẽ hỏi ngay. Vá được chúng vừa giảm rủi ro, vừa biến điểm yếu thành câu chuyện trưởng thành.</p>
+
+    <div class="grid2">
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Độ phủ test gần như bằng 0</h3>
+        <p>Chỉ <b>1 file test</b> trên 89 service+controller. Trớ trêu là phần giá trị nhất — <code class="inl">scoreEvent</code>, <code class="inl">timeDecay</code>, Jaccard — lại <b>deterministic, cực dễ test</b>.</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●●●</span>○</b></span><span>Effort <b class="dots"><span class="onol">●●</span>○○○</b></span></div>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Thiếu security headers</h3>
+        <p><code class="inl">main.ts</code> có <code class="inl">ValidationPipe</code> + <code class="inl">cookieParser</code>, nhưng <b>không thấy</b> <code class="inl">helmet</code> hay cấu hình <code class="inl">cors</code> tường minh.</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●●</span>○○</b></span><span>Effort <b class="dots"><span class="onol">●</span>○○○○</b></span></div>
+        <span class="path">src/main.ts</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Permission cache không invalidate</h3>
+        <p>Cache <code class="inl">role_per:{id}:perms</code> TTL 1h, nhưng grant/revoke không xoá cache → quyền cũ sống thêm tới 1 giờ (rủi ro bảo mật tinh tế).</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●●●</span>○</b></span><span>Effort <b class="dots"><span class="onol">●</span>○○○○</b></span></div>
+        <span class="path">common/security/guard/permission.guard.ts</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Webhook chưa verify chữ ký</h3>
+        <p>Idempotency đã tốt, nhưng callback thanh toán cần <b>xác thực secret/chữ ký</b> từ Sepay để chống giả mạo "đơn đã thanh toán".</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●●●●</span></b></span><span>Effort <b class="dots"><span class="onol">●●</span>○○○</b></span></div>
+        <span class="path">modules/hooks</span>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Swagger phủ chưa đều</h3>
+        <p>Mới <b>22/38</b> controller có annotation Swagger. API contract đã export được nhưng chưa đầy đủ cho người tích hợp.</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●</span>○○○</b></span><span>Effort <b class="dots"><span class="onol">●●</span>○○○</b></span></div>
+      </div>
+
+      <div class="acard">
+        <span class="badge b-gap">Gap</span>
+        <h3>Observability mỏng</h3>
+        <p>Có <code class="inl">LoggingInterceptor</code> nhưng chưa thấy structured logging/correlation-id/tracing — khó debug luồng webhook → queue → email trên production.</p>
+        <div class="ei"><span>Impact <b class="dots"><span class="on">●●●</span>○○</b></span><span>Effort <b class="dots"><span class="onol">●●●</span>○○</b></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. LEVERAGE ============ -->
+  <section id="leverage">
+    <div class="sec-head"><span class="sec-num">③</span><h2>Đòn bẩy giá trị cao — biến "tốt" thành "ấn tượng"</h2></div>
+    <p class="sec-sub">Những hạng mục này không vá lỗ hổng mà <i>nhân</i> giá trị của thứ đã có, tạo câu chuyện kỹ thuật mạnh trên CV.</p>
+
+    <div class="grid3">
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Hybrid Reranking</h3>
+        <p>Hợp nhất điểm hành vi (§reco) với điểm ngữ nghĩa (§search) thành một bộ rerank → <b>"personalized semantic search"</b>, một keyword cực mạnh.</p>
+      </div>
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Đo lường chất lượng gợi ý</h3>
+        <p>Thêm offline metric (hit-rate@K, coverage, novelty) + A/B hook → <b>chứng minh bằng số</b> rằng engine tốt hơn baseline, thay vì nói suông.</p>
+      </div>
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Refresh token rotation</h3>
+        <p>Đã có session+device. Thêm <b>rotation + reuse-detection</b> → thu hồi cả họ session khi phát hiện token bị đánh cắp. Auth chuẩn ngân hàng.</p>
+      </div>
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Outbox → CDC tổng quát</h3>
+        <p>Pattern outbox cho email có thể tổng quát hoá thành <b>domain event bus</b> (order.paid, stock.low) → kiến trúc event-driven thực thụ.</p>
+      </div>
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Realtime admin dashboard</h3>
+        <p>Bật WebSocket + đẩy <code class="inl">UserEvent</code>/order live → demo "wow" khi phỏng vấn, tận dụng hạ tầng đã cài.</p>
+      </div>
+      <div class="acard">
+        <span class="badge b-quick">Leverage</span>
+        <h3>Load test số liệu thật</h3>
+        <p>Cache + index đã có; chạy k6/Artillery để có <b>con số p95/throughput</b> đưa vào CV — bằng chứng "build hệ thống chịu tải".</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. ROADMAP ============ -->
+  <section id="roadmap">
+    <div class="sec-head"><span class="sec-num">④</span><h2>Roadmap ưu tiên theo ROI</h2></div>
+    <p class="sec-sub">Sắp xếp theo "lợi ích / công sức". Ưu tiên những việc nhỏ-tác-động-lớn trước.</p>
+    <table>
+      <tr><th>Hạng mục</th><th>Loại</th><th>Impact</th><th>Effort</th><th>Khi nào</th></tr>
+      <tr><td>Verify chữ ký webhook Sepay</td><td>Bảo mật</td><td>Rất cao</td><td>Thấp</td><td><span class="tag t-now">Ngay</span></td></tr>
+      <tr><td>Invalidate permission cache khi grant/revoke</td><td>Bảo mật</td><td>Cao</td><td>Rất thấp</td><td><span class="tag t-now">Ngay</span></td></tr>
+      <tr><td>Thêm helmet + cấu hình CORS tường minh</td><td>Bảo mật</td><td>TB-cao</td><td>Rất thấp</td><td><span class="tag t-now">Ngay</span></td></tr>
+      <tr><td>Unit test cho scoreEvent / timeDecay / Jaccard</td><td>Chất lượng</td><td>Cao</td><td>Thấp</td><td><span class="tag t-now">Ngay</span></td></tr>
+      <tr><td>Refresh token rotation + reuse detection</td><td>Đòn bẩy</td><td>Cao</td><td>TB</td><td><span class="tag t-soon">Kế tiếp</span></td></tr>
+      <tr><td>Metric đánh giá recommendation + A/B hook</td><td>Đòn bẩy</td><td>Cao</td><td>TB</td><td><span class="tag t-soon">Kế tiếp</span></td></tr>
+      <tr><td>Hoàn thiện Swagger 38/38 controller</td><td>DX</td><td>TB</td><td>TB</td><td><span class="tag t-soon">Kế tiếp</span></td></tr>
+      <tr><td>Hybrid reranking (behavior × semantic)</td><td>Đòn bẩy</td><td>Rất cao</td><td>Cao</td><td><span class="tag t-later">Sau</span></td></tr>
+      <tr><td>WebSocket realtime + admin dashboard</td><td>Tài sản ngủ</td><td>Cao</td><td>Cao</td><td><span class="tag t-later">Sau</span></td></tr>
+      <tr><td>Observability: structured log + tracing</td><td>Vận hành</td><td>TB-cao</td><td>Cao</td><td><span class="tag t-later">Sau</span></td></tr>
+    </table>
+    <div class="callout why">
+      <b>Nguyên tắc:</b> 4 hạng mục "Ngay" cộng lại chỉ vài giờ làm nhưng vá toàn bộ rủi ro phỏng vấn nặng nhất (bảo mật + test).
+      Làm xong nhóm này trước khi đụng tới các đòn bẩy lớn.
+    </div>
+  </section>
+
+  <!-- ============ VERDICT ============ -->
+  <section id="verdict" style="border:none">
+    <div class="sec-head"><span class="sec-num" style="color:var(--clay)">★</span><h2>Kết luận</h2></div>
+    <p class="sec-sub" style="max-width:74ch">
+      Đây là một codebase có <b>chiều sâu kiến trúc hiếm thấy</b> ở dự án cá nhân: recommendation tự thiết kế,
+      semantic search, RBAC có cache, outbox, snapshot. Phần "tiềm ẩn" không nằm ở việc thiếu tính năng —
+      mà ở chỗ <b>nhiều nền tảng mạnh chưa được bật công tắc</b> (real-time, analytics từ UserEvent, audit UI)
+      và một vài <b>khoảng trống cơ bản</b> (test, security headers, cache invalidation) đang kéo điểm tổng xuống.
+    </p>
+    <div class="callout">
+      <b>Một câu cho CV:</b> "Thiết kế &amp; vận hành backend thương mại điện tử 47-bảng với recommendation engine
+      deterministic giải thích được, semantic search bằng vector, RBAC cache-first và xử lý thanh toán idempotent —
+      kèm test cho lõi thuật toán và webhook được ký xác thực." Roadmap ở §④ chính là con đường để câu nói đó <i>đúng hoàn toàn</i>.
+    </div>
+  </section>
+
+  <footer>
+    <span class="acc">Hidden Potential Assessment</span>
+    <span class="mono">Bookstore Backend · 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>

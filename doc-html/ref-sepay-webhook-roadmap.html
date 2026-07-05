@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend - reference doc converted from docs/sepay-webhook-integration-roadmap.md
+  Style adapted from Anthropic's html-effectiveness gallery (Apache-2.0).
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sepay Webhook Integration Roadmap (NestJS + Prisma) · Bookstore Backend</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --rust:#B04A3F; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g150:#ECEAE0; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0; background:var(--ivory); color:var(--g700); font-family:var(--sans);
+    font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+
+  .page{max-width:1180px; margin:0 auto; padding:0 24px 96px;
+    display:grid; grid-template-columns:minmax(0,1fr) 248px; gap:48px}
+  @media(max-width:920px){ .page{grid-template-columns:1fr; gap:0} }
+
+  /* ---- Masthead ---- */
+  header.masthead{grid-column:1 / -1; padding:40px 0 26px; border-bottom:1px solid var(--g200); margin-bottom:8px}
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:26px}
+  .repo-line{font-family:var(--mono); font-size:12.5px; color:var(--g500)}
+  .repo-line b{color:var(--clay-d); font-weight:500}
+  a.back{font-family:var(--mono); font-size:12px; text-decoration:none; color:var(--g700);
+    border:1px solid var(--g300); border-radius:999px; padding:6px 13px; background:var(--paper); white-space:nowrap;
+    transition:all .14s ease}
+  a.back:hover{border-color:var(--clay); color:var(--clay-d)}
+  .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--clay-d); margin:0 0 12px}
+  header.masthead h1{font-family:var(--serif); font-weight:600; line-height:1.1;
+    font-size:clamp(30px,4.2vw,44px); margin:0; letter-spacing:-.01em; color:var(--slate)}
+  .lede{font-size:clamp(16px,1.5vw,18px); color:var(--g700); margin:18px 0 0; max-width:68ch}
+  .lede code{font-family:var(--mono); font-size:.86em}
+
+  /* ---- Content column ---- */
+  main{min-width:0; padding-top:30px}
+  main > *:first-child{margin-top:0}
+
+  h2.h{font-family:var(--serif); font-weight:600; font-size:clamp(22px,2.6vw,28px);
+    color:var(--slate); letter-spacing:-.01em; margin:46px 0 14px; padding-top:10px; line-height:1.2}
+  h3.h{font-family:var(--serif); font-weight:600; font-size:19px; color:var(--slate); margin:30px 0 10px; line-height:1.25}
+  h4.h,h5.h,h6.h{font-family:var(--sans); font-weight:700; font-size:14px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.05em; margin:24px 0 8px}
+  .h .anchor{opacity:0; text-decoration:none; color:var(--clay); font-family:var(--mono);
+    margin-left:-22px; padding-right:8px; font-weight:400}
+  .h:hover .anchor{opacity:1}
+
+  main p{margin:0 0 16px}
+  main ul,main ol{margin:0 0 16px; padding-left:24px}
+  main li{margin:5px 0}
+  main li>ul,main li>ol{margin:6px 0}
+  main strong{color:var(--slate); font-weight:650}
+  main hr{border:0; border-top:1px solid var(--g200); margin:40px 0}
+
+  main :not(pre)>code{font-family:var(--mono); font-size:.86em; background:var(--g100);
+    border:1px solid var(--g200); border-radius:5px; padding:1.5px 6px; color:var(--rust); word-break:break-word}
+
+  /* ---- Code blocks ---- */
+  .codeblock{margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--slate);
+    border:1px solid #2a2a27; box-shadow:0 8px 24px rgba(20,20,19,.10)}
+  .codeblock figcaption{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:#9d9b90; padding:9px 16px; border-bottom:1px solid #2a2a27; background:#1b1b19}
+  .codeblock pre{margin:0; padding:16px 18px; overflow-x:auto}
+  .codeblock code{font-family:var(--mono); font-size:12.8px; line-height:1.7; color:#E8E6DC; white-space:pre}
+  .codeblock.diagram{background:var(--paper); border:1px solid var(--g300); box-shadow:none}
+  .codeblock.diagram figcaption{background:var(--g100); color:var(--clay-d); border-bottom:1px solid var(--g200)}
+  .codeblock.diagram code{color:var(--g700)}
+
+  /* ---- Tables ---- */
+  .table-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--g200); border-radius:12px; background:var(--paper)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  thead th{font-family:var(--sans); font-weight:650; text-align:left; color:var(--slate);
+    background:var(--g100); padding:11px 14px; border-bottom:1px solid var(--g200); white-space:nowrap}
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--g150); vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--ivory)}
+  table code{font-family:var(--mono); font-size:12px; background:var(--g100); border:1px solid var(--g200);
+    border-radius:4px; padding:1px 5px; color:var(--rust)}
+
+  /* ---- Callout / blockquote ---- */
+  .callout{margin:0 0 20px; padding:14px 18px; border-left:3px solid var(--clay);
+    background:rgba(217,119,87,.06); border-radius:0 10px 10px 0; color:var(--g700)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ---- TOC sidebar ---- */
+  aside{grid-column:2; align-self:start; position:sticky; top:24px}
+  @media(max-width:920px){ aside{position:static; margin:8px 0 32px} }
+  .toc{border:1px solid var(--g200); border-radius:12px; background:var(--paper); padding:16px 18px}
+  .toc-title{font-family:var(--sans); font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--g500); margin:0 0 12px}
+  .toc ul{list-style:none; margin:0; padding:0}
+  .toc li{margin:0}
+  .toc a{display:block; text-decoration:none; color:var(--g700); font-size:13px; line-height:1.4;
+    padding:5px 0 5px 12px; border-left:2px solid var(--g200); transition:all .12s ease}
+  .toc a:hover{color:var(--clay-d); border-left-color:var(--clay)}
+  .toc li.lvl3 a{padding-left:24px; font-size:12.5px; color:var(--g500)}
+  .toc a.active{color:var(--clay-d); border-left-color:var(--clay); font-weight:600}
+
+  footer{grid-column:1 / -1; margin-top:56px; padding:28px 0 0; border-top:1px solid var(--g200);
+    display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:center}
+  footer .src{font-family:var(--mono); font-size:12px; color:var(--g500)}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:16px; color:var(--g700)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="topbar">
+      <div class="repo-line">book-store-be · <b>sepay webhook roadmap</b></div>
+      <a class="back" href="./index.html">← Documentation index</a>
+    </div>
+    <p class="eyebrow">Reference · Payments</p>
+    <h1>Sepay Webhook Integration Roadmap (NestJS + Prisma)</h1>
+    <p class="lede">Tài liệu này là <strong>lộ trình + code mẫu</strong> để bạn tự triển khai dần.
+Không phải full source code đã cắm sẵn vào project.</p>
+  </header>
+
+  <main>
+<h2 id="1-muc-tieu-phase-1" class="h h2"><a class="anchor" href="#1-muc-tieu-phase-1" aria-label="Link to this section">#</a>1) Mục tiêu phase 1</h2>
+<ol>
+<li><code>POST /api/v1/payments/sepay/checkout</code>: tạo đơn chờ thanh toán.</li>
+<li>User chuyển khoản theo nội dung chuẩn (prefix + <code>orderCode</code>).</li>
+<li><code>POST /api/v1/payments/sepay/webhook/:secret</code>: nhận webhook Sepay.</li>
+<li>Auto cập nhật <code>orders</code> + log vào <code>payment_transactions</code> + <code>webhook_inbox</code>.</li>
+</ol>
+<h2 id="2-y-tuong-tong-quat" class="h h2"><a class="anchor" href="#2-y-tuong-tong-quat" aria-label="Link to this section">#</a>2) Ý tưởng tổng quát</h2>
+<ol>
+<li><strong>Checkout</strong> tạo <code>order</code> ở trạng thái <code>PENDING_PAYMENT</code>.</li>
+<li>Backend trả <code>transferContent</code> và <code>qrUrl</code> để frontend hiển thị.</li>
+<li>Sepay gửi webhook khi có giao dịch vào.</li>
+<li>Backend dùng <code>code</code> (hoặc fallback từ <code>content</code>) để tìm order.</li>
+<li>Nếu khớp tiền: chuyển order sang <code>PAID</code>.</li>
+<li>Nếu không khớp: ghi <code>FAILED</code>, giữ order pending.</li>
+</ol>
+<h2 id="3-schema-va-env-can-chuan-bi" class="h h2"><a class="anchor" href="#3-schema-va-env-can-chuan-bi" aria-label="Link to this section">#</a>3) Schema và env cần chuẩn bị</h2>
+<h2 id="3-1-prisma-enum" class="h h2"><a class="anchor" href="#3-1-prisma-enum" aria-label="Link to this section">#</a>3.1 Prisma enum</h2>
+<p>File: <code>prisma/schema.prisma</code></p>
+<figure class="codeblock"><figcaption>Prisma</figcaption><pre><code>enum PaymentGateway {
+  COD
+  VNPAY
+  MOMO
+  STRIPE
+  PAYPAL
+  SEPAY
+  OTHER
+}</code></pre></figure>
+<h2 id="3-2-sql-migration-mau-mysql" class="h h2"><a class="anchor" href="#3-2-sql-migration-mau-mysql" aria-label="Link to this section">#</a>3.2 SQL migration mẫu (MySQL)</h2>
+<p>Tạo migration mới với nội dung kiểu:</p>
+<figure class="codeblock"><figcaption>SQL</figcaption><pre><code>ALTER TABLE `payment_transactions`
+MODIFY `gateway` ENUM(&#39;COD&#39;,&#39;VNPAY&#39;,&#39;MOMO&#39;,&#39;STRIPE&#39;,&#39;PAYPAL&#39;,&#39;SEPAY&#39;,&#39;OTHER&#39;) NOT NULL;
+
+ALTER TABLE `webhook_inbox`
+MODIFY `gateway` ENUM(&#39;COD&#39;,&#39;VNPAY&#39;,&#39;MOMO&#39;,&#39;STRIPE&#39;,&#39;PAYPAL&#39;,&#39;SEPAY&#39;,&#39;OTHER&#39;) NOT NULL;</code></pre></figure>
+<h2 id="3-3-env-mau" class="h h2"><a class="anchor" href="#3-3-env-mau" aria-label="Link to this section">#</a>3.3 Env mẫu</h2>
+<figure class="codeblock"><figcaption>env</figcaption><pre><code>SEPAY_WEBHOOK_SECRET=replace_me
+SEPAY_TRANSFER_PREFIX=DH
+SEPAY_BANK_ACCOUNT=0123456789
+SEPAY_BANK_CODE=MB
+SEPAY_ACCOUNT_NAME=BOOK STORE
+SEPAY_QR_BASE_URL=https://qr.sepay.vn/img</code></pre></figure>
+<h2 id="4-cau-truc-module-goi-y" class="h h2"><a class="anchor" href="#4-cau-truc-module-goi-y" aria-label="Link to this section">#</a>4) Cấu trúc module gợi ý</h2>
+<p>Tạo mới:</p>
+<figure class="codeblock"><figcaption>text</figcaption><pre><code>src/modules/payment/
+  payment.module.ts
+  payment.controller.ts
+  payment.service.ts
+  payment.repository.ts
+  dto/
+    request/
+      sepay-checkout.request.dto.ts
+      sepay-webhook.request.dto.ts
+      index.ts
+    response/
+      sepay-checkout.response.dto.ts
+      sepay-order-status.response.dto.ts
+      index.ts</code></pre></figure>
+<p>Wire vào <code>src/app.module.ts</code>:</p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>import { PaymentModule } from &#39;@/modules/payment/payment.module&#39;;
+
+@Module({
+  imports: [
+    // ...
+    PaymentModule,
+  ],
+})
+export class AppModule {}</code></pre></figure>
+<h2 id="5-dto-mau" class="h h2"><a class="anchor" href="#5-dto-mau" aria-label="Link to this section">#</a>5) DTO mẫu</h2>
+<h2 id="5-1-checkout-request" class="h h2"><a class="anchor" href="#5-1-checkout-request" aria-label="Link to this section">#</a>5.1 Checkout request</h2>
+<p>File: <code>src/modules/payment/dto/request/sepay-checkout.request.dto.ts</code></p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>import { ApiProperty, ApiPropertyOptional } from &#39;@nestjs/swagger&#39;;
+import { IsOptional, IsString, MaxLength } from &#39;class-validator&#39;;
+
+export class SepayCheckoutRequestDto {
+  @ApiProperty({ example: &#39;Nguyen Van A&#39; })
+  @IsString()
+  @MaxLength(200)
+  recipientName: string;
+
+  @ApiProperty({ example: &#39;0900000000&#39; })
+  @IsString()
+  @MaxLength(30)
+  phoneNumber: string;
+
+  @ApiProperty({ example: &#39;123 Nguyen Trai&#39; })
+  @IsString()
+  @MaxLength(500)
+  addressLine: string;
+
+  @ApiProperty({ example: &#39;Ho Chi Minh&#39; })
+  @IsString()
+  @MaxLength(200)
+  city: string;
+
+  @ApiPropertyOptional({ example: &#39;Phuong 1&#39; })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  ward?: string;
+
+  @ApiPropertyOptional({ example: &#39;Quan 1&#39; })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  district?: string;
+
+  @ApiPropertyOptional({ example: &#39;Giao gio hanh chinh&#39; })
+  @IsOptional()
+  @IsString()
+  note?: string;
+}</code></pre></figure>
+<h2 id="5-2-webhook-request" class="h h2"><a class="anchor" href="#5-2-webhook-request" aria-label="Link to this section">#</a>5.2 Webhook request</h2>
+<p>File: <code>src/modules/payment/dto/request/sepay-webhook.request.dto.ts</code></p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>import { ApiProperty, ApiPropertyOptional } from &#39;@nestjs/swagger&#39;;
+import { IsIn, IsInt, IsNumber, IsOptional, IsString } from &#39;class-validator&#39;;
+
+export class SepayWebhookRequestDto {
+  @ApiProperty({ example: 92704 })
+  @IsInt()
+  id: number;
+
+  @ApiProperty({ example: &#39;Vietcombank&#39; })
+  @IsString()
+  gateway: string;
+
+  @ApiProperty({ example: &#39;2023-03-25 14:02:37&#39; })
+  @IsString()
+  transactionDate: string;
+
+  @ApiProperty({ example: &#39;0123499999&#39; })
+  @IsString()
+  accountNumber: string;
+
+  @ApiPropertyOptional({ example: null, nullable: true })
+  @IsOptional()
+  @IsString()
+  code?: string | null;
+
+  @ApiProperty({ example: &#39;chuyen khoan DHORD0001&#39; })
+  @IsString()
+  content: string;
+
+  @ApiProperty({ example: &#39;in&#39;, enum: [&#39;in&#39;, &#39;out&#39;] })
+  @IsIn([&#39;in&#39;, &#39;out&#39;])
+  transferType: &#39;in&#39; | &#39;out&#39;;
+
+  @ApiProperty({ example: 2277000 })
+  @IsNumber()
+  transferAmount: number;
+
+  @ApiPropertyOptional({ example: &#39;MBVCB.3278907687&#39; })
+  @IsOptional()
+  @IsString()
+  referenceCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}</code></pre></figure>
+<h2 id="6-controller-mau" class="h h2"><a class="anchor" href="#6-controller-mau" aria-label="Link to this section">#</a>6) Controller mẫu</h2>
+<p>File: <code>src/modules/payment/payment.controller.ts</code></p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>import { GetUser } from &#39;@/common/decorators/getUser.decorator&#39;;
+import { Public } from &#39;@/common/security/decorators/public.decorator&#39;;
+import type { JwtPayload } from &#39;@/common/dto/jwt.dto&#39;;
+import { Body, Controller, Get, Param, Post } from &#39;@nestjs/common&#39;;
+import { ApiBearerAuth, ApiTags } from &#39;@nestjs/swagger&#39;;
+import { SkipThrottle } from &#39;@nestjs/throttler&#39;;
+import { SepayCheckoutRequestDto, SepayWebhookRequestDto } from &#39;./dto/request&#39;;
+import { PaymentService } from &#39;./payment.service&#39;;
+
+@ApiTags(&#39;payment&#39;)
+@Controller(&#39;payments/sepay&#39;)
+export class PaymentController {
+  constructor(private readonly paymentService: PaymentService) {}
+
+  @Post(&#39;checkout&#39;)
+  @ApiBearerAuth(&#39;access-token&#39;)
+  checkout(@GetUser() user: JwtPayload, @Body() body: SepayCheckoutRequestDto) {
+    return this.paymentService.createCheckout(BigInt(user.sub), body);
+  }
+
+  @Public()
+  @SkipThrottle()
+  @Post(&#39;webhook/:secret&#39;)
+  webhook(@Param(&#39;secret&#39;) secret: string, @Body() body: SepayWebhookRequestDto) {
+    return this.paymentService.handleWebhook(secret, body);
+  }
+
+  @Get(&#39;orders/:orderCode/status&#39;)
+  @ApiBearerAuth(&#39;access-token&#39;)
+  getStatus(@GetUser() user: JwtPayload, @Param(&#39;orderCode&#39;) orderCode: string) {
+    return this.paymentService.getOrderStatus(BigInt(user.sub), orderCode);
+  }
+}</code></pre></figure>
+<h2 id="7-service-logic-mau" class="h h2"><a class="anchor" href="#7-service-logic-mau" aria-label="Link to this section">#</a>7) Service logic mẫu</h2>
+<p>File: <code>src/modules/payment/payment.service.ts</code></p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>private extractOrderCode(code: string | null | undefined, content: string | undefined, prefix: string): string | null {
+  if (code?.trim()) return code.trim();
+  if (!content) return null;
+  const regex = new RegExp(`${prefix}[A-Za-z0-9-]+`);
+  const match = content.match(regex);
+  return match ? match[0] : null;
+}</code></pre></figure>
+<p>Luồng <code>createCheckout</code>:</p>
+<ol>
+<li>Lấy cart mới nhất của user + items.</li>
+<li>Validate cart không rỗng.</li>
+<li>Tính <code>subtotal/totalAmount</code>.</li>
+<li>Tạo <code>order</code> (<code>PENDING_PAYMENT</code>, <code>PENDING</code>).</li>
+<li>Tạo <code>payment_transactions</code> trạng thái <code>PENDING</code> với gateway <code>SEPAY</code>.</li>
+<li>Sinh <code>transferContent = PREFIX + orderCode</code>.</li>
+<li>Trả <code>qrUrl</code>, <code>amount</code>, <code>transferContent</code>.</li>
+</ol>
+<p>Luồng <code>handleWebhook</code>:</p>
+<ol>
+<li>Verify <code>secret</code>.</li>
+<li>Insert <code>webhook_inbox</code> <code>PENDING</code> theo <code>providerEventId = payload.id</code>.</li>
+<li>Nếu duplicate unique key: return <code>{ accepted: true, duplicate: true }</code>.</li>
+<li>Nếu <code>transferType !== &#39;in&#39;</code>: mark <code>DONE</code> và return.</li>
+<li>Parse <code>orderCode</code> từ <code>code</code> hoặc <code>content</code>.</li>
+<li>Tìm order.</li>
+<li>So khớp amount.</li>
+<li>Nếu match: tạo payment <code>SUCCESS</code>, update order <code>PAID/SUCCESS</code>, mark inbox <code>DONE</code>.</li>
+<li>Nếu mismatch: tạo payment <code>FAILED</code>, mark inbox <code>FAILED</code>.</li>
+</ol>
+<h2 id="8-repository-pseudo-code-mau" class="h h2"><a class="anchor" href="#8-repository-pseudo-code-mau" aria-label="Link to this section">#</a>8) Repository pseudo-code mẫu</h2>
+<p>File: <code>src/modules/payment/payment.repository.ts</code></p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>// 1) createWebhookInboxPending(payload)
+// 2) markWebhookDone(id)
+// 3) markWebhookFailed(id, reason)
+// 4) findOrderByOrderCode(orderCode)
+// 5) createPaymentTransaction(...)
+// 6) markOrderPaidWithTransaction(...)</code></pre></figure>
+<p>Idempotency mẫu:</p>
+<figure class="codeblock"><figcaption>TypeScript</figcaption><pre><code>try {
+  await prisma.webhookInbox.create({
+    data: {
+      gateway: &#39;SEPAY&#39;,
+      providerEventId: String(body.id),
+      receivedAt: new Date(),
+      payload: body,
+      status: &#39;PENDING&#39;,
+      attempts: 1,
+    },
+  });
+} catch (error) {
+  // Prisma P2002 =&gt; duplicate event
+  return { accepted: true, duplicate: true };
+}</code></pre></figure>
+<h2 id="9-response-goi-y" class="h h2"><a class="anchor" href="#9-response-goi-y" aria-label="Link to this section">#</a>9) Response gợi ý</h2>
+<p>Checkout response:</p>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;orderCode&quot;: &quot;ORD2502160001&quot;,
+  &quot;amount&quot;: &quot;2277000&quot;,
+  &quot;paymentStatus&quot;: &quot;PENDING&quot;,
+  &quot;transferContent&quot;: &quot;DHORD2502160001&quot;,
+  &quot;qrUrl&quot;: &quot;https://qr.sepay.vn/img?acc=0123456789&amp;bank=MB&amp;amount=2277000&amp;des=DHORD2502160001&quot;,
+  &quot;bankAccount&quot;: &quot;0123456789&quot;,
+  &quot;bankCode&quot;: &quot;MB&quot;,
+  &quot;accountName&quot;: &quot;BOOK STORE&quot;
+}</code></pre></figure>
+<p>Webhook ack response:</p>
+<figure class="codeblock"><figcaption>JSON</figcaption><pre><code>{
+  &quot;accepted&quot;: true,
+  &quot;duplicate&quot;: false,
+  &quot;ignored&quot;: false
+}</code></pre></figure>
+<h2 id="10-checklist-test-thu-cong" class="h h2"><a class="anchor" href="#10-checklist-test-thu-cong" aria-label="Link to this section">#</a>10) Checklist test thủ công</h2>
+<ol>
+<li>Checkout trả <code>transferContent</code> + <code>qrUrl</code> đúng.</li>
+<li>Webhook hợp lệ đổi order sang <code>PAID</code>.</li>
+<li>Gửi lại cùng <code>id</code> webhook không tạo record success lần 2.</li>
+<li><code>code = null</code> nhưng <code>content</code> có mã đơn vẫn match.</li>
+<li>Amount lệch thì order không thành công.</li>
+<li>Secret sai thì reject.</li>
+<li><code>transferType = out</code> được ignore.</li>
+</ol>
+<h2 id="11-luu-y-trien-khai" class="h h2"><a class="anchor" href="#11-luu-y-trien-khai" aria-label="Link to this section">#</a>11) Lưu ý triển khai</h2>
+<ol>
+<li>Không tin <code>payload.gateway</code> là enum hệ thống, lưu raw vào JSON payload để đối soát.</li>
+<li><code>webhook</code> phải trả ACK nhanh, không xử lý nặng blocking lâu.</li>
+<li>Toàn bộ cập nhật paid nên đi trong transaction DB.</li>
+<li>Có thể bổ sung cron reconcile ở phase 2 (không làm trong phase này).</li>
+</ol>
+<h2 id="12-nguon-tham-khao" class="h h2"><a class="anchor" href="#12-nguon-tham-khao" aria-label="Link to this section">#</a>12) Nguồn tham khảo</h2>
+<ol>
+<li><a href="https://docs.sepay.vn/tich-hop-webhooks.html" target="_blank" rel="noopener">https://docs.sepay.vn/tich-hop-webhooks.html</a></li>
+<li><a href="https://developer.sepay.vn/" target="_blank" rel="noopener">https://developer.sepay.vn/</a></li>
+</ol>
+  </main>
+
+  <aside>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul><li class="lvl2"><a href="#1-muc-tieu-phase-1">1) Mục tiêu phase 1</a></li><li class="lvl2"><a href="#2-y-tuong-tong-quat">2) Ý tưởng tổng quát</a></li><li class="lvl2"><a href="#3-schema-va-env-can-chuan-bi">3) Schema và env cần chuẩn bị</a></li><li class="lvl2"><a href="#3-1-prisma-enum">3.1 Prisma enum</a></li><li class="lvl2"><a href="#3-2-sql-migration-mau-mysql">3.2 SQL migration mẫu (MySQL)</a></li><li class="lvl2"><a href="#3-3-env-mau">3.3 Env mẫu</a></li><li class="lvl2"><a href="#4-cau-truc-module-goi-y">4) Cấu trúc module gợi ý</a></li><li class="lvl2"><a href="#5-dto-mau">5) DTO mẫu</a></li><li class="lvl2"><a href="#5-1-checkout-request">5.1 Checkout request</a></li><li class="lvl2"><a href="#5-2-webhook-request">5.2 Webhook request</a></li><li class="lvl2"><a href="#6-controller-mau">6) Controller mẫu</a></li><li class="lvl2"><a href="#7-service-logic-mau">7) Service logic mẫu</a></li><li class="lvl2"><a href="#8-repository-pseudo-code-mau">8) Repository pseudo-code mẫu</a></li><li class="lvl2"><a href="#9-response-goi-y">9) Response gợi ý</a></li><li class="lvl2"><a href="#10-checklist-test-thu-cong">10) Checklist test thủ công</a></li><li class="lvl2"><a href="#11-luu-y-trien-khai">11) Lưu ý triển khai</a></li><li class="lvl2"><a href="#12-nguon-tham-khao">12) Nguồn tham khảo</a></li></ul></nav>
+  </aside>
+
+  <footer>
+    <span class="acc">Bookstore Backend — documentation</span>
+    <span class="src">source: docs/sepay-webhook-integration-roadmap.md</span>
+  </footer>
+
+</div>
+
+<script>
+  // Highlight the TOC entry for the section currently in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    if (!links.length) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('main h2.h, main h3.h'));
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (l) { l.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a) a.classList.add('active');
+      });
+    }, { rootMargin: '0px 0px -78% 0px', threshold: 0 });
+    heads.forEach(function (h) { obs.observe(h); });
+  })();
+</script>
+</body>
+</html>

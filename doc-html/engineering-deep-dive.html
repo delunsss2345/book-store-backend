@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<!--
+  Bookstore Backend — Core Engineering Deep-Dive
+  Style adapted from Anthropic's html-effectiveness gallery palette.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookstore Backend · Engineering Deep-Dive</title>
+<style>
+  :root{
+    --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413;
+    --clay:#D97757; --clay-d:#B85C3E; --oat:#E3DACC; --olive:#788C5D;
+    --g100:#F0EEE6; --g200:#E6E3DA; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+    --serif:ui-serif, Georgia, "Times New Roman", Times, serif;
+    --sans:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--ivory); color:var(--slate);
+    font-family:var(--sans); line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+
+  /* ---- Masthead ---- */
+  header.masthead{padding:72px 0 40px; border-bottom:1px solid var(--g200)}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--clay-d); margin:0 0 18px
+  }
+  header.masthead h1{
+    font-family:var(--serif); font-weight:600; line-height:1.05;
+    font-size:clamp(38px,5.4vw,62px); margin:0 0 20px; letter-spacing:-.01em
+  }
+  .lede{font-size:clamp(17px,1.6vw,20px); max-width:64ch; color:var(--g700); margin:0 0 28px}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:24px}
+  .chip{
+    font-family:var(--mono); font-size:12px; padding:6px 12px;
+    border:1px solid var(--g300); border-radius:999px; background:var(--paper); color:var(--g700)
+  }
+  .chip.k{background:var(--slate); color:var(--ivory); border-color:var(--slate)}
+
+  /* ---- TOC ---- */
+  nav.toc{display:flex; flex-wrap:wrap; gap:10px; padding:28px 0; border-bottom:1px solid var(--g200)}
+  nav.toc a{
+    text-decoration:none; font-size:13px; padding:8px 15px; border-radius:999px;
+    border:1px solid var(--g300); background:var(--paper); color:var(--g700);
+    transition:all .15s ease
+  }
+  nav.toc a:hover{background:var(--clay); color:var(--paper); border-color:var(--clay); transform:translateY(-1px)}
+
+  /* ---- Sections ---- */
+  section{padding:56px 0; border-bottom:1px solid var(--g200)}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:8px}
+  .sec-num{font-family:var(--mono); font-size:13px; color:var(--clay-d); padding-top:6px}
+  section h2{font-family:var(--serif); font-weight:600; font-size:clamp(26px,3.2vw,36px); margin:0; letter-spacing:-.01em}
+  .sec-sub{color:var(--g500); font-size:15px; margin:6px 0 30px; max-width:70ch}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:24px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px}
+
+  /* ---- Cards ---- */
+  .card{
+    background:var(--paper); border:1px solid var(--g200); border-radius:14px;
+    padding:22px 22px; transition:transform .15s ease, box-shadow .15s ease
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:0 8px 28px rgba(20,20,19,.07)}
+  .card h3{font-family:var(--serif); font-size:19px; font-weight:600; margin:0 0 8px}
+  .card h3 .ic{font-family:var(--mono); color:var(--clay-d); margin-right:8px; font-size:14px}
+  .card p{margin:0 0 10px; font-size:14.5px; color:var(--g700)}
+  .card ul{margin:8px 0 0; padding-left:18px; font-size:14px; color:var(--g700)}
+  .card ul li{margin:5px 0}
+  .path{font-family:var(--mono); font-size:11.5px; color:var(--g500); display:block; margin-top:12px; word-break:break-all}
+
+  /* ---- Code blocks ---- */
+  pre{
+    background:var(--slate); color:#E9E6DD; border-radius:12px; padding:18px 20px;
+    overflow-x:auto; font-family:var(--mono); font-size:12.5px; line-height:1.65; margin:16px 0
+  }
+  pre .cm{color:#8A9A78}     /* comment - olive-ish */
+  pre .kw{color:#E0A07E}     /* keyword - clay */
+  pre .st{color:#C9C2B0}     /* string  */
+  pre .nm{color:#F0EEE6}     /* default */
+  code.inl{font-family:var(--mono); font-size:.88em; background:var(--g100); padding:2px 6px; border-radius:5px; color:var(--clay-d)}
+
+  /* ---- Callout ---- */
+  .callout{
+    border-left:3px solid var(--clay); background:var(--g100);
+    padding:16px 20px; border-radius:0 10px 10px 0; margin:20px 0; font-size:14.5px; color:var(--g700)
+  }
+  .callout b{color:var(--slate)}
+  .why{border-left-color:var(--olive)}
+
+  /* ---- Tables ---- */
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:13.5px}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--g200)}
+  th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--g500)}
+  td .w{font-family:var(--mono); color:var(--clay-d); font-weight:600}
+  tr:hover td{background:var(--g100)}
+
+  /* ---- Pipeline / flow ---- */
+  .flow{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:18px 0}
+  .node{
+    background:var(--paper); border:1px solid var(--g300); border-radius:10px;
+    padding:10px 14px; font-size:13px; font-family:var(--mono)
+  }
+  .node.hot{background:var(--clay); color:var(--paper); border-color:var(--clay)}
+  .node.ol{background:var(--olive); color:var(--paper); border-color:var(--olive)}
+  .arrow{color:var(--g300); font-size:18px}
+
+  .pillrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+  .pill{font-family:var(--mono); font-size:11.5px; padding:4px 10px; border-radius:999px; background:var(--g100); color:var(--g700); border:1px solid var(--g200)}
+
+  /* CV value banner */
+  .cvbox{background:var(--slate); color:var(--ivory); border-radius:16px; padding:34px 32px}
+  .cvbox h2{color:var(--ivory); font-family:var(--serif)}
+  .cvbox .grid3 .card{background:#1E1E1C; border-color:#33322E}
+  .cvbox .card h3{color:var(--ivory)}
+  .cvbox .card p, .cvbox .card ul{color:#C9C5BA}
+  .cvbox .card h3 .ic{color:var(--clay)}
+
+  footer{padding:48px 0 64px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:center}
+  footer .acc{font-family:var(--serif); font-style:italic; font-size:18px}
+  footer .mono{font-family:var(--mono); font-size:12px; color:var(--g500)}
+
+  @media(max-width:880px){ .grid2{grid-template-columns:1fr} }
+  @media(max-width:640px){ section{padding:40px 0} .sec-head{flex-direction:column; gap:4px} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <p class="eyebrow">Kỹ thuật backend · Báo cáo chiều sâu</p>
+    <h1>Bookstore Backend:<br>5 Core Systems Worth Putting on Your CV</h1>
+    <p class="lede">
+      Một nền tảng thương mại điện tử sách xây trên <b>NestJS 11 + Prisma 7 + MariaDB</b>,
+      gồm <b>50+ module</b> và <b>527 file TypeScript</b>. Báo cáo này không liệt kê tính năng —
+      nó xoáy vào năm hệ thống có chiều sâu kỹ thuật thật sự, giải thích <i>tại sao</i> chúng được
+      thiết kế như vậy và đâu là điểm phỏng vấn viên sẽ hỏi.
+    </p>
+    <div class="meta-row">
+      <span class="chip k">NestJS 11</span>
+      <span class="chip k">Prisma 7 · MariaDB</span>
+      <span class="chip">BullMQ + Redis</span>
+      <span class="chip">Gemini · Pinecone</span>
+      <span class="chip">RBAC + JWT</span>
+      <span class="chip">Sepay Webhook</span>
+      <span class="chip">Cloudflare R2</span>
+      <span class="chip">Docker · EC2 · Terraform</span>
+    </div>
+  </header>
+
+  <!-- ============ TOC ============ -->
+  <nav class="toc">
+    <a href="#reco">01 · Recommendation Engine</a>
+    <a href="#ai">02 · Semantic Search (AI)</a>
+    <a href="#auth">03 · Auth &amp; Session</a>
+    <a href="#rbac">04 · Cached RBAC</a>
+    <a href="#money">05 · Payment &amp; Outbox</a>
+    <a href="#data">06 · Data Integrity</a>
+    <a href="#cv">★ CV Value</a>
+    <a href="#next">→ Going Deeper</a>
+  </nav>
+
+  <!-- ============ 01 RECOMMENDATION ============ -->
+  <section id="reco">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Deterministic Recommendation Engine (No LLM)</h2></div>
+    <p class="sec-sub">
+      Đây là tài sản kỹ thuật mạnh nhất của dự án: một bộ gợi ý <b>deterministic</b>, giải thích được,
+      không phụ thuộc runtime của model ML — rẻ, nhanh, testable, và reproducible.
+    </p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="ic">▸</span>Weighted Scoring + Time Decay</h3>
+        <p>Mỗi hành vi người dùng được quy về một <b>điểm ý định</b> = trọng số sự kiện × hệ số suy giảm theo thời gian. Mua thật (PAYMENT_SUCCESS) nặng gấp 12 lần một lượt xem.</p>
+        <table>
+          <tr><th>Sự kiện</th><th>Trọng số</th></tr>
+          <tr><td>PAYMENT_SUCCESS</td><td><span class="w">+12</span></td></tr>
+          <tr><td>PLACE_ORDER</td><td><span class="w">+8</span></td></tr>
+          <tr><td>CHECKOUT_START</td><td><span class="w">+6</span></td></tr>
+          <tr><td>ADD_TO_CART</td><td><span class="w">+4</span></td></tr>
+          <tr><td>VIEW_BOOK</td><td><span class="w">+1</span></td></tr>
+          <tr><td>REMOVE_FROM_CART</td><td><span class="w">−2</span></td></tr>
+          <tr><td>PAYMENT_FAILED</td><td><span class="w">−1</span></td></tr>
+        </table>
+        <span class="path">src/common/constants/event-type.constant.ts</span>
+      </div>
+
+      <div class="card">
+        <h3><span class="ic">▸</span>Core Formula</h3>
+        <p>Tín hiệu âm (gỡ khỏi giỏ, thanh toán lỗi) <i>trừ điểm</i> — điều mà collaborative filtering ngây thơ thường bỏ qua.</p>
+<pre><span class="cm">// suy giảm theo số ngày: ưu tiên hành vi gần đây</span>
+<span class="kw">function</span> timeDecay(daysAgo) {
+  <span class="kw">if</span> (daysAgo &lt;= 3)  <span class="kw">return</span> 1.0;  <span class="cm">// 100%</span>
+  <span class="kw">if</span> (daysAgo &lt;= 14) <span class="kw">return</span> 0.7;
+  <span class="kw">if</span> (daysAgo &lt;= 30) <span class="kw">return</span> 0.4;
+  <span class="kw">return</span> 0.2;                  <span class="cm">// cũ → 20%</span>
+}
+
+score = EVENT_WEIGHT[type] * timeDecay(daysAgo);</pre>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>Điểm phỏng vấn:</b> vì sao chọn deterministic thay vì ML? → Cold-start tốt, giải thích được cho business,
+      không cần GPU/training pipeline, kết quả ổn định để viết unit test. Đây là một quyết định kiến trúc <i>có lý do</i>, không phải hạn chế.
+    </div>
+
+    <h3 style="font-family:var(--serif); font-size:20px; margin-top:34px">Pipeline 3 luồng → hợp nhất → top-K</h3>
+    <div class="flow">
+      <span class="node">Variant events<br><small>view/cart/pay</small></span>
+      <span class="arrow">+</span>
+      <span class="node">Order events<br><small>theo đơn hàng</small></span>
+      <span class="arrow">→</span>
+      <span class="node ol">Co-purchase graph<br><small>order_items</small></span>
+      <span class="arrow">→</span>
+      <span class="node hot">merge + boost theo qty</span>
+      <span class="arrow">→</span>
+      <span class="node">getTopKMap(20)</span>
+    </div>
+    <p class="sec-sub" style="margin-top:8px">
+      Luồng đơn hàng được mở rộng bằng <b>đồ thị mua-kèm</b>: từ <code class="inl">order_id → order_items → snapshot → variant</code>,
+      khám phá sách thường được mua cùng nhau (novelty), rồi hợp nhất vào điểm variant với hệ số nhân theo số lượng.
+      Hàm <code class="inl">upsertScore()</code> giữ lại timestamp gần nhất để decay luôn chính xác.
+    </p>
+
+    <div class="grid2" style="margin-top:18px">
+      <div class="card">
+        <h3><span class="ic">▸</span>Related Books via Jaccard</h3>
+        <p>Gợi ý "sách tương tự" dùng <b>Jaccard Index (Intersection over Union)</b> trên tập category — đơn giản, đối xứng, không cần embedding.</p>
+<pre><span class="cm">// Intersection over Union trên tập thể loại</span>
+J = |A ∩ B| / |A ∪ B|</pre>
+        <span class="path">src/modules/catalog/catalog.service.ts:327</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Why This Is a CV Strength</h3>
+        <ul>
+          <li>Thuật toán <b>tự thiết kế</b>, không phải gọi thư viện</li>
+          <li>Độ phức tạp O(n) + lọc top-K → scale tốt</li>
+          <li>Giải thích được từng điểm số cho stakeholder</li>
+          <li>Kết hợp behavioral signal + graph expansion</li>
+        </ul>
+        <span class="path">src/modules/user-event/user-event.service.ts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 AI SEARCH ============ -->
+  <section id="ai">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Semantic Search: Gemini Embeddings + Pinecone</h2></div>
+    <p class="sec-sub">
+      Search không phải <code class="inl">LIKE '%keyword%'</code>. Người dùng gõ ý tưởng tự nhiên → vector 768 chiều → đối sánh độ tương đồng trong Pinecone.
+    </p>
+
+    <div class="flow">
+      <span class="node">Query "sách self-help nhẹ nhàng"</span>
+      <span class="arrow">→</span>
+      <span class="node hot">Gemini embed · 768D</span>
+      <span class="arrow">→</span>
+      <span class="node ol">Pinecone topK</span>
+      <span class="arrow">→</span>
+      <span class="node">giữ thứ hạng vector</span>
+      <span class="arrow">→</span>
+      <span class="node">cache Redis</span>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="ic">▸</span>Batch Indexing</h3>
+        <p>Reindex toàn bộ catalog bằng <b>batch embedding</b> (200 record/lần) để tránh rate-limit, kèm validate giá &amp; bỏ qua record lỗi thay vì fail cả lô.</p>
+        <ul>
+          <li>Metadata enrichment: <code class="inl">categoryIds</code>, <code class="inl">langHints</code>, <code class="inl">price</code></li>
+          <li>Namespace <code class="inl">book-store</code>, upsert idempotent theo id</li>
+          <li>Endpoint reindex được bảo vệ bằng quyền <code class="inl">search:reindex_books</code></li>
+        </ul>
+        <span class="path">src/modules/pinecone/pinecone.service.ts</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Rank Preservation + Cache</h3>
+        <p>Pinecone trả về thứ tự liên quan; service map <code class="inl">bookId → rank</code> rồi <b>sort lại dữ liệu DB theo rank đó</b> để không mất relevance khi hydrate chi tiết sách.</p>
+<pre><span class="cm">// key cache phản ánh đủ tham số truy vấn</span>
+`query:books-sematic:${q}:${langId}:${page}:${limit}`</pre>
+        <span class="path">src/modules/search/search.service.ts</span>
+      </div>
+    </div>
+
+    <div class="callout why">
+      <b>Why structured output:</b> Gemini còn được dùng để <b>làm giàu dữ liệu sách</b> từ Google Books và <b>sinh nháp review</b>,
+      luôn ép <code class="inl">responseJsonSchema</code> + <code class="inl">thinkingBudget:0</code> — đầu ra JSON đúng schema, chống bịa placeholder, chi phí token thấp.
+      <span class="path" style="margin-top:8px">src/modules/gemini/gemini.service.ts · src/modules/review-ai</span>
+    </div>
+  </section>
+
+  <!-- ============ 03 AUTH ============ -->
+  <section id="auth">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Auth: JWT + Refresh, Session, Device, Brute-Force Defense</h2></div>
+    <p class="sec-sub">Không chỉ "login trả token" — đây là một hệ thống danh tính nhiều lớp với khả năng thu hồi tức thì.</p>
+
+    <div class="grid3">
+      <div class="card">
+        <h3><span class="ic">▸</span>Token pair</h3>
+        <p>Access JWT ngắn hạn + refresh token <b>opaque</b> lưu hash. Logout thu hồi song song cả access (blacklist tới <code class="inl">exp</code>) lẫn session.</p>
+        <span class="path">auth.service.ts · revoked-token</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Revocation Check in Guard</h3>
+        <p><code class="inl">AuthGuard</code> verify chữ ký rồi tra <code class="inl">isRevoked(tokenHash)</code> — token bị logout không còn dùng được dù chưa hết hạn.</p>
+        <span class="path">common/security/guard/auth.guard.ts</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Device fingerprinting</h3>
+        <p>Upsert thiết bị theo <code class="inl">(userId, fingerprint)</code>, gắn session với device → nền tảng cho "thiết bị tin cậy".</p>
+        <span class="path">user-device · user-session</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Brute-force backoff</h3>
+        <p>Resend OTP: tối đa <b>5 lần/24h</b>, chặn <b>5h</b> nếu vượt ngưỡng; mọi lần đăng nhập (kể cả thất bại) đều ghi <code class="inl">login_attempt</code>.</p>
+        <span class="path">login-attempt · email-outbox</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Email Verify via Queue</h3>
+        <p>Mã xác thực được tạo + đẩy vào BullMQ; cũ bị vô hiệu trước khi sinh mã mới (chống đua &amp; spam).</p>
+        <span class="path">verification-code</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Guest → User</h3>
+        <p>Khi đăng ký, <code class="inl">guestSession</code> được convert sang user — giữ giỏ hàng &amp; hành vi tracking liền mạch.</p>
+        <span class="path">guest-session</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 04 RBAC ============ -->
+  <section id="rbac">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Cached RBAC: Authorization Without DB Round-Trips</h2></div>
+    <p class="sec-sub">Permission được kiểm ở tầng guard, nhưng được cache theo role trong Redis để không truy vấn DB mỗi request.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="ic">▸</span>Decorator → Guard → Cache</h3>
+        <p>Controller khai báo <code class="inl">@RequirePermissions(...)</code>; guard đọc role của user, nạp quyền <b>song song</b>, ưu tiên cache <code class="inl">role_per:{id}:perms</code> (TTL 1h), gộp thành <code class="inl">Set</code> rồi kiểm tra.</p>
+<pre><span class="cm">// nạp quyền theo từng role, cache-first, chạy song song</span>
+<span class="kw">const</span> keys = roleIds.map(id =&gt; `role_per:${id}:perms`);
+<span class="kw">const</span> perms = <span class="kw">await</span> Promise.all(roleIds.map(<span class="kw">async</span> (id,i) =&gt;
+  cached[i] ?? fetchAndCache(id)));
+<span class="kw">if</span> (!<span class="kw">new</span> Set(perms.flat()).has(required))
+  <span class="kw">throw new</span> ForbiddenException();</pre>
+        <span class="path">common/security/guard/permission.guard.ts</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Normalized Data Model</h3>
+        <p>Quan hệ nhiều-nhiều đầy đủ: <code class="inl">User → UserRole → Role → RolePermission → Permission</code>, dùng <b>composite unique key</b> chống cấp quyền trùng.</p>
+        <div class="pillrow">
+          <span class="pill">User</span><span class="pill">UserRole</span><span class="pill">Role</span>
+          <span class="pill">RolePermission</span><span class="pill">Permission</span>
+        </div>
+        <p style="margin-top:12px">Permission là enum có chủ đích (<code class="inl">admin:create-book</code>, <code class="inl">role_permission:grant</code>…) → tự-tài-liệu &amp; type-safe.</p>
+        <span class="path">modules/permission · role · role-permission · user-role</span>
+      </div>
+    </div>
+    <div class="callout">
+      <b>Vấn đề mời gọi cải tiến:</b> cache theo role rất nhanh, nhưng cần <b>invalidation</b> khi grant/revoke quyền —
+      đây chính là phần đáng "đào sâu" ở mục cuối để tăng giá trị CV (xem §Cần đào sâu thêm).
+    </div>
+  </section>
+
+  <!-- ============ 05 PAYMENT ============ -->
+  <section id="money">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Payment Webhook &amp; Outbox: Where Errors Aren't Allowed</h2></div>
+    <p class="sec-sub">Tiền bạc đòi hỏi idempotency và nhất quán giao dịch — dự án xử lý cả hai một cách bài bản.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="ic">▸</span>Idempotent Sepay Webhook</h3>
+        <p>Mỗi sự kiện lưu vào <code class="inl">webhook_inbox</code> với <b>composite unique</b> <code class="inl">(gateway, providerEventId)</code> bằng <code class="inl">upsert</code> → webhook bắn lại nhiều lần cũng chỉ xử lý một lần.</p>
+        <ul>
+          <li>Cập nhật order + payment trong <b>một transaction</b></li>
+          <li><code class="inl">order.status = PAID</code> &amp; <code class="inl">paymentStatus = SUCCESS</code> nguyên tử</li>
+          <li>Lưu raw payload để truy vết/đối soát</li>
+        </ul>
+        <span class="path">modules/hooks/hooks.repository.ts</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Outbox Pattern for Email</h3>
+        <p>Email không gửi inline. Bản ghi vào <code class="inl">email_outbox</code> (PENDING) → đẩy BullMQ với <b>jobId idempotent</b> + <b>exponential backoff</b> (3s→9s→27s, 3 lần).</p>
+<pre>add(<span class="st">'send-email'</span>, payload, {
+  attempts: 3,
+  backoff: { type: <span class="st">'exponential'</span>, delay: 3000 },
+  jobId: `email-${outboxId}`, <span class="cm">// idempotent</span>
+  removeOnComplete: <span class="kw">true</span>,
+});</pre>
+        <span class="path">modules/jobs/producers/email.producer.ts</span>
+      </div>
+    </div>
+    <div class="callout why">
+      <b>Why outbox:</b> tách "ghi nhận ý định gửi" khỏi "gửi thật" → trạng thái <code class="inl">PENDING→SENDING→SENT/FAILED</code> theo dõi được,
+      retry an toàn, không mất mail khi SMTP chập chờn. Đây là pattern enterprise mà nhà tuyển dụng đánh giá cao.
+    </div>
+  </section>
+
+  <!-- ============ 06 DATA ============ -->
+  <section id="data">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Data Integrity: Snapshot · Audit · onDelete Matrix</h2></div>
+    <p class="sec-sub">Thiết kế schema cho thấy tư duy về lịch sử bất biến và truy vết — điểm phân biệt junior với mid/senior.</p>
+
+    <div class="grid3">
+      <div class="card">
+        <h3><span class="ic">▸</span>Snapshot at Order Time</h3>
+        <p><code class="inl">OrderItem</code> trỏ tới <code class="inl">BookVariantSnapshot</code> (giá, tiêu đề, SKU đông cứng), <b>không</b> tới variant sống. Đổi giá sau này không làm sai đơn cũ.</p>
+        <span class="path">prisma/models/commerce.prisma</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>Audit log before/after</h3>
+        <p><code class="inl">AuditLog</code> lưu JSON <code class="inl">before</code>/<code class="inl">after</code> + actor + IP → tái dựng được ai đổi gì, khi nào.</p>
+        <span class="path">prisma/models/engagement.prisma</span>
+      </div>
+      <div class="card">
+        <h3><span class="ic">▸</span>onDelete by Design</h3>
+        <p>Mỗi quan hệ chọn <code class="inl">Cascade</code>/<code class="inl">Restrict</code>/<code class="inl">SetNull</code>/<code class="inl">NoAction</code> theo ngữ nghĩa — có hẳn <i>ma trận</i> tài liệu hoá.</p>
+        <span class="path">docs/schema-ondelete-matrix.md</span>
+      </div>
+    </div>
+    <div class="pillrow" style="margin-top:18px">
+      <span class="pill">UserEvent (tracking)</span>
+      <span class="pill">Order idempotencyKey</span>
+      <span class="pill">PaymentTransaction payloads</span>
+      <span class="pill">contentHash chống trùng snapshot</span>
+      <span class="pill">index (userId, createdAt)</span>
+    </div>
+  </section>
+
+  <!-- ============ CV VALUE ============ -->
+  <section id="cv" style="border:none">
+    <div class="cvbox">
+      <div class="sec-head" style="margin-bottom:6px"><span class="sec-num" style="color:var(--clay)">★</span><h2>Why This Feature Set Has CV Value</h2></div>
+      <p class="sec-sub" style="color:#B4B0A6; margin-bottom:28px">Không phải "CRUD sách" — đây là những hệ thống mà phỏng vấn viên backend thật sự muốn nghe.</p>
+      <div class="grid3">
+        <div class="card">
+          <h3><span class="ic">▸</span>Self-Designed Algorithms</h3>
+          <p>Recommendation deterministic + Jaccard + co-purchase graph: chứng minh năng lực <b>thiết kế thuật toán</b>, không chỉ ghép thư viện.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">▸</span>AI Applied in the Right Place</h3>
+          <p>Embedding + vector DB cho search; LLM có structured output cho enrichment — biết <b>khi nào dùng/không dùng</b> LLM.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">▸</span>Distributed Thinking</h3>
+          <p>Idempotency, outbox, retry/backoff, webhook inbox — đúng vocabulary của hệ thống production.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">▸</span>Multi-Layer Security</h3>
+          <p>JWT+refresh, revocation, RBAC có cache, brute-force backoff, device tracking.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">▸</span>Senior-Level Schema</h3>
+          <p>Snapshot bất biến, audit trail, onDelete matrix, composite key, indexing chủ đích.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">▸</span>Real Operations</h3>
+          <p>Docker Compose, Nginx, EC2, Terraform, CI/CD — full lifecycle, không chỉ code chạy local.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NEXT / DEPTH ============ -->
+  <section id="next">
+    <div class="sec-head"><span class="sec-num">→</span><h2>Going Deeper to Make the Project Shine</h2></div>
+    <p class="sec-sub">Mỗi điểm dưới đây vừa nâng chất lượng kỹ thuật, vừa cho bạn câu chuyện hay khi phỏng vấn.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="ic">1</span>Measuring Recommendation Quality</h3>
+        <p>Thêm metric offline (CTR giả lập, hit-rate@K, coverage) + A/B hook. Hiện chưa có cách <b>chứng minh</b> recommendation tốt hơn baseline.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">2</span>Permission Cache Invalidation</h3>
+        <p>Khi grant/revoke, chủ động xoá <code class="inl">role_per:{id}:perms</code>. Tránh "quyền cũ sống thêm 1 giờ" — một lỗ hổng bảo mật tinh tế.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">3</span>Refresh token rotation + reuse detection</h3>
+        <p>Xoay refresh mỗi lần dùng, phát hiện tái sử dụng token đã xoay → thu hồi cả họ session. Nâng auth lên chuẩn ngân hàng.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">4</span>Testing &amp; Observability</h3>
+        <p>Unit test cho <code class="inl">scoreEvent</code>/Jaccard (đang deterministic → dễ test), structured logging, tracing webhook → tăng độ tin cậy.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">5</span>Webhook Signature Verification</h3>
+        <p>Idempotency đã tốt; bổ sung <b>xác thực chữ ký/secret</b> từ Sepay để chống giả mạo callback thanh toán.</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">6</span>Hybrid Reranking</h3>
+        <p>Kết hợp điểm hành vi (§01) với điểm ngữ nghĩa (§02) thành một bộ rerank duy nhất — câu chuyện "personalized semantic search" rất ấn tượng.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="acc">Bookstore Backend — engineering deep-dive</span>
+    <span class="mono">NestJS · Prisma · Redis · BullMQ · Pinecone · Gemini · 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>

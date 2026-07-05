@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Note Template"
+  short_description: "Draft and refine a new Codex skill"
+  default_prompt: "Use $skill-note-template to turn rough notes into a production-ready SKILL.md with clear triggers and workflow steps."

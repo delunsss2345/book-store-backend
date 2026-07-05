@@ -1,0 +1,580 @@
+<!-- Bookstore Backend · doc-html — style adapted from Anthropic html-effectiveness (Apache-2.0) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PR #128 — Review Summary</title>
+<style>
+  :root {
+    --ivory: #FAF9F5;
+    --slate: #141413;
+    --clay: #D97757;
+    --oat: #E3DACC;
+    --olive: #788C5D;
+    --rust: #B04A3F;
+    --gray-150: #F0EEE6;
+    --gray-300: #D1CFC5;
+    --gray-500: #87867F;
+    --gray-700: #3D3D3A;
+    --serif: ui-serif, Georgia, 'Times New Roman', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Monaco, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ivory);
+    color: var(--gray-700);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 48px 24px 80px;
+  }
+
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header.pr-head {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    padding: 28px 32px;
+    background: #fff;
+    margin-bottom: 36px;
+  }
+
+  .repo-line {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--gray-500);
+    letter-spacing: 0.01em;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 1.25;
+    color: var(--slate);
+    margin-bottom: 18px;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--oat);
+    color: var(--slate);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    border: 1.5px solid var(--gray-300);
+  }
+
+  .author-name { font-weight: 500; color: var(--slate); }
+  .author-sub { font-size: 12px; color: var(--gray-500); }
+
+  .branch {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--gray-700);
+    background: var(--gray-150);
+    border: 1.5px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .branch .arrow { color: var(--gray-500); margin: 0 6px; }
+
+  .stat {
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .stat .add { color: var(--olive); font-weight: 600; }
+  .stat .del { color: var(--rust); font-weight: 600; }
+  .stat .files { color: var(--gray-500); margin-left: 10px; }
+
+  /* ---------- Section blocks ---------- */
+  section { margin-bottom: 40px; }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 21px;
+    color: var(--slate);
+    margin-bottom: 14px;
+  }
+
+  .prose ul {
+    list-style: none;
+    padding: 0;
+  }
+  .prose li {
+    position: relative;
+    padding-left: 22px;
+    margin-bottom: 10px;
+  }
+  .prose li::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    background: var(--gray-500);
+    border-radius: 2px;
+  }
+  .prose code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--gray-150); padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* ---------- Risk map ---------- */
+  .risk-map {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--gray-300);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--slate);
+    text-decoration: none;
+    background: #fff;
+    transition: transform 0.12s ease;
+  }
+  .chip:hover { transform: translateY(-1px); }
+
+  .chip .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .chip.safe { background: rgba(120,140,93,0.10); border-color: rgba(120,140,93,0.45); }
+  .chip.safe .dot { background: var(--olive); }
+  .chip.medium { background: var(--oat); }
+  .chip.medium .dot { background: #B89B6E; }
+  .chip.attention { background: rgba(217,119,87,0.12); border-color: rgba(217,119,87,0.55); }
+  .chip.attention .dot { background: var(--clay); }
+
+  .legend {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--gray-500);
+    display: flex;
+    gap: 18px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ---------- File sections ---------- */
+  .file-card {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 24px;
+    overflow: hidden;
+    scroll-margin-top: 20px;
+  }
+
+  .file-head {
+    padding: 16px 20px;
+    border-bottom: 1.5px solid var(--gray-150);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .file-path {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--slate);
+  }
+  .file-delta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .file-delta .add { color: var(--olive); }
+  .file-delta .del { color: var(--rust); }
+
+  .risk-tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .risk-tag.safe { background: rgba(120,140,93,0.15); color: var(--olive); }
+  .risk-tag.medium { background: var(--oat); color: #7A6A4F; }
+  .risk-tag.attention { background: rgba(217,119,87,0.15); color: var(--clay); }
+
+  /* ---------- Diff block ---------- */
+  .diff {
+    background: var(--slate);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .diff-row {
+    display: grid;
+    grid-template-columns: 48px 18px 1fr;
+    align-items: baseline;
+    padding: 0 14px 0 0;
+    white-space: pre;
+  }
+  .diff-row .ln {
+    text-align: right;
+    padding-right: 14px;
+    color: var(--gray-500);
+    user-select: none;
+  }
+  .diff-row .mark {
+    text-align: center;
+    color: var(--gray-500);
+  }
+  .diff-row .code { color: #E8E6DC; }
+  .diff-row.ctx .code { color: #B8B6AC; }
+  .diff-row.add { background: rgba(120,140,93,0.15); }
+  .diff-row.add .mark { color: var(--olive); }
+  .diff-row.del { background: rgba(176,74,63,0.15); }
+  .diff-row.del .mark { color: var(--rust); }
+  .diff-row.hunk {
+    background: rgba(255,255,255,0.04);
+    color: var(--gray-500);
+  }
+  .diff-row.hunk .code { color: var(--gray-500); }
+
+  /* ---------- Review comments ---------- */
+  .comments {
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--gray-150);
+  }
+
+  .bubble {
+    position: relative;
+    background: #fff;
+    border: 1.5px solid var(--gray-300);
+    border-left-width: 4px;
+    border-radius: 8px;
+    padding: 12px 14px 12px 16px;
+    max-width: 680px;
+  }
+  .bubble.blocking { border-left-color: var(--clay); }
+  .bubble.nit { border-left-color: var(--gray-300); }
+
+  .bubble::before {
+    content: "";
+    position: absolute;
+    left: -9px;
+    top: 16px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-left: 1.5px solid var(--gray-300);
+    border-bottom: 1.5px solid var(--gray-300);
+    transform: rotate(45deg);
+  }
+  .bubble.blocking::before { border-left-color: var(--clay); border-bottom-color: var(--clay); }
+
+  .bubble .anchor {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+  }
+  .bubble .label {
+    display: inline-block;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .bubble.blocking .label { color: var(--clay); }
+  .bubble.nit .label { color: var(--gray-500); }
+  .bubble p { font-size: 13.5px; color: var(--gray-700); }
+  .bubble code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--gray-150);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* ---------- Collapsed files ---------- */
+  details.file-collapsed {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 14px;
+    scroll-margin-top: 20px;
+  }
+  details.file-collapsed summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  details.file-collapsed summary::-webkit-details-marker { display: none; }
+  details.file-collapsed summary::after {
+    content: "+";
+    font-family: var(--mono);
+    color: var(--gray-500);
+    font-size: 16px;
+  }
+  details.file-collapsed[open] summary::after { content: "\2212"; }
+  details.file-collapsed .body {
+    padding: 0 20px 16px;
+    font-size: 13.5px;
+    color: var(--gray-700);
+  }
+  details.file-collapsed .body code { font-family: var(--mono); }
+
+  /* ---------- Footer ---------- */
+  footer.next-steps {
+    border: 1.5px solid var(--gray-300);
+    border-radius: 12px;
+    background: #fff;
+    padding: 24px 28px;
+  }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  .checklist input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    accent-color: var(--olive);
+    cursor: pointer;
+  }
+  .checklist label { cursor: pointer; flex: 1; }
+  .checklist code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--gray-150);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="pr-head">
+    <div class="repo-line">book-store-be &middot; Pull Request #128</div>
+    <h1>Cache per-role permissions in the global PermissionsGuard</h1>
+    <div class="meta-row">
+      <div class="author">
+        <div class="avatar">HU</div>
+        <div>
+          <div class="author-name">Huy</div>
+          <div class="author-sub">opened 1 day ago</div>
+        </div>
+      </div>
+      <div class="branch">
+        feat/perm-cache <span class="arrow">&rarr;</span> main
+      </div>
+      <div class="stat">
+        <span class="add">+47</span> / <span class="del">&minus;9</span>
+        <span class="files">3 files changed</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="prose">
+    <h2>What this PR does</h2>
+    <ul>
+      <li>Adds a Redis read-through cache to <code>PermissionsGuard</code> so the warm path no longer hits MariaDB twice per guarded request — role IDs are still read, but each role's permission list is served from cache.</li>
+      <li>Introduces <code>PERMISSION_CACHE_TTL</code> in <code>enum-ttl.constant.ts</code> and back-fills the cache on a miss inside the existing <code>Promise.all</code> over the caller's roles.</li>
+      <li>Keeps the public contract identical: the guard still throws <code>ForbiddenException</code> when the required <code>@RequirePermissions(...)</code> code is absent.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Risk map</h2>
+    <div class="risk-map">
+      <a class="chip attention" href="#file-guard"><span class="dot"></span>permission.guard.ts</a>
+      <a class="chip medium" href="#file-ttl"><span class="dot"></span>enum-ttl.constant.ts</a>
+      <a class="chip safe" href="#file-module"><span class="dot"></span>permission-guard.module.ts</a>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--olive)"></span> safe</span>
+      <span><span class="dot" style="background:#B89B6E"></span> worth a look</span>
+      <span><span class="dot" style="background:var(--clay)"></span> needs attention</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Files</h2>
+
+    <!-- File 1: guard (attention) -->
+    <article class="file-card" id="file-guard">
+      <div class="file-head">
+        <div>
+          <div class="file-path">src/common/security/guard/permission.guard.ts</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="risk-tag attention">needs attention</span>
+          <span class="file-delta"><span class="add">+39</span> <span class="del">&minus;7</span></span>
+        </div>
+      </div>
+      <div class="diff">
+        <div class="diff-row hunk"><span class="ln"></span><span class="mark"></span><span class="code">@@ -30,9 +30,27 @@ async canActivate(context) {</span></div>
+        <div class="diff-row ctx"><span class="ln">30</span><span class="mark"> </span><span class="code">  const { user } = context.switchToHttp().getRequest();</span></div>
+        <div class="diff-row ctx"><span class="ln">31</span><span class="mark"> </span><span class="code">  const roleIds = await this.userRoleService.getRoleIdsByUserId(user.sub);</span></div>
+        <div class="diff-row add"><span class="ln">34</span><span class="mark">+</span><span class="code">  const keyOf = (id) =&gt; `role_user:${id}:perms`;</span></div>
+        <div class="diff-row add"><span class="ln">37</span><span class="mark">+</span><span class="code">  const keys = roleIds.map((id) =&gt; `role_per:${id}:perms`);</span></div>
+        <div class="diff-row add"><span class="ln">38</span><span class="mark">+</span><span class="code">  const cached = await Promise.all(keys.map(k =&gt; this.cache.get(k)));</span></div>
+        <div class="diff-row add"><span class="ln">40</span><span class="mark">+</span><span class="code">  const permsByRole = await Promise.all(</span></div>
+        <div class="diff-row add"><span class="ln">41</span><span class="mark">+</span><span class="code">    roleIds.map(async (roleId, i) =&gt; {</span></div>
+        <div class="diff-row add"><span class="ln">42</span><span class="mark">+</span><span class="code">      if (cached[i]) return cached[i];</span></div>
+        <div class="diff-row add"><span class="ln">47</span><span class="mark">+</span><span class="code">      const perms = await this.rolePermissionService.getByRoleId(roleId);</span></div>
+        <div class="diff-row add"><span class="ln">48</span><span class="mark">+</span><span class="code">      await this.cache.set(keyOf(roleId), perms, PERMISSION_CACHE_TTL);</span></div>
+        <div class="diff-row add"><span class="ln">49</span><span class="mark">+</span><span class="code">      return perms;</span></div>
+        <div class="diff-row add"><span class="ln">50</span><span class="mark">+</span><span class="code">    }));</span></div>
+        <div class="diff-row add"><span class="ln">52</span><span class="mark">+</span><span class="code">  const userPerms = new Set(permsByRole.flat());</span></div>
+        <div class="diff-row add"><span class="ln">53</span><span class="mark">+</span><span class="code">  console.log(userPerms);</span></div>
+        <div class="diff-row ctx"><span class="ln">54</span><span class="mark"> </span><span class="code">  if (!userPerms.has(requireRemission)) throw new ForbiddenException();</span></div>
+      </div>
+      <div class="comments">
+        <div class="bubble blocking">
+          <div class="anchor">lines 34, 37, 48</div>
+          <p><span class="label">Blocking</span>The write key and the read key don't match. <code>keyOf</code> writes <code>role_user:{id}:perms</code> (line&nbsp;34, used by <code>cache.set</code> on line&nbsp;48), but the lookup reads <code>role_per:{id}:perms</code> (line&nbsp;37). The cache will <em>never</em> hit — every request pays a Redis round-trip <em>and</em> the two DB queries. Pick one prefix and use it for both set and get.</p>
+        </div>
+        <div class="bubble blocking">
+          <div class="anchor">line 53</div>
+          <p><span class="label">Blocking</span><code>console.log(userPerms)</code> runs on the hot path of every authorized request and leaks the caller's full permission set to stdout. Remove it, or route through <code>Logger.debug</code> behind a flag.</p>
+        </div>
+        <div class="bubble nit">
+          <div class="anchor">line 20</div>
+          <p><span class="label">Nit</span>The local is named <code>requireRemission</code> (and the field <code>requirePermission</code> elsewhere). Rename to <code>requiredPermission</code> for grep-ability — it's read on the throw line.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- File 2: ttl (medium) -->
+    <article class="file-card" id="file-ttl">
+      <div class="file-head">
+        <div>
+          <div class="file-path">src/common/constants/enum-ttl.constant.ts</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="risk-tag medium">worth a look</span>
+          <span class="file-delta"><span class="add">+1</span> <span class="del">&minus;0</span></span>
+        </div>
+      </div>
+      <div class="diff">
+        <div class="diff-row hunk"><span class="ln"></span><span class="mark"></span><span class="code">@@ -5,3 +5,4 @@</span></div>
+        <div class="diff-row ctx"><span class="ln">5</span><span class="mark"> </span><span class="code">export const ORDER_STATUS_TTL = 60_000;</span></div>
+        <div class="diff-row add"><span class="ln">6</span><span class="mark">+</span><span class="code">export const PERMISSION_CACHE_TTL = 36000;</span></div>
+      </div>
+      <div class="comments">
+        <div class="bubble blocking">
+          <div class="anchor">line 6</div>
+          <p><span class="label">Blocking</span>The call site comments this as <code>// cache 1h</code>, but <code>36000</code> ms is <strong>36 seconds</strong>, not one hour. Either the value should be <code>3_600_000</code> or the comment is wrong. Decide deliberately — this is the staleness window for permission revocation. Also use the <code>_</code> separators (<code>36_000</code>) for consistency with the neighbours.</p>
+        </div>
+        <div class="bubble nit">
+          <div class="anchor">line 6</div>
+          <p><span class="label">Nit</span>Permission TTL is a security-relevant knob; consider sourcing it from config rather than a hard-coded constant so it can be tuned per environment.</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Collapsed files -->
+    <details class="file-collapsed" id="file-module">
+      <summary>
+        <span class="file-path">src/common/security/permission/permission-guard.module.ts</span>
+        <span style="display:flex;align-items:center;gap:12px">
+          <span class="risk-tag safe">safe</span>
+          <span class="file-delta"><span class="add">+7</span> <span class="del">&minus;2</span></span>
+        </span>
+      </summary>
+      <div class="body">Imports <code>CacheProvider</code> alongside <code>RolePermissionModule</code> and <code>UserRoleModule</code> so the guard can inject <code>CACHE_MANAGER</code>. Wiring only — no behaviour change.</div>
+    </details>
+  </section>
+
+  <footer class="next-steps">
+    <h2>Suggested next steps</h2>
+    <ul class="checklist">
+      <li>
+        <input type="checkbox" id="step1">
+        <label for="step1">Unify the cache key — use <code>role_per:${id}:perms</code> for both <code>cache.get</code> and <code>cache.set</code>, then delete the unused <code>keyOf</code> alias.</label>
+      </li>
+      <li>
+        <input type="checkbox" id="step2">
+        <label for="step2">Remove <code>console.log(userPerms)</code> from the guard.</label>
+      </li>
+      <li>
+        <input type="checkbox" id="step3">
+        <label for="step3">Reconcile <code>PERMISSION_CACHE_TTL</code> with its intended duration and document the staleness window.</label>
+      </li>
+      <li>
+        <input type="checkbox" id="step4">
+        <label for="step4">Add active invalidation: bust <code>role_per:{id}:perms</code> when a role's grants change, so edits don't wait out the TTL.</label>
+      </li>
+      <li>
+        <input type="checkbox" id="step5">
+        <label for="step5">Add a guard spec covering cache-hit, cache-miss back-fill, and the forbidden path.</label>
+      </li>
+    </ul>
+  </footer>
+
+</div>
+
+<script>
+  // Briefly highlight a file card when reached via the risk-map anchors.
+  document.querySelectorAll('.risk-map a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      var target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      target.style.transition = 'box-shadow 180ms ease';
+      target.style.boxShadow = '0 0 0 3px rgba(217,119,87,0.35)';
+      setTimeout(function () { target.style.boxShadow = 'none'; }, 1400);
+    });
+  });
+</script>
+</body>
+</html>

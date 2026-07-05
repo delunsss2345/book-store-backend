@@ -6,7 +6,7 @@ export class CreateVerifyCodeRequestDto {
     @ApiProperty()
     @IsNotEmpty()
     @IsNumber()
-    userId: bigint;
+    userId: number;
 
     @ApiProperty()
     @IsNotEmpty()

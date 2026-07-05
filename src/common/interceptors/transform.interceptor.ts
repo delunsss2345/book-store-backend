@@ -1,8 +1,7 @@
+import { ResponseDto } from '@common/dto';
 import { CallHandler, ExecutionContext, HttpStatus, Injectable, NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { HttpMessage } from '@common/constants';
-import { ResponseDto } from '@common/dto';
 
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, ResponseDto<T>> {
@@ -14,7 +13,6 @@ export class TransformInterceptor<T> implements NestInterceptor<T, ResponseDto<T
             map((data) => ResponseDto.success({
                 statusCode,
                 data,
-                message: HttpMessage.OK,
             })),
         );
     }

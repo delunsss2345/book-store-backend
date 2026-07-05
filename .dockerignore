@@ -4,3 +4,15 @@ dist
 .env
 .env.*
 npm-debug.log*
+docker/mysql_data
+docker/mysql_data/**
+**/mysql_data
+**/mysql_data/**
+**/.git
+node_modules
+.agents
+doc
+.md
+.github
+test
+doc-html

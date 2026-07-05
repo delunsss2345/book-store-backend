@@ -2,7 +2,6 @@
 /dist
 /node_modules
 /build
-/docs
 # Logs
 logs
 *.log
@@ -41,7 +40,8 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
-
+.env.prod
+.agents
 # temp directory
 .temp
 .tmp
@@ -57,3 +57,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 generated
 docker
+.env.*
+terraform
+nginx
+*.txt
+/doc-html
+doc-html

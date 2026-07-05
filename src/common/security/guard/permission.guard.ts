@@ -47,7 +47,6 @@ export class PermissionsGuard implements CanActivate {
             })
         );
         const userPerms = new Set(permsByRole.flat());
-        console.log(userPerms);
         if (!userPerms.has(requireRemission)) throw new ForbiddenException();
         return true;
     }

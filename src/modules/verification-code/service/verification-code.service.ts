@@ -43,7 +43,7 @@ export class VerificationCodeService {
         return { verification: record, outbox };
     }
     updateExpiresAll(email: string) {
-        return this.verificationRepository.markAllRegisterUnusedByEmail(email, new Date());
+        return this.verificationRepository.markAllRegisterUnusedByEmail(email, new Date(), VerificationType.FORGOT_PASSWORD);
     }
     updateCodeHash(id: number, codeHash: string) {
         return this.verificationRepository.updateCodeHash(id, codeHash)

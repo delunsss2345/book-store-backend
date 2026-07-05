@@ -5,6 +5,7 @@ import {
   RegisterMessage,
 } from '@/common';
 import { JwtPayload } from '@/common/dto/jwt.dto';
+import { TooManyRequestException } from '@/common/errors';
 import { CACHE_REDIS } from '@/config/redis.config';
 import {
   ChangePasswordRequestDto,
@@ -34,8 +35,6 @@ import { randomKey } from '@/utils/randomKey.util';
 import {
   BadRequestException,
   ConflictException,
-  HttpException,
-  HttpStatus,
   Inject,
   Injectable,
   UnauthorizedException
@@ -197,7 +196,7 @@ export class AuthService {
     const { token } = params;
 
     if (await this.isDailyRateLimitExceeded('verify-email', token)) {
-      return { success: false };
+      throw new TooManyRequestException();
     }
 
     const codeHash = hashToken(token);
@@ -240,7 +239,7 @@ export class AuthService {
     const { email } = params;
 
     if (await this.isDailyRateLimitExceeded('resend-email', email)) {
-      return { success: false };
+      throw new TooManyRequestException();
     }
 
     const user = await this.authRepository.findUserByEmail(email);
@@ -264,10 +263,7 @@ export class AuthService {
       Date.now()
     ) {
       // Chặn resend-email
-      throw new HttpException(
-        RegisterMessage.RESEND_VERIFY_EMAIL_QUOTA_EXCEEDED,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new TooManyRequestException();
     }
 
     const now = new Date();
@@ -433,7 +429,7 @@ export class AuthService {
     originUrl: string | undefined,
   ) {
     if (await this.isDailyRateLimitExceeded('forgot-password', body.email)) {
-      return { success: false };
+      throw new TooManyRequestException();
     }
 
     const user = await this.authRepository.findUserByEmail(body.email);
@@ -484,7 +480,7 @@ export class AuthService {
     }
 
     if (await this.isDailyRateLimitExceeded('reset-password', body.email)) {
-      return { success: false };
+      throw new TooManyRequestException();
     }
 
     const codeHash = hashToken(body.token);

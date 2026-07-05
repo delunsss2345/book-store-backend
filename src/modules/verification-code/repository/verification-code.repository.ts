@@ -58,11 +58,11 @@ export class VerificationRepository {
         });
     }
     // Đánh dấu đã bị dùng
-    markAllRegisterUnusedByEmail(email: string, usedAt: Date) {
+    markAllRegisterUnusedByEmail(email: string, usedAt: Date, type: VerificationType = VerificationType.REGISTER) {
         return this.prisma.verificationCode.updateMany({
             where: {
                 email,
-                type: VerificationType.REGISTER,
+                type,
                 usedAt: null,
             },
             data: { usedAt },

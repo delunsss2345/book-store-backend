@@ -42,7 +42,9 @@ export class VerificationCodeService {
 
         return { verification: record, outbox };
     }
-
+    updateExpiresAll(email: string) {
+        return this.verificationRepository.markAllRegisterUnusedByEmail(email, new Date());
+    }
     updateCodeHash(id: number, codeHash: string) {
         return this.verificationRepository.updateCodeHash(id, codeHash)
     }

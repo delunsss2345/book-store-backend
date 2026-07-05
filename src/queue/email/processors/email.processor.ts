@@ -80,7 +80,7 @@ export class EmailProcessor extends WorkerHost {
     } else if (outBox.templateKey !== OTP_REGISTER_TEMPLATE_KEY) {
       throw new Error('Unsupported email template key');
     }
-
+    console.log(originUrl);
     const { link } = generateLinkWithType({ path, token, originUrl });
     const codeHash = hashToken(token);
 

@@ -5,6 +5,7 @@ import {
   RegisterMessage,
 } from '@/common';
 import { JwtPayload } from '@/common/dto/jwt.dto';
+import { CACHE_REDIS } from '@/config/redis.config';
 import {
   ChangePasswordRequestDto,
   ForgotPasswordRequestDto,
@@ -35,15 +36,18 @@ import {
   ConflictException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
-  UnauthorizedException,
+  UnauthorizedException
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RoleCode, UserSession } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import Redis from 'ioredis';
 import { randomUUID } from 'node:crypto';
 
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
+const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 const RESEND_BLOCK_WINDOW_IN_MS = 5 * 60 * 60 * 1000;
 const RESEND_MAX_ATTEMPTS_PER_DAY = 5;
 
@@ -63,6 +67,7 @@ export class AuthService {
     private readonly roleService: RoleService,
     private readonly guestSessionService: GuestSessionService,
     private readonly permissionService: PermissionService,
+    @Inject(CACHE_REDIS) private readonly redis: Redis
   ) { }
 
   async getMe(id: number) {
@@ -88,7 +93,7 @@ export class AuthService {
     body: RegisterRequestDto,
     userAgent: string,
     ip: string,
-    originUrl: string,
+    originUrl: string | undefined,
     guestSessionId?: string,
   ) {
     if (body.password !== body.confirmPassword) {
@@ -177,8 +182,24 @@ export class AuthService {
     return expiresAt;
   }
 
+  private async isDailyRateLimitExceeded(namespace: string, identifier: string) {
+    const dailyKey = `${namespace}:daily:${identifier}`;
+    const count = await this.redis.incr(dailyKey);
+
+    if (count === 1) {
+      await this.redis.expire(dailyKey, ONE_DAY_IN_SECONDS);
+    }
+
+    return count > RESEND_MAX_ATTEMPTS_PER_DAY;
+  }
+
   async verifyEmail(params: VerifyEmailRequestDto) {
     const { token } = params;
+
+    if (await this.isDailyRateLimitExceeded('verify-email', token)) {
+      return { success: false };
+    }
+
     const codeHash = hashToken(token);
     const verification =
       await this.verificationCodeService.findActiveRegisterByCodeHash(codeHash);
@@ -212,8 +233,15 @@ export class AuthService {
     return { success: true };
   }
 
-  async resendEmail(params: ResendVerifyEmailRequestDto, url: string) {
+  async resendEmail(
+    params: ResendVerifyEmailRequestDto,
+    originUrl: string | undefined,
+  ) {
     const { email } = params;
+
+    if (await this.isDailyRateLimitExceeded('resend-email', email)) {
+      return { success: false };
+    }
 
     const user = await this.authRepository.findUserByEmail(email);
     if (!user || user.isEmailVerified) {
@@ -260,6 +288,7 @@ export class AuthService {
     await this.emailQueue.enqueueOutboxEmail({
       outboxId: verificationBundle.outbox.id,
       verificationCodeId: verificationBundle.verification.id,
+      originUrl,
     });
 
     return { success: true };
@@ -399,12 +428,20 @@ export class AuthService {
     return { success: true };
   }
 
-  async forgotPassword(body: ForgotPasswordRequestDto) {
+  async forgotPassword(
+    body: ForgotPasswordRequestDto,
+    originUrl: string | undefined,
+  ) {
+    if (await this.isDailyRateLimitExceeded('forgot-password', body.email)) {
+      return { success: false };
+    }
+
     const user = await this.authRepository.findUserByEmail(body.email);
     if (!user) {
       return { success: true };
     }
 
+    await this.verificationCodeService.updateExpiresAll(user.email);
     const verificationBundle =
       await this.verificationCodeService.createForgotPasswordVerification({
         email: user.email,
@@ -415,6 +452,7 @@ export class AuthService {
     await this.emailQueue.enqueueOutboxEmail({
       outboxId: verificationBundle.outbox.id,
       verificationCodeId: verificationBundle.verification.id,
+      originUrl,
     });
 
     return { success: true };
@@ -443,6 +481,10 @@ export class AuthService {
       throw new BadRequestException(
         ForgotPasswordMessage.RESET_PASSWORD_CONFIRM_MISMATCH,
       );
+    }
+
+    if (await this.isDailyRateLimitExceeded('reset-password', body.email)) {
+      return { success: false };
     }
 
     const codeHash = hashToken(body.token);

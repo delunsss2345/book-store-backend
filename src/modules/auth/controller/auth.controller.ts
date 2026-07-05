@@ -1,14 +1,13 @@
 import { ResponseDto } from '@/common';
 import { PermissionCode } from '@/common/constants/permission-pattern.constant';
 import { GetAccessToken } from '@/common/decorators/getAccessToken.decorator';
-import { GetOriginUrl } from '@/common/decorators/getOrginUrl.decorator';
 import { GetUser } from '@/common/decorators/getUser.decorator';
 import { UserAgent } from '@/common/decorators/userAgent.decorator';
 import type { JwtPayload } from '@/common/dto/jwt.dto';
 import { Public } from '@/common/security/decorators/public.decorator';
 import { RefreshSession } from '@/common/security/decorators/refresh-session.decorator';
-import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { Refresh } from '@/common/security/decorators/refresh.decorator';
+import { RequirePermissions } from '@/common/security/decorators/requirePermission.decorator';
 import { RefreshGuard } from '@/common/security/guard/refresh.guard';
 import {
   ChangePasswordRequestDto,
@@ -47,7 +46,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -59,6 +57,7 @@ import {
 } from '@nestjs/swagger';
 import type { UserSession } from '@prisma/client';
 import type { CookieOptions, Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
 
 const DEVICE_FINGERPRINT_COOKIE = 'device_fingerprint';
 @ApiTags('auth')
@@ -67,7 +66,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user account' })
@@ -76,9 +75,9 @@ export class AuthController {
     @Body() body: RegisterRequestDto,
     @UserAgent() userAgent: string,
     @Ip() ip: string,
+    @Headers('x-origin-url') originUrl: string | undefined,
     @Req() req: Request,
   ) {
-    const originUrl = req['x-origin-url'] ?? '';
     const guestSessionId = req.cookies?.guestSessionId as string | undefined;
     return this.authService.register(
       body,
@@ -171,8 +170,11 @@ export class AuthController {
   @Post('forgot-password')
   @ApiOperation({ summary: 'Send a password reset email to the user' })
   @ApiOkResponse({ type: ResponseDto<ForgotPasswordResponseDto> })
-  forgotPassword(@Body() body: ForgotPasswordRequestDto) {
-    return this.authService.forgotPassword(body);
+  forgotPassword(
+    @Headers('x-origin-url') originUrl: string | undefined,
+    @Body() body: ForgotPasswordRequestDto,
+  ) {
+    return this.authService.forgotPassword(body, originUrl);
   }
 
   @Public()
@@ -188,8 +190,11 @@ export class AuthController {
   @Post('resend-email')
   @ApiOperation({ summary: 'Resend the email verification link' })
   @ApiOkResponse({ type: ResponseDto<ResendEmailResponseDto> })
-  resendEmail(@GetOriginUrl() url, @Body() body: ResendVerifyEmailRequestDto) {
-    return this.authService.resendEmail(body, url);
+  resendEmail(
+    @Headers('x-origin-url') originUrl: string | undefined,
+    @Body() body: ResendVerifyEmailRequestDto,
+  ) {
+    return this.authService.resendEmail(body, originUrl);
   }
 
   @HttpCode(HttpStatus.OK)

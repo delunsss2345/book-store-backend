@@ -1,6 +1,7 @@
 import { CacheProvider } from '@/config/redis.config';
 import { AuditLogModule } from '@/modules/admin/audit-log/audit-log.module';
 import { AuthorModule } from '@/modules/author/author.module';
+import { CacheVersionModule } from '@/modules/cache-version/cache-version.module';
 import { LanguageModule } from '@/modules/language/language.module';
 import { PublisherModule } from '@/modules/publisher/publisher.module';
 import { Module } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { AdminBookService } from './service/admin-book.service';
 @Module({
   imports: [
     CacheProvider,
+    CacheVersionModule,
     LanguageModule,
     AuditLogModule,
     PublisherModule,
@@ -28,4 +30,4 @@ import { AdminBookService } from './service/admin-book.service';
   providers: [AdminBookService, AdminBookRepository],
   exports: [AdminBookService, AdminBookRepository],
 })
-export class AdminBookModule { }
+export class AdminBookModule {}

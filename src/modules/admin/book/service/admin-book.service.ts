@@ -5,6 +5,7 @@ import { PrismaService } from '@/database';
 import { AuditLogService } from '@/modules/admin/audit-log/service/audit-log.service';
 import { AdminBookVariantsService } from '@/modules/admin/book-variant/service/admin-book-variant.service';
 import { AuthorService } from '@/modules/author/service/author.service';
+import { CacheVersionService } from '@/modules/cache-version/service/cache-version.service';
 import { LanguageService } from '@/modules/language/service/language.service';
 import { PublisherService } from '@/modules/publisher/service/publisher.service';
 import { generateSlug } from '@/utils/generateSlug.util';
@@ -41,7 +42,7 @@ import {
   toBookDetail,
   toBookPriceView,
   toMapperUpdateBook,
-  toSnapshotItem
+  toSnapshotItem,
 } from '../mapper';
 import {
   AdminBookRepository,
@@ -60,6 +61,7 @@ export class AdminBookService {
     private readonly publisherService: PublisherService,
     private readonly authorService: AuthorService,
     private readonly prisma: PrismaService,
+    private readonly cacheVersionService: CacheVersionService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
@@ -96,7 +98,10 @@ export class AdminBookService {
       throw new BadRequestException(AdminBookMessage.INVALID_PUBLISHER_ID);
     }
 
-    const normalizedAuthorMap = new Map<string, { name: string; isPrimary: boolean }>();
+    const normalizedAuthorMap = new Map<
+      string,
+      { name: string; isPrimary: boolean }
+    >();
     for (const author of body.authors ?? []) {
       const normalizedAuthorName = author.authorName?.trim();
       if (!normalizedAuthorName) continue;
@@ -122,7 +127,9 @@ export class AdminBookService {
       const authorIdByName = new Map<string, number>(
         createdAuthors.map((a) => [a.name.trim().toLowerCase(), Number(a.id)]),
       );
-      bookAuthorsPayload = normalizedAuthors.reduce<CreateBookAuthorLinkInput[]>((acc, author) => {
+      bookAuthorsPayload = normalizedAuthors.reduce<
+        CreateBookAuthorLinkInput[]
+      >((acc, author) => {
         const authorId = authorIdByName.get(author.name.toLowerCase());
         if (!authorId) return acc;
         acc.push({ authorId, isPrimary: author.isPrimary });
@@ -141,7 +148,8 @@ export class AdminBookService {
         tx,
       );
 
-      const baseSlug = generateSlug(body.title) || `book-${createdBook.id.toString()}`;
+      const baseSlug =
+        generateSlug(body.title) || `book-${createdBook.id.toString()}`;
       const slug = await this.buildUniqueSlug(langId, baseSlug, tx);
 
       const createTasks: Promise<unknown>[] = [
@@ -159,14 +167,22 @@ export class AdminBookService {
 
       if (bookAuthorsPayload.length > 0) {
         createTasks.push(
-          this.adminBookRepository.createBookAuthors(createdBook.id, bookAuthorsPayload, tx),
+          this.adminBookRepository.createBookAuthors(
+            createdBook.id,
+            bookAuthorsPayload,
+            tx,
+          ),
         );
       }
 
       await Promise.all(createTasks);
 
       if (body.spec) {
-        await this.adminBookRepository.createBookSpecById(createdBook.id, body.spec, tx);
+        await this.adminBookRepository.createBookSpecById(
+          createdBook.id,
+          body.spec,
+          tx,
+        );
       }
 
       if (body.bookVariantItems?.length) {
@@ -177,7 +193,10 @@ export class AdminBookService {
         );
       }
 
-      const newBook = await this.adminBookRepository.findBookById(createdBook.id, tx);
+      const newBook = await this.adminBookRepository.findBookById(
+        createdBook.id,
+        tx,
+      );
       return toAdminBookItem(newBook!);
     });
   }
@@ -254,11 +273,11 @@ export class AdminBookService {
     actorUserId: number,
     ip?: string,
   ): Promise<AdminBookItemUpdateResponseDto> {
-    return this.prisma.$transaction(async (tx) => {
-      const before = await this.adminBookRepository.findBookById(bookId, tx);
-      if (!before || before.deletedAt) {
-        throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
-      }
+    const before = await this.adminBookRepository.findBookById(bookId);
+    if (!before || before.deletedAt) {
+      throw new NotFoundException(AdminBookMessage.BOOK_NOT_FOUND);
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
 
       if (body.translations) {
         for (const translation of body.translations) {
@@ -312,9 +331,11 @@ export class AdminBookService {
         },
         tx,
       );
-      console.log(updatedBook);
       return toMapperUpdateBook(updatedBook);
     });
+
+    await this.bumpCatalogBookDetailCache(bookId);
+    return updated;
   }
 
   async deleteBook(
@@ -380,12 +401,7 @@ export class AdminBookService {
     ]);
     console.log(rows);
 
-    return buildPaginatedResult(
-      rows,
-      total,
-      page,
-      limit,
-    );
+    return buildPaginatedResult(rows, total, page, limit);
   }
 
   async listBooks(
@@ -396,12 +412,17 @@ export class AdminBookService {
     const limit = query.limit ?? 20;
     const searchPhrase = query.searchPhrase;
     const type = query.type ?? undefined;
-    console.log(query.type)
+    console.log(query.type);
     if (!searchPhrase && !type) return buildPaginatedResult([], 0, page, limit);
 
     const [total, rows] = await Promise.all([
       this.adminBookRepository.countBooksDetailed(langId, searchPhrase),
-      this.adminBookRepository.findBooksDetailed(page, limit, langId, searchPhrase),
+      this.adminBookRepository.findBooksDetailed(
+        page,
+        limit,
+        langId,
+        searchPhrase,
+      ),
     ]);
 
     const items: AdminBookListDetailItemResponseDto[] = rows.map((row) => {
@@ -411,16 +432,16 @@ export class AdminBookService {
         title: translation?.title ?? '',
         description: translation?.description ?? null,
         slug: translation?.slug ?? null,
-        authors: row.authors
-          .map((ba) => ba.author.defaultName)
-          .join(', '),
+        authors: row.authors.map((ba) => ba.author.defaultName).join(', '),
         isActive: row.isActive,
         coverImageUrl: row.coverImageUrl ?? null,
         spec: row.specs
           ? {
             widthCm: row.specs.widthCm ? Number(row.specs.widthCm) : null,
             heightCm: row.specs.heightCm ? Number(row.specs.heightCm) : null,
-            thicknessCm: row.specs.thicknessCm ? Number(row.specs.thicknessCm) : null,
+            thicknessCm: row.specs.thicknessCm
+              ? Number(row.specs.thicknessCm)
+              : null,
             packaging: row.specs.packaging ?? null,
           }
           : null,
@@ -512,5 +533,17 @@ export class AdminBookService {
       candidate = `${baseSlug}-${index}`;
       index += 1;
     }
+  }
+
+  private async bumpCatalogBookDetailCache(bookId: number) {
+    const languages = await this.languageService.getLanguage();
+
+    await Promise.all(
+      languages.map((language) =>
+        this.cacheVersionService.bumpVersion(
+          cacheKey.catalog.bookDetail(bookId, Number(language.id)),
+        ),
+      ),
+    );
   }
 }

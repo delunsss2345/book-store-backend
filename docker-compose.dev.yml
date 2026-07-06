@@ -33,6 +33,29 @@ services:
       - redis
     networks:
       - book-store-network
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+    networks:
+      - book-store-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - '3001:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - ./docker/grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - book-store-network
   # qdrant:
   #   image: qdrant/qdrant:v1.9.2
   #   container_name: qdrant

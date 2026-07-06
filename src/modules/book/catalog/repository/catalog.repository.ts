@@ -1031,16 +1031,16 @@ export class CatalogRepository {
 
         if (search.mode === 'like') {
             return Prisma.sql`(
-                bt.title LIKE ${likeKeyword} ESCAPE '\\'
-                OR bt.description LIKE ${likeKeyword} ESCAPE '\\'
-            )`;
+            bt.title LIKE ${likeKeyword} ESCAPE '!'
+            OR bt.description LIKE ${likeKeyword} ESCAPE '!'
+        )`;
         }
 
         return Prisma.sql`(
-            MATCH(bt.title, bt.description) AGAINST (${search.keyword} IN BOOLEAN MODE)
-            OR bt.title LIKE ${likeKeyword} ESCAPE '\\'
-            OR bt.description LIKE ${likeKeyword} ESCAPE '\\'
-        )`;
+        MATCH(bt.title, bt.description) AGAINST (${search.keyword} IN BOOLEAN MODE)
+        OR bt.title LIKE ${likeKeyword} ESCAPE '!'
+        OR bt.description LIKE ${likeKeyword} ESCAPE '!'
+    )`;
     }
 
     private buildBookTranslationScoreSelect(search: CatalogKeywordSearch): Prisma.Sql {

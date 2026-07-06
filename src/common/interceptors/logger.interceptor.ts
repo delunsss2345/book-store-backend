@@ -22,7 +22,7 @@ export class LoggingInterceptor implements NestInterceptor {
             .handle()
             .pipe(
                 tap((data) => {
-                    // console.log(`After... ${Date.now() - now}ms`)
+                    console.log(`After... ${Date.now() - now}ms`)
                     // Logger.log(data);
                 }));
     }

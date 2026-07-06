@@ -15,7 +15,10 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
+  // app.useGlobalInterceptors(new MertricInterceptor());
   app.useGlobalInterceptors(new LoggingInterceptor());
+
+
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,

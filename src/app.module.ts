@@ -31,6 +31,7 @@ import { EmailModule } from '@/queue/email/email.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { LanguageMiddleware } from './common/middleware/language.middleware';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth/auth.module';
@@ -42,7 +43,6 @@ import { TransactionModule } from './modules/transaction/transaction.module';
 import { R2ServiceModule } from './modules/uploads/r2-service/r2-service.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { VerificationCodeModule } from './modules/verification-code/verification-code.module';
-
 @Module({
   imports: [
     DatabaseModule,
@@ -54,6 +54,12 @@ import { VerificationCodeModule } from './modules/verification-code/verification
       load: [() => CONFIGURATION],
     }),
     ScheduleModule.forRoot(),
+    PrometheusModule.register({
+      defaultMetrics: {
+        enabled: true,
+      },
+      path: '/metrics',
+    }),
     RedisModule,
     RateLimitProvider,
     VerificationCodeModule,

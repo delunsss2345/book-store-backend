@@ -35,6 +35,7 @@ import {
 import {
   CatalogKeywordSearch,
   CatalogRepository,
+  CatalogSortDirective,
 } from '../repository/catalog.repository';
 
 @Injectable()
@@ -131,13 +132,16 @@ export class CatalogService {
     const { page, limit } = getPaginationParams(query.page, query.limit);
     const slugCategory = query.slugCategory?.trim();
     const keyword = query.keyword?.trim() || undefined;
+    const typeSort = query.typeSort;
+    const priceType = query.priceType;
+    const { typeSortWhere, priceTypeWhere } = this.repo.buildListFilters(typeSort, priceType);
     const keywordSearch = keyword
       ? this.buildKeywordSearch(keyword)
       : undefined;
 
     if (slugCategory) {
       return this.cache.withCache(
-        cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory),
+        cacheKey.catalog.bookListByCategory(langId, page, limit, slugCategory, typeSort, priceType),
         CATALOG_LIST_CACHE_TTL_SECONDS,
         async () => {
           const category = await this.repo.findCategoryBySlug(slugCategory, langId);
@@ -150,15 +154,17 @@ export class CatalogService {
               this.repo.findBookIncludeCategory(category.id, langId, keywordSearch!, page, limit),
               this.repo.countBookIncludeCategory(category.id, langId, keywordSearch!),
             ]);
-            const rows = await this.repo.findBooksByIds(ids, langId);
-            return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+            const rows = await this.repo.findBooksByIds(ids, langId, 1, 20, priceTypeWhere);
+            const items = this.applySort(rows.map(toCatalogListBookCard), typeSortWhere);
+            return buildPaginatedResult(items, total, page, limit);
           }
 
           const [rows, total] = await Promise.all([
-            this.repo.findBooksForListByCategory(category.id, langId, page, limit),
-            this.repo.countBooksForListByCategory(category.id, langId),
+            this.repo.findBooksForListByCategory(category.id, langId, page, limit, priceTypeWhere),
+            this.repo.countBooksForListByCategory(category.id, langId, priceTypeWhere),
           ]);
-          return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+          const items = this.applySort(rows.map(toCatalogListBookCard), typeSortWhere);
+          return buildPaginatedResult(items, total, page, limit);
         },
       );
     }
@@ -168,20 +174,22 @@ export class CatalogService {
         this.repo.findBookNeIncludeCategory(langId, keywordSearch!, page, limit),
         this.repo.countBookNeIncludeCategory(langId, keywordSearch!),
       ]);
-      const rows = await this.repo.findBooksByIds(ids, langId);
+      const rows = await this.repo.findBooksByIds(ids, langId, 1, 20, priceTypeWhere);
+      const items = this.applySort(rows.map(toCatalogListBookCard), typeSortWhere);
 
-      return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+      return buildPaginatedResult(items, total, page, limit);
     }
 
     return this.cache.withCache(
-      cacheKey.catalog.bookList(langId, page, limit),
+      cacheKey.catalog.bookList(langId, page, limit, typeSort, priceType),
       CATALOG_LIST_CACHE_TTL_SECONDS,
       async () => {
         const [rows, total] = await Promise.all([
-          this.repo.findBooksQueryRaw(langId, page, limit),
-          this.repo.countBookQueryRaw(langId),
+          this.repo.findBooksQueryRaw(langId, page, limit, priceTypeWhere),
+          this.repo.countBookQueryRaw(langId, priceTypeWhere),
         ]);
-        return buildPaginatedResult(rows.map(toCatalogListBookCard), total, page, limit);
+        const items = this.applySort(rows.map(toCatalogListBookCard), typeSortWhere);
+        return buildPaginatedResult(items, total, page, limit);
       },
     );
   }
@@ -287,6 +295,19 @@ export class CatalogService {
       keyword,
       mode: keyword.length > 3 ? 'fulltext' : 'like',
     };
+  }
+
+  private applySort(
+    items: CatalogBookCardDto[],
+    sort: CatalogSortDirective | null,
+  ): CatalogBookCardDto[] {
+    if (!sort) return items;
+
+    const dir = sort.direction === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => {
+      if (sort.field === 'title') return dir * a.title.localeCompare(b.title);
+      return dir * ((Number(a.price) || 0) - (Number(b.price) || 0));
+    });
   }
 
   private shuffle<T>(items: T[]): T[] {

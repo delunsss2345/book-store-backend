@@ -8,10 +8,10 @@ export const cacheKey = {
   catalog: {
     home: (langId: number, limit: number) => `catalog:home:${langId}:${limit}`,
     categories: (langId: number) => `catalog:categories:${langId}`,
-    bookList: (langId: number, page: number, limit: number) =>
-      `catalog:books:langId=${langId}:p${page}:l${limit}`,
-    bookListByCategory: (langId: number, page: number, limit: number, slug: string) =>
-      `catalog:books:langId=${langId}:p${page}:l${limit}:cat=${slug}`,
+    bookList: (langId: number, page: number, limit: number, typeSort?: string, priceType?: string) =>
+      `catalog:books:langId=${langId}:p${page}:l${limit}:sort=${typeSort ?? ''}:price=${priceType ?? ''}`,
+    bookListByCategory: (langId: number, page: number, limit: number, slug: string, typeSort?: string, priceType?: string) =>
+      `catalog:books:langId=${langId}:p${page}:l${limit}:cat=${slug}:sort=${typeSort ?? ''}:price=${priceType ?? ''}`,
     bookDetail: (bookId: number, langId: number) =>
       `catalog:detail:${bookId}:${langId}`,
     bookDetailBySlug: (slug: string, langId: number) =>

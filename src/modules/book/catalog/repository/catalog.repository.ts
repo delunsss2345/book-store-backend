@@ -1,4 +1,8 @@
 import { PrismaService } from '@/database';
+import {
+    SearchFilterSortType,
+    SearchPriceType,
+} from '@/modules/book/catalog/dto/request/catalog-book-list.query.dto';
 import { CatalogBookCardDto } from '@/modules/book/catalog/dto/response';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -9,9 +13,17 @@ export type BookFilterParams = {
     categoryId?: number;
 };
 
+export type PriceRangeFilter = { gt?: number; lte?: number };
+
+export type CatalogSortDirective = {
+    field: 'title' | 'price';
+    direction: 'asc' | 'desc';
+};
+
 export type BookListFilterParams = {
     languageId: number;
     categoryId?: number;
+    priceWhere?: PriceRangeFilter | null;
 };
 
 type FindBooksForListParams = {
@@ -20,6 +32,7 @@ type FindBooksForListParams = {
     limit: number;
     keyword?: string;
     categoryId?: number;
+    priceWhere?: PriceRangeFilter | null;
 };
 
 export type CatalogKeywordSearchMode = 'fulltext' | 'like';
@@ -76,23 +89,33 @@ export class CatalogRepository {
         });
     }
 
-    countBooksForList(languageId: number) {
+    countBooksForList(languageId: number, priceWhere?: PriceRangeFilter | null) {
         return this.prisma.book.count({
-            where: this.buildBookListWhere({ languageId }),
+            where: this.buildBookListWhere({ languageId, priceWhere }),
         });
     }
 
-    countBooksForListByCategory(categoryId: number, languageId: number) {
+    countBooksForListByCategory(
+        categoryId: number,
+        languageId: number,
+        priceWhere?: PriceRangeFilter | null,
+    ) {
         return this.prisma.book.count({
-            where: this.buildBookListWhere({ languageId, categoryId }),
+            where: this.buildBookListWhere({ languageId, categoryId, priceWhere }),
         });
     }
 
-    findBooksForList(languageId: number, page: number, limit: number) {
+    findBooksForList(
+        languageId: number,
+        page: number,
+        limit: number,
+        priceWhere?: PriceRangeFilter | null,
+    ) {
         return this.findBooksForListByFilter({
             languageId,
             page,
             limit,
+            priceWhere,
         });
     }
 
@@ -101,12 +124,14 @@ export class CatalogRepository {
         languageId: number,
         page: number,
         limit: number,
+        priceWhere?: PriceRangeFilter | null,
     ) {
         return this.findBooksForListByFilter({
             languageId,
             categoryId,
             page,
             limit,
+            priceWhere,
         });
     }
 
@@ -261,7 +286,13 @@ export class CatalogRepository {
         });
     }
 
-    findBooksByIds(bookIds: number[], languageId: number, page = 1, limit = 20) {
+    findBooksByIds(
+        bookIds: number[],
+        languageId: number,
+        page = 1,
+        limit = 20,
+        priceWhere?: PriceRangeFilter | null,
+    ) {
         if (!bookIds.length) {
             return Promise.resolve([]);
         }
@@ -277,7 +308,7 @@ export class CatalogRepository {
                     some: {
                         isActive: true,
                         price: {
-                            gt: 0,
+                            ...(priceWhere ? priceWhere : { gt: 0 })
                         },
                     },
                 },
@@ -888,18 +919,23 @@ export class CatalogRepository {
         return Number(rows[0]?.total ?? 0);
     }
 
-    findBooksQueryRaw(languageId: number, page: number, limit: number) {
-        return this.findBooksForListByFilter({ languageId, page, limit });
+    findBooksQueryRaw(
+        languageId: number,
+        page: number,
+        limit: number,
+        priceWhere?: PriceRangeFilter | null,
+    ) {
+        return this.findBooksForListByFilter({ languageId, page, limit, priceWhere });
     }
 
-    countBookQueryRaw(languageId: number) {
-        return this.countBooksForList(languageId);
+    countBookQueryRaw(languageId: number, priceWhere?: PriceRangeFilter | null) {
+        return this.countBooksForList(languageId, priceWhere);
     }
     private findBooksForListByFilter(params: FindBooksForListParams) {
-        const { languageId, categoryId, page, limit } = params;
+        const { languageId, categoryId, page, limit, priceWhere } = params;
 
         return this.prisma.book.findMany({
-            where: this.buildBookListWhere({ languageId, categoryId }),
+            where: this.buildBookListWhere({ languageId, categoryId, priceWhere }),
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             skip: (page - 1) * limit,
             take: limit,
@@ -1005,7 +1041,7 @@ export class CatalogRepository {
                 some: {
                     isActive: true,
                     price: {
-                        gt: 0,
+                        ...(filter.priceWhere ? filter.priceWhere : { gt: 0 }),
                     },
                 },
             },
@@ -1024,6 +1060,47 @@ export class CatalogRepository {
                 }
                 : {}),
         };
+    }
+
+    buildListFilters(
+        typeSort?: SearchFilterSortType,
+        priceType?: SearchPriceType,
+    ): {
+        typeSortWhere: CatalogSortDirective | null;
+        priceTypeWhere: PriceRangeFilter | null;
+    } {
+        return {
+            typeSortWhere: typeSort ? this.resolveSortDirective(typeSort) : null,
+            priceTypeWhere: priceType ? this.resolvePriceWhere(priceType) : null,
+        };
+    }
+
+    private resolveSortDirective(typeSort: SearchFilterSortType): CatalogSortDirective | null {
+        switch (typeSort) {
+            case SearchFilterSortType.TITLE_A_Z:
+                return { field: 'title', direction: 'asc' };
+            case SearchFilterSortType.TITLE_Z_A:
+                return { field: 'title', direction: 'desc' };
+            case SearchFilterSortType.PRICE_LOW_TO_HIGH:
+                return { field: 'price', direction: 'asc' };
+            case SearchFilterSortType.PRICE_HIGH_TO_LOW:
+                return { field: 'price', direction: 'desc' };
+            default:
+                return null;
+        }
+    }
+
+    private resolvePriceWhere(priceType: SearchPriceType): PriceRangeFilter | null {
+        switch (priceType) {
+            case SearchPriceType.UNDER_100:
+                return { lte: 100_000 };
+            case SearchPriceType.BETWEEN_100_300:
+                return { gt: 100_000, lte: 300_000 };
+            case SearchPriceType.OVER_300:
+                return { gt: 300_000 };
+            default:
+                return null;
+        }
     }
 
     private buildBookTranslationKeywordCondition(search: CatalogKeywordSearch): Prisma.Sql {
